@@ -77,16 +77,21 @@ def proxy_to_frontend(path):
 
     try:
         # Proxy to Next.js on port 3000
-        frontend_url = f"http://127.0.0.1:3000/{path}"
+        frontend_url = f"http://localhost:3000/{path}"
 
-        # Forward the request
+        # Add query string if present
+        if flask_request.query_string:
+            frontend_url += f"?{flask_request.query_string.decode('utf-8')}"
+
+        # Forward the request with timeout
         resp = requests.request(
             method=flask_request.method,
             url=frontend_url,
             headers={key: value for (key, value) in flask_request.headers if key != 'Host'},
             data=flask_request.get_data(),
             cookies=flask_request.cookies,
-            allow_redirects=False
+            allow_redirects=False,
+            timeout=10
         )
 
         # Return the response
@@ -95,12 +100,27 @@ def proxy_to_frontend(path):
         headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
 
         return Response(resp.content, resp.status_code, headers)
+    except requests.exceptions.ConnectionError as e:
+        app.logger.error(f"Cannot connect to Next.js: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': 'Frontend service unavailable',
+            'message': 'Next.js is not responding'
+        }), 503
+    except requests.exceptions.Timeout as e:
+        app.logger.error(f"Next.js timeout: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': 'Frontend timeout',
+            'message': 'Next.js took too long to respond'
+        }), 504
     except Exception as e:
         app.logger.error(f"Proxy error: {str(e)}")
         return jsonify({
             'ok': True,
             'service': 'BuyPilot API',
-            'frontend': 'Connect to port 3000 directly for frontend'
+            'frontend': 'Connect to port 3000 directly for frontend',
+            'error_detail': str(e)
         }), 200
 
 # Global error handlers
