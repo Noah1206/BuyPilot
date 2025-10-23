@@ -1,8 +1,12 @@
 [phases.setup]
-nixPkgs = ["python39", "postgresql"]
+nixPkgs = ["python311", "postgresql"]
 
 [phases.install]
-cmds = ["cd backend && pip install -r requirements.txt"]
+cmds = [
+  "python -m ensurepip",
+  "python -m pip install --upgrade pip",
+  "cd backend && python -m pip install -r requirements.txt"
+]
 
 [start]
 cmd = "cd backend && gunicorn app:app --bind 0.0.0.0:$PORT"
