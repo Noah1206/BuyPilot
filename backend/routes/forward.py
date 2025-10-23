@@ -108,7 +108,6 @@ def send_to_forwarder(order_id):
                 func=execute_forwarder_job,
                 job_id=job_id,
                 order_id=str(order.id),
-                job_id=job_id,
                 forwarder_id=forwarder_id
             )
 
