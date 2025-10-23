@@ -2,7 +2,21 @@
  * API client utilities for BuyPilot backend
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4070'
+// Determine API URL based on environment
+function getApiUrl(): string {
+  // In browser, check if we're on Railway (production)
+  if (typeof window !== 'undefined') {
+    // If origin is Railway domain, use same origin for API
+    if (window.location.origin.includes('railway.app')) {
+      return window.location.origin
+    }
+  }
+
+  // Use environment variable or localhost for development
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4070'
+}
+
+const API_URL = getApiUrl()
 
 interface ApiResponse<T> {
   ok: boolean
