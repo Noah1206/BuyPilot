@@ -45,20 +45,10 @@ COPY --from=frontend-builder /app/frontend/.next/standalone ./
 COPY --from=frontend-builder /app/frontend/.next/static ./.next/static
 COPY --from=frontend-builder /app/frontend/public ./public
 
-# Create simple startup script
+# Copy startup script
 WORKDIR /app
-RUN printf '#!/bin/bash\n\
-set -e\n\
-echo "Starting Next.js..."\n\
-cd /app/frontend && PORT=3000 node server.js &\n\
-NEXTJS_PID=$!\n\
-echo "Next.js started with PID $NEXTJS_PID"\n\
-\n\
-sleep 2\n\
-\n\
-echo "Starting Flask..."\n\
-cd /app/backend && exec gunicorn app:app --bind 0.0.0.0:8080 --workers 2 --timeout 120\n\
-' > /app/start.sh && chmod +x /app/start.sh
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 EXPOSE 8080
 CMD ["/app/start.sh"]
