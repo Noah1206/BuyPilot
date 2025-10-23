@@ -14,12 +14,13 @@ class ProductScorer:
 
     def __init__(self):
         """Initialize with OpenAI API key"""
-        self.api_key = os.getenv('OPENAI_API_KEY')
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY must be set")
-
-        openai.api_key = self.api_key
-        logger.info("✅ ProductScorer initialized")
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            logger.warning("⚠️ OPENAI_API_KEY not configured. Product scoring will use fallback.")
+            self.client = None
+        else:
+            self.client = openai.OpenAI(api_key=api_key)
+            logger.info("✅ ProductScorer initialized")
 
     def score_product(self, product: Dict[str, Any], keyword: str) -> Dict[str, Any]:
         """
@@ -115,8 +116,12 @@ class ProductScorer:
 점수만 숫자로 응답하세요 (0-100).
 """
 
-            response = openai.chat.completions.create(
-                model="gpt-3.5-turbo",
+            if not self.client:
+                logger.warning("⚠️ Sales prediction failed, using heuristic")
+                return self._heuristic_sales_prediction(product, keyword)
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a sales prediction expert. Respond with only a number between 0-100."},
                     {"role": "user", "content": prompt}

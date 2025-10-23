@@ -15,12 +15,13 @@ class KeywordAnalyzer:
 
     def __init__(self):
         """Initialize with OpenAI API key"""
-        self.api_key = os.getenv('OPENAI_API_KEY')
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY must be set")
-
-        openai.api_key = self.api_key
-        logger.info("✅ KeywordAnalyzer initialized")
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            logger.warning("⚠️ OPENAI_API_KEY not configured. Keyword analysis will use fallback.")
+            self.client = None
+        else:
+            self.client = openai.OpenAI(api_key=api_key)
+            logger.info("✅ KeywordAnalyzer initialized")
 
     def get_trending_keywords(self, category: str = "fashion", count: int = 10) -> List[Dict[str, Any]]:
         """
@@ -67,8 +68,12 @@ class KeywordAnalyzer:
 JSON 배열로만 응답하세요. 다른 설명은 불필요합니다.
 """
 
-            response = openai.chat.completions.create(
-                model="gpt-4",
+            if not self.client:
+                logger.warning("⚠️ Using fallback keywords")
+                return self._get_fallback_keywords(category, count)
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a Korean e-commerce trend analyst. Always respond in valid JSON format."},
                     {"role": "user", "content": prompt}
