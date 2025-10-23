@@ -9,7 +9,8 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from contextlib import contextmanager
 
 # Get database URL from environment
-DATABASE_URL = os.getenv('SUPABASE_DB_URL', 'postgresql://localhost/buypilot')
+# Railway provides DATABASE_URL automatically when PostgreSQL is added
+DATABASE_URL = os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL', 'postgresql://localhost/buypilot')
 
 # Create SQLAlchemy engine
 engine = create_engine(

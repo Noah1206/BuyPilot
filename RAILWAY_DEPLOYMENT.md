@@ -6,14 +6,14 @@ Railway에 BuyPilot을 배포하는 방법입니다.
 
 Railway 프로젝트 → Variables 탭에서 다음 환경 변수들을 설정하세요:
 
-### 1. Database (PostgreSQL)
-Railway에서 PostgreSQL 서비스를 추가하면 자동으로 설정됩니다:
-- `DATABASE_URL` - 자동 설정됨
-- `PGHOST` - 자동 설정됨
-- `PGPORT` - 자동 설정됨
-- `PGUSER` - 자동 설정됨
-- `PGPASSWORD` - 자동 설정됨
-- `PGDATABASE` - 자동 설정됨
+### 1. Database (PostgreSQL) - ⚠️ 중요!
+Railway에서 PostgreSQL 서비스를 **반드시 추가**해야 합니다:
+1. Railway Dashboard → "New" → "Database" → "PostgreSQL" 클릭
+2. 자동으로 설정되는 환경 변수들:
+   - `DATABASE_URL` - 자동 설정됨 (백엔드에서 자동 사용)
+   - `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` - 자동 설정됨
+
+**중요**: PostgreSQL 서비스를 추가하지 않으면 "connection to server at localhost failed" 오류가 발생합니다!
 
 ### 2. OpenAI (필수) - HeySeller 번역 기능
 ```
