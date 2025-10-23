@@ -11,8 +11,8 @@ RUN npm ci
 COPY frontend/tsconfig.json ./tsconfig.json
 COPY frontend/next.config.js ./next.config.js
 COPY frontend/tailwind.config.ts ./tailwind.config.ts
-COPY frontend/postcss.config.mjs ./postcss.config.mjs
-COPY frontend/.eslintrc.json ./.eslintrc.json
+COPY frontend/postcss.config.js ./postcss.config.js
+COPY frontend/next-env.d.ts ./next-env.d.ts
 COPY frontend/app ./app
 COPY frontend/components ./components
 COPY frontend/lib ./lib
