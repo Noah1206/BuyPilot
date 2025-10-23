@@ -68,7 +68,7 @@ RUN echo 'server {' > /etc/nginx/sites-available/default && \
 # Create startup script
 RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'nginx' >> /app/start.sh && \
-    echo 'cd /app/frontend && node server.js &' >> /app/start.sh && \
+    echo 'cd /app/frontend && PORT=3000 node server.js &' >> /app/start.sh && \
     echo 'cd /app/backend && gunicorn app:app --bind 127.0.0.1:4070 --workers 2 --timeout 120' >> /app/start.sh && \
     chmod +x /app/start.sh
 
