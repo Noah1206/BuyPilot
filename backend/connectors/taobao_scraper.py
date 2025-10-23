@@ -43,17 +43,34 @@ class TaobaoScraper:
             chrome_options = Options()
 
             if self.headless:
-                chrome_options.add_argument('--headless')
+                chrome_options.add_argument('--headless=new')  # Use new headless mode
 
-            # Standard options for scraping
+            # Railway/Docker required options
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--disable-software-rasterizer')
+            chrome_options.add_argument('--disable-extensions')
             chrome_options.add_argument('--disable-blink-features=AutomationControlled')
             chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
 
-            # Initialize driver
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            # Memory optimization for Railway
+            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--memory-pressure-off')
+            chrome_options.add_argument('--max_old_space_size=512')
+
+            # Check if running on Railway (use system Chrome)
+            chrome_bin = os.getenv('CHROME_BIN')
+            if chrome_bin:
+                chrome_options.binary_location = chrome_bin
+                logger.info(f"🐳 Using Railway system Chrome: {chrome_bin}")
+                # Use system chromedriver on Railway
+                self.driver = webdriver.Chrome(options=chrome_options)
+            else:
+                # Local development - use ChromeDriverManager
+                logger.info("💻 Using local ChromeDriverManager")
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
 
             logger.info("✅ Chrome WebDriver initialized")
 

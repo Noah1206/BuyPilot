@@ -66,12 +66,20 @@ RUN apt-get update && apt-get install -y \
     && wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
     && apt-get install -y /tmp/chrome.deb \
     && rm /tmp/chrome.deb \
+    # Install ChromeDriver (matching Chrome version)
+    && CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+') \
+    && CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_VERSION%%.*}") \
+    && wget -q -O /tmp/chromedriver-linux64.zip "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" \
+    && unzip -q /tmp/chromedriver-linux64.zip -d /tmp/ \
+    && mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ \
+    && chmod +x /usr/local/bin/chromedriver \
+    && rm -rf /tmp/chromedriver* \
     # Cleanup
     && rm -rf /var/lib/apt/lists/*
 
 # Set Chrome environment variables for headless operation
 ENV CHROME_BIN=/usr/bin/google-chrome-stable \
-    CHROMEDRIVER_SKIP_DOWNLOAD=false
+    CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
 
 # Copy backend
 COPY backend/ /app/backend/
