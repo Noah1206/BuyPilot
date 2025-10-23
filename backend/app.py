@@ -63,24 +63,45 @@ def health():
         'service': 'buypilot-backend'
     }), 200
 
-# Root endpoint
-@app.route('/', methods=['GET'])
-def root():
-    """Root endpoint with API info"""
-    return jsonify({
-        'ok': True,
-        'service': 'BuyPilot API',
-        'version': 'v1',
-        'endpoints': {
-            'health': '/health',
-            'orders': '/api/v1/orders',
-            'products': '/api/v1/products',
-            'import_product': '/api/v1/products/import',
-            'purchase': '/api/v1/orders/{id}/actions/execute-purchase',
-            'forward': '/api/v1/orders/{id}/actions/send-to-forwarder',
-            'webhooks': '/api/v1/webhooks/{supplier|forwarder}'
-        }
-    }), 200
+# Proxy to Next.js frontend
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def proxy_to_frontend(path):
+    """Proxy non-API requests to Next.js frontend"""
+    import requests
+    from flask import request as flask_request
+
+    # Only proxy if not an API endpoint
+    if path.startswith('api/'):
+        return jsonify({'ok': False, 'error': 'Not found'}), 404
+
+    try:
+        # Proxy to Next.js on port 3000
+        frontend_url = f"http://127.0.0.1:3000/{path}"
+
+        # Forward the request
+        resp = requests.request(
+            method=flask_request.method,
+            url=frontend_url,
+            headers={key: value for (key, value) in flask_request.headers if key != 'Host'},
+            data=flask_request.get_data(),
+            cookies=flask_request.cookies,
+            allow_redirects=False
+        )
+
+        # Return the response
+        from flask import Response
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
+
+        return Response(resp.content, resp.status_code, headers)
+    except Exception as e:
+        app.logger.error(f"Proxy error: {str(e)}")
+        return jsonify({
+            'ok': True,
+            'service': 'BuyPilot API',
+            'frontend': 'Connect to port 3000 directly for frontend'
+        }), 200
 
 # Global error handlers
 @app.errorhandler(404)
