@@ -113,8 +113,7 @@ def execute_purchase(order_id):
             add_job(
                 func=execute_purchase_job,
                 job_id=job_id,
-                order_id=str(order.id),
-                job_id=job_id
+                order_id=str(order.id)
             )
 
             response = {
