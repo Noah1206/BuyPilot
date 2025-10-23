@@ -51,8 +51,17 @@ class TaobaoScraper:
             chrome_options.add_argument('--disable-gpu')
             chrome_options.add_argument('--disable-software-rasterizer')
             chrome_options.add_argument('--disable-extensions')
+
+            # Anti-bot detection (IMPORTANT for Taobao)
             chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-            chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
+
+            # Additional anti-detection
+            chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+            chrome_options.add_argument('--disable-infobars')
+            chrome_options.add_argument('--start-maximized')
 
             # Memory optimization for Railway
             chrome_options.add_argument('--disable-dev-shm-usage')
@@ -159,11 +168,26 @@ class TaobaoScraper:
 
             # Load page
             self.driver.get(url)
-            time.sleep(3)  # Wait for page to load
+
+            # Wait for JavaScript to execute (Taobao is heavily JS-based)
+            time.sleep(5)
+
+            # Execute script to remove webdriver flag
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+            # Additional wait for dynamic content
+            time.sleep(2)
 
             # Get page source
             html = self.driver.page_source
             soup = BeautifulSoup(html, 'lxml')
+
+            # Debug: Log page title to verify we got the right page
+            page_title = soup.find('title')
+            if page_title:
+                logger.info(f"📄 Page title: {page_title.get_text(strip=True)[:100]}")
+            else:
+                logger.warning("⚠️ No page title found - might be bot detection")
 
             # Determine platform (Taobao/Tmall vs 1688)
             if '1688.com' in url:
