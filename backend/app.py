@@ -22,8 +22,8 @@ from routes.discovery import bp as discovery_bp
 # Import scheduler
 from workers.scheduler import init_scheduler, shutdown_scheduler
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app with static file serving
+app = Flask(__name__, static_folder='storage', static_url_path='/static')
 
 # Initialize background scheduler
 init_scheduler()

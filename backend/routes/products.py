@@ -1,6 +1,7 @@
 """
 Products API routes
 Handles product import from Taobao, CRUD operations
+HeySeller-style: Web scraping + AI translation + Image download
 """
 from flask import Blueprint, request, jsonify
 import uuid
@@ -10,6 +11,9 @@ import logging
 
 from models import get_db, Product
 from connectors.taobao_api import get_taobao_connector
+from connectors.taobao_scraper import get_taobao_scraper
+from ai.translator import get_translator
+from services.image_service import get_image_service
 
 bp = Blueprint('products', __name__)
 logger = logging.getLogger(__name__)
@@ -18,7 +22,12 @@ logger = logging.getLogger(__name__)
 @bp.route('/products/import', methods=['POST'])
 def import_product():
     """
-    Import product from Taobao URL
+    Import product from Taobao URL - HeySeller Style
+    Features:
+    - Web scraping (no API needed)
+    - AI translation (Chinese → Korean)
+    - Image download and optimization
+
     Body: {url: string}
     Returns: {ok: bool, data: {product_id, ...}}
     """
@@ -37,23 +46,13 @@ def import_product():
                 }
             }), 400
 
-        logger.info(f"🔍 Importing product from URL: {url}")
+        logger.info(f"🔍 [HeySeller Mode] Importing product from URL: {url}")
 
-        # Get Taobao connector
-        try:
-            taobao = get_taobao_connector()
-        except ValueError as e:
-            return jsonify({
-                'ok': False,
-                'error': {
-                    'code': 'CONFIG_ERROR',
-                    'message': 'Taobao API credentials not configured',
-                    'details': {'error': str(e)}
-                }
-            }), 500
+        # Get scraper
+        scraper = get_taobao_scraper()
 
         # Parse product ID from URL
-        product_id = taobao.parse_product_url(url)
+        product_id = scraper.parse_product_url(url)
         if not product_id:
             return jsonify({
                 'ok': False,
@@ -84,43 +83,89 @@ def import_product():
                     }
                 }), 200
 
-        # Fetch product info from Taobao
-        product_info = taobao.get_product_info(product_id)
+        # Step 1: Scrape product from Taobao
+        logger.info("📥 Step 1/3: Scraping product information...")
+        product_info = scraper.scrape_product(url)
+
         if not product_info:
             return jsonify({
                 'ok': False,
                 'error': {
-                    'code': 'FETCH_ERROR',
-                    'message': 'Failed to fetch product information from Taobao',
+                    'code': 'SCRAPE_ERROR',
+                    'message': 'Failed to scrape product information from Taobao',
                     'details': {'product_id': product_id}
                 }
             }), 500
 
-        logger.info(f"✅ Fetched product info: {product_info.get('title', '')[:50]}...")
+        logger.info(f"✅ Scraped product: {product_info.get('title', '')[:50]}...")
+
+        # Step 2: Translate to Korean
+        logger.info("🌐 Step 2/3: Translating to Korean...")
+        translator = get_translator()
+        product_info = translator.translate_product(product_info)
+        logger.info("✅ Translation completed")
+
+        # Step 3: Download images
+        logger.info("📷 Step 3/3: Downloading images...")
+        image_service = get_image_service()
+
+        downloaded_images = []
+        if product_info.get('images'):
+            downloaded_images = image_service.download_images(
+                product_info['images'],
+                optimize=True,
+                max_images=5  # Limit to 5 images
+            )
+
+        # Use first downloaded image as main image
+        main_image_path = downloaded_images[0] if downloaded_images else None
+        main_image_url = image_service.get_public_url(main_image_path) if main_image_path else product_info.get('pic_url', '')
+
+        logger.info(f"✅ Downloaded {len(downloaded_images)} images")
 
         # Create product in database
         with get_db() as db:
             product = Product(
-                source='taobao',
+                source=product_info.get('source', 'taobao'),
                 source_url=url,
                 supplier_id=product_info.get('seller_nick', ''),
-                title=product_info.get('title', ''),
+                title=product_info.get('title', ''),  # Korean translated title
                 price=product_info.get('price', 0),
                 currency='CNY',  # Taobao uses Chinese Yuan
                 stock=product_info.get('num', 0),
-                image_url=product_info.get('main_image', ''),
+                image_url=main_image_url,
                 score=product_info.get('score', 0),
                 data={
+                    # IDs
                     'taobao_item_id': product_info.get('taobao_item_id', ''),
+
+                    # Original Chinese content
+                    'title_cn': product_info.get('title_cn', product_info.get('title', '')),
+                    'desc_cn': product_info.get('desc_cn', product_info.get('desc', '')),
+
+                    # Korean translations
+                    'title_kr': product_info.get('title_kr', ''),
+                    'desc_kr': product_info.get('desc_kr', ''),
+
+                    # Seller info
                     'seller_nick': product_info.get('seller_nick', ''),
+
+                    # Images
                     'pic_url': product_info.get('pic_url', ''),
                     'images': product_info.get('images', []),
-                    'desc': product_info.get('desc', ''),
+                    'downloaded_images': [image_service.get_public_url(img) for img in downloaded_images],
+
+                    # Additional info
                     'location': product_info.get('location', ''),
                     'cid': product_info.get('cid', ''),
                     'props': product_info.get('props', ''),
                     'modified': product_info.get('modified', ''),
-                    'imported_at': datetime.utcnow().isoformat()
+
+                    # Processing info
+                    'translated': product_info.get('translated', False),
+                    'translation_provider': product_info.get('translation_provider', ''),
+                    'imported_at': datetime.utcnow().isoformat(),
+                    'import_method': 'heyseller_scraper'
                 }
             )
 
@@ -133,13 +178,18 @@ def import_product():
                 'ok': True,
                 'data': {
                     'product_id': str(product.id),
-                    'message': 'Product imported successfully',
+                    'message': 'Product imported successfully (HeySeller Mode)',
+                    'features': {
+                        'scraped': True,
+                        'translated': product_info.get('translated', False),
+                        'images_downloaded': len(downloaded_images)
+                    },
                     'product': product.to_dict()
                 }
             }), 201
 
     except Exception as e:
-        logger.error(f"❌ Error importing product: {str(e)}")
+        logger.error(f"❌ Error importing product: {str(e)}", exc_info=True)
         return jsonify({
             'ok': False,
             'error': {
