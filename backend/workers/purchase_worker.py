@@ -108,7 +108,6 @@ def execute_purchase_job(order_id: str, job_id: str, retry_count: int = 0):
                         job_id=f"{job_id}-retry-{retry_count + 1}",
                         run_date=retry_time,
                         order_id=order_id,
-                        job_id=job_id,
                         retry_count=retry_count + 1
                     )
 

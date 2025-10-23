@@ -111,7 +111,6 @@ def execute_forwarder_job(order_id: str, job_id: str, forwarder_id: str, retry_c
                         job_id=f"{job_id}-retry-{retry_count + 1}",
                         run_date=retry_time,
                         order_id=order_id,
-                        job_id=job_id,
                         forwarder_id=forwarder_id,
                         retry_count=retry_count + 1
                     )
