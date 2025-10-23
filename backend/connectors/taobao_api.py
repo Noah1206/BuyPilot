@@ -8,8 +8,14 @@ import logging
 from typing import Dict, Any, Optional
 from urllib.parse import urlparse, parse_qs
 
-import top.api
-from top import TOP
+# Optional import - taobao SDK may not be available
+try:
+    import top.api
+    from top import TOP
+    HAS_TAOBAO_SDK = True
+except ImportError:
+    HAS_TAOBAO_SDK = False
+    logging.warning("Taobao SDK not installed. Install 'top-api' package for full functionality.")
 
 from connectors.base import BaseConnector
 
@@ -25,9 +31,15 @@ class TaobaoAPIConnector(BaseConnector):
         self.app_secret = os.getenv('TAOBAO_APP_SECRET')
         self.session_key = os.getenv('TAOBAO_SESSION_KEY', '')  # Optional for some APIs
 
+        if not HAS_TAOBAO_SDK:
+            logger.warning("⚠️ Taobao SDK not available. Using mock data mode.")
+            self.client = None
+            return
+
         if not self.app_key or not self.app_secret:
-            logger.warning("⚠️ Taobao API credentials not configured")
-            raise ValueError("TAOBAO_APP_KEY and TAOBAO_APP_SECRET must be set in environment variables")
+            logger.warning("⚠️ Taobao API credentials not configured. Using mock data mode.")
+            self.client = None
+            return
 
         # Initialize TOP client
         self.client = TOP(self.app_key, self.app_secret, 'gw.api.taobao.com')
