@@ -2,9 +2,23 @@
 FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend
+
+# Copy package files and install dependencies
 COPY frontend/package*.json ./
 RUN npm ci
-COPY frontend/ ./
+
+# Copy all frontend source files explicitly
+COPY frontend/tsconfig.json ./tsconfig.json
+COPY frontend/next.config.js ./next.config.js
+COPY frontend/tailwind.config.ts ./tailwind.config.ts
+COPY frontend/postcss.config.mjs ./postcss.config.mjs
+COPY frontend/.eslintrc.json ./.eslintrc.json
+COPY frontend/app ./app
+COPY frontend/components ./components
+COPY frontend/lib ./lib
+COPY frontend/public ./public
+
+# Build Next.js app
 RUN npm run build
 
 # Final stage: Python with Node.js and nginx
