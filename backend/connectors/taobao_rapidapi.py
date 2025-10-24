@@ -41,7 +41,9 @@ class TaobaoRapidAPI:
             Product ID or None if invalid
         """
         try:
+            logger.info(f"🔍 Parsing URL: {url}")
             parsed = urlparse(url)
+            logger.info(f"📋 Parsed - netloc: {parsed.netloc}, query: {parsed.query}")
 
             # Check domain
             valid_domains = ['taobao.com', 'tmall.com', '1688.com']
@@ -51,9 +53,11 @@ class TaobaoRapidAPI:
 
             # Extract ID from query string (Taobao/Tmall)
             query_params = parse_qs(parsed.query)
+            logger.info(f"🔎 Query params: {query_params}")
+
             if 'id' in query_params:
                 product_id = query_params['id'][0]
-                logger.info(f"✅ Extracted product ID: {product_id}")
+                logger.info(f"✅ Extracted product ID from 'id' param: {product_id}")
                 return product_id
 
             # Extract ID from path (1688)
