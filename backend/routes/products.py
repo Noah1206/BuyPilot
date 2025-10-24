@@ -12,6 +12,7 @@ import logging
 from models import get_db, Product
 from connectors.taobao_api import get_taobao_connector
 from connectors.taobao_scraper import get_taobao_scraper
+from connectors.taobao_rapidapi import get_taobao_rapidapi
 from ai.translator import get_translator
 from services.image_service import get_image_service
 
@@ -50,9 +51,8 @@ def import_product():
 
         # Get scraper
         scraper = get_taobao_scraper()
-
-        # Parse product ID from URL
         product_id = scraper.parse_product_url(url)
+
         if not product_id:
             return jsonify({
                 'ok': False,
@@ -92,7 +92,7 @@ def import_product():
                 'ok': False,
                 'error': {
                     'code': 'SCRAPE_ERROR',
-                    'message': 'Failed to scrape product information from Taobao',
+                    'message': 'Failed to scrape product information',
                     'details': {'product_id': product_id}
                 }
             }), 500
