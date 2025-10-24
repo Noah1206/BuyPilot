@@ -111,14 +111,20 @@ class TaobaoRapidAPI:
 
             data = response.json()
 
+            # Log full response for debugging
+            logger.info(f"📦 Full API response: {data}")
+
             # Check result structure
             result = data.get('result', {})
 
             # Check for errors
             status = result.get('status', {})
+            logger.info(f"📊 Status: {status}")
+
             if status.get('msg') != 'success':
                 error_msg = status.get('msg', 'Unknown error')
                 logger.error(f"❌ RapidAPI error: {error_msg}")
+                logger.error(f"❌ Full status: {status}")
                 return None
 
             # Get item data
