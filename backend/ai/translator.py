@@ -1,11 +1,11 @@
 """
 AI Translation Service - Chinese to Korean
-Uses OpenAI GPT for natural, context-aware translation
+Uses Google Gemini for natural, context-aware translation
 """
 import os
 import logging
 from typing import Optional, Dict
-import openai
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +14,15 @@ class AITranslator:
     """AI-powered translator for product information"""
 
     def __init__(self):
-        """Initialize OpenAI client"""
-        api_key = os.getenv('OPENAI_API_KEY')
+        """Initialize Gemini client"""
+        api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
-            logger.warning("⚠️ OPENAI_API_KEY not configured. Translation will be disabled.")
+            logger.warning("⚠️ GEMINI_API_KEY not configured. Translation will be disabled.")
             self.client = None
         else:
-            self.client = openai.OpenAI(api_key=api_key)
-            logger.info("✅ AI Translator initialized")
+            genai.configure(api_key=api_key)
+            self.client = genai.GenerativeModel('gemini-1.5-flash')
+            logger.info("✅ AI Translator initialized (Gemini)")
 
     def translate_product_title(self, chinese_title: str) -> Optional[str]:
         """
@@ -47,22 +48,14 @@ Requirements:
 - Keep product specifications (numbers, model names) as-is
 - Make it appealing to Korean consumers
 - Keep it concise (under 100 characters if possible)
+- Return ONLY the Korean translation, no explanations
 
 Chinese title: {chinese_title}
 
 Korean translation:"""
 
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a professional e-commerce translator."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,  # Lower temperature for more consistent translations
-                max_tokens=200
-            )
-
-            korean_title = response.choices[0].message.content.strip()
+            response = self.client.generate_content(prompt)
+            korean_title = response.text.strip()
             logger.info(f"✅ Translated title: {korean_title[:50]}...")
             return korean_title
 
@@ -99,23 +92,15 @@ Requirements:
 - Maintain product specifications and technical details
 - Keep formatting and structure
 - Professional tone
+- Return ONLY the Korean translation, no explanations
 
 Chinese description:
 {chinese_desc}
 
 Korean translation:"""
 
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a professional e-commerce translator."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                max_tokens=1500
-            )
-
-            korean_desc = response.choices[0].message.content.strip()
+            response = self.client.generate_content(prompt)
+            korean_desc = response.text.strip()
             logger.info(f"✅ Translated description ({len(korean_desc)} chars)")
             return korean_desc
 
@@ -134,7 +119,7 @@ Korean translation:"""
             Product dictionary with Korean translations added
         """
         if not self.client:
-            logger.warning("⚠️ Translation skipped - OpenAI not configured")
+            logger.warning("⚠️ Translation skipped - Gemini not configured")
             return product_data
 
         try:
@@ -160,7 +145,7 @@ Korean translation:"""
 
             # Mark as translated
             translated['translated'] = True
-            translated['translation_provider'] = 'openai'
+            translated['translation_provider'] = 'gemini'
 
             logger.info("✅ Product translation completed")
             return translated
