@@ -47,55 +47,112 @@ def import_product():
                 }
             }), 400
 
-        logger.info(f"🔍 [RapidAPI Mode] Importing product from URL: {url}")
+        # Detect platform (Taobao vs Tmall)
+        is_tmall = 'tmall.com' in url.lower()
+        platform_name = 'Tmall' if is_tmall else 'Taobao'
 
-        # Get RapidAPI connector
-        rapidapi = get_taobao_rapidapi()
-        product_id = rapidapi.parse_product_url(url)
+        logger.info(f"🔍 [{platform_name}] Importing product from URL: {url}")
 
-        if not product_id:
-            return jsonify({
-                'ok': False,
-                'error': {
-                    'code': 'INVALID_URL',
-                    'message': 'Could not extract product ID from URL',
-                    'details': {'url': url}
-                }
-            }), 400
+        # Hybrid approach: RapidAPI for Taobao, Scraper for Tmall
+        if is_tmall:
+            # Tmall: Use HeySeller scraper (RapidAPI doesn't support Tmall)
+            logger.info("📌 Using HeySeller scraper for Tmall product")
+            scraper = get_taobao_scraper()
+            product_id = scraper.parse_product_url(url)
 
-        logger.info(f"✅ Extracted product ID: {product_id}")
-
-        # Check if product already exists
-        with get_db() as db:
-            existing = db.query(Product).filter(
-                Product.data['taobao_item_id'].astext == product_id
-            ).first()
-
-            if existing:
-                logger.warning(f"⚠️ Product {product_id} already exists")
+            if not product_id:
                 return jsonify({
-                    'ok': True,
-                    'data': {
-                        'product_id': str(existing.id),
-                        'already_exists': True,
-                        'message': 'Product already imported',
-                        'product': existing.to_dict()
+                    'ok': False,
+                    'error': {
+                        'code': 'INVALID_URL',
+                        'message': 'Could not extract product ID from Tmall URL',
+                        'details': {'url': url}
                     }
-                }), 200
+                }), 400
 
-        # Step 1: Fetch product from RapidAPI
-        logger.info("📥 Step 1/3: Fetching product from RapidAPI...")
-        product_info = rapidapi.get_product_detail(product_id)
+            logger.info(f"✅ Extracted Tmall product ID: {product_id}")
 
-        if not product_info:
-            return jsonify({
-                'ok': False,
-                'error': {
-                    'code': 'API_ERROR',
-                    'message': 'Failed to fetch product information from RapidAPI',
-                    'details': {'product_id': product_id}
-                }
-            }), 500
+            # Check if product already exists
+            with get_db() as db:
+                existing = db.query(Product).filter(
+                    Product.data['taobao_item_id'].astext == product_id
+                ).first()
+
+                if existing:
+                    logger.warning(f"⚠️ Tmall product {product_id} already exists")
+                    return jsonify({
+                        'ok': True,
+                        'data': {
+                            'product_id': str(existing.id),
+                            'already_exists': True,
+                            'message': 'Product already imported',
+                            'product': existing.to_dict()
+                        }
+                    }), 200
+
+            # Step 1: Fetch product using scraper
+            logger.info("📥 Step 1/3: Fetching Tmall product using HeySeller scraper...")
+            product_info = scraper.scrape_product(url)
+
+            if not product_info:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'SCRAPER_ERROR',
+                        'message': 'Failed to scrape Tmall product information',
+                        'details': {'product_id': product_id, 'url': url}
+                    }
+                }), 500
+
+        else:
+            # Taobao: Use RapidAPI
+            logger.info("📌 Using RapidAPI for Taobao product")
+            rapidapi = get_taobao_rapidapi()
+            product_id = rapidapi.parse_product_url(url)
+
+            if not product_id:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'INVALID_URL',
+                        'message': 'Could not extract product ID from Taobao URL',
+                        'details': {'url': url}
+                    }
+                }), 400
+
+            logger.info(f"✅ Extracted Taobao product ID: {product_id}")
+
+            # Check if product already exists
+            with get_db() as db:
+                existing = db.query(Product).filter(
+                    Product.data['taobao_item_id'].astext == product_id
+                ).first()
+
+                if existing:
+                    logger.warning(f"⚠️ Taobao product {product_id} already exists")
+                    return jsonify({
+                        'ok': True,
+                        'data': {
+                            'product_id': str(existing.id),
+                            'already_exists': True,
+                            'message': 'Product already imported',
+                            'product': existing.to_dict()
+                        }
+                    }), 200
+
+            # Step 1: Fetch product from RapidAPI
+            logger.info("📥 Step 1/3: Fetching Taobao product from RapidAPI...")
+            product_info = rapidapi.get_product_detail(product_id)
+
+            if not product_info:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'API_ERROR',
+                        'message': 'Failed to fetch product information from RapidAPI',
+                        'details': {'product_id': product_id}
+                    }
+                }), 500
 
         logger.info(f"✅ Fetched product: {product_info.get('title', '')[:50]}...")
 
@@ -165,7 +222,8 @@ def import_product():
                     'translated': product_info.get('translated', False),
                     'translation_provider': product_info.get('translation_provider', ''),
                     'imported_at': datetime.utcnow().isoformat(),
-                    'import_method': 'rapidapi'
+                    'import_method': 'rapidapi' if not is_tmall else 'heyseller_scraper',
+                    'platform': platform_name
                 }
             )
 
@@ -178,9 +236,10 @@ def import_product():
                 'ok': True,
                 'data': {
                     'product_id': str(product.id),
-                    'message': 'Product imported successfully (RapidAPI Mode)',
+                    'message': f'Product imported successfully ({platform_name} - {"RapidAPI" if not is_tmall else "HeySeller Scraper"})',
                     'features': {
-                        'api_fetched': True,
+                        'method': 'rapidapi' if not is_tmall else 'heyseller_scraper',
+                        'platform': platform_name,
                         'translated': product_info.get('translated', False),
                         'images_downloaded': len(downloaded_images)
                     },
