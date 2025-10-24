@@ -5,6 +5,14 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8080/api/:path*', // Proxy to Flask backend
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig
