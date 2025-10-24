@@ -21,8 +21,8 @@ class AITranslator:
             self.client = None
         else:
             genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel('gemini-2.0-flash-exp')
-            logger.info("✅ AI Translator initialized (Gemini 2.0 Flash)")
+            self.client = genai.GenerativeModel('gemini-2.5-flash')
+            logger.info("✅ AI Translator initialized (Gemini 2.5 Flash)")
 
     def translate_product_title(self, chinese_title: str) -> Optional[str]:
         """

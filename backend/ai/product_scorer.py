@@ -20,8 +20,8 @@ class ProductScorer:
             self.client = None
         else:
             genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel('gemini-2.0-flash-exp')
-            logger.info("✅ ProductScorer initialized (Gemini 2.0 Flash)")
+            self.client = genai.GenerativeModel('gemini-2.5-flash')
+            logger.info("✅ ProductScorer initialized (Gemini 2.5 Flash)")
 
     def score_product(self, product: Dict[str, Any], keyword: str) -> Dict[str, Any]:
         """

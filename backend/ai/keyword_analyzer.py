@@ -21,8 +21,8 @@ class KeywordAnalyzer:
             self.client = None
         else:
             genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel('gemini-2.0-flash-exp')
-            logger.info("✅ KeywordAnalyzer initialized (Gemini 2.0 Flash)")
+            self.client = genai.GenerativeModel('gemini-2.5-flash')
+            logger.info("✅ KeywordAnalyzer initialized (Gemini 2.5 Flash)")
 
     def get_trending_keywords(self, category: str = "fashion", count: int = 10) -> List[Dict[str, Any]]:
         """
