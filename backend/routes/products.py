@@ -1,7 +1,7 @@
 """
 Products API routes
 Handles product import from Taobao, CRUD operations
-HeySeller-style: Web scraping + AI translation + Image download
+RapidAPI Mode: API integration + AI translation + Image download
 """
 from flask import Blueprint, request, jsonify
 import uuid
@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 @bp.route('/products/import', methods=['POST'])
 def import_product():
     """
-    Import product from Taobao URL - HeySeller Style
+    Import product from Taobao URL - RapidAPI Mode
     Features:
-    - Web scraping (no API needed)
+    - RapidAPI integration (reliable, no bot detection)
     - AI translation (Chinese → Korean)
     - Image download and optimization
 
@@ -47,11 +47,11 @@ def import_product():
                 }
             }), 400
 
-        logger.info(f"🔍 [HeySeller Mode] Importing product from URL: {url}")
+        logger.info(f"🔍 [RapidAPI Mode] Importing product from URL: {url}")
 
-        # Get scraper
-        scraper = get_taobao_scraper()
-        product_id = scraper.parse_product_url(url)
+        # Get RapidAPI connector
+        rapidapi = get_taobao_rapidapi()
+        product_id = rapidapi.parse_product_url(url)
 
         if not product_id:
             return jsonify({
@@ -83,21 +83,21 @@ def import_product():
                     }
                 }), 200
 
-        # Step 1: Scrape product from Taobao
-        logger.info("📥 Step 1/3: Scraping product information...")
-        product_info = scraper.scrape_product(url)
+        # Step 1: Fetch product from RapidAPI
+        logger.info("📥 Step 1/3: Fetching product from RapidAPI...")
+        product_info = rapidapi.get_product_detail(product_id)
 
         if not product_info:
             return jsonify({
                 'ok': False,
                 'error': {
-                    'code': 'SCRAPE_ERROR',
-                    'message': 'Failed to scrape product information',
+                    'code': 'API_ERROR',
+                    'message': 'Failed to fetch product information from RapidAPI',
                     'details': {'product_id': product_id}
                 }
             }), 500
 
-        logger.info(f"✅ Scraped product: {product_info.get('title', '')[:50]}...")
+        logger.info(f"✅ Fetched product: {product_info.get('title', '')[:50]}...")
 
         # Step 2: Translate to Korean
         logger.info("🌐 Step 2/3: Translating to Korean...")
@@ -165,7 +165,7 @@ def import_product():
                     'translated': product_info.get('translated', False),
                     'translation_provider': product_info.get('translation_provider', ''),
                     'imported_at': datetime.utcnow().isoformat(),
-                    'import_method': 'heyseller_scraper'
+                    'import_method': 'rapidapi'
                 }
             )
 
@@ -178,9 +178,9 @@ def import_product():
                 'ok': True,
                 'data': {
                     'product_id': str(product.id),
-                    'message': 'Product imported successfully (HeySeller Mode)',
+                    'message': 'Product imported successfully (RapidAPI Mode)',
                     'features': {
-                        'scraped': True,
+                        'api_fetched': True,
                         'translated': product_info.get('translated', False),
                         'images_downloaded': len(downloaded_images)
                     },
