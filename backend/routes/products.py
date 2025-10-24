@@ -156,11 +156,17 @@ def import_product():
 
         logger.info(f"✅ Fetched product: {product_info.get('title', '')[:50]}...")
 
-        # Step 2: Translate to Korean
+        # Step 2: Translate to Korean (optional - continue if fails)
         logger.info("🌐 Step 2/3: Translating to Korean...")
-        translator = get_translator()
-        product_info = translator.translate_product(product_info)
-        logger.info("✅ Translation completed")
+        try:
+            translator = get_translator()
+            product_info = translator.translate_product(product_info)
+            logger.info("✅ Translation completed")
+        except Exception as e:
+            logger.warning(f"⚠️ Translation failed (continuing without translation): {str(e)}")
+            # Continue without translation
+            product_info['translated'] = False
+            product_info['translation_error'] = str(e)
 
         # Step 3: Download images
         logger.info("📷 Step 3/3: Downloading images...")
