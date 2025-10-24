@@ -5,7 +5,7 @@ import os
 import logging
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
-import openai
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +14,15 @@ class KeywordAnalyzer:
     """AI-powered keyword trend analyzer"""
 
     def __init__(self):
-        """Initialize with OpenAI API key"""
-        api_key = os.getenv('OPENAI_API_KEY')
+        """Initialize with Gemini API key"""
+        api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
-            logger.warning("⚠️ OPENAI_API_KEY not configured. Keyword analysis will use fallback.")
+            logger.warning("⚠️ GEMINI_API_KEY not configured. Keyword analysis will use fallback.")
             self.client = None
         else:
-            self.client = openai.OpenAI(api_key=api_key)
-            logger.info("✅ KeywordAnalyzer initialized")
+            genai.configure(api_key=api_key)
+            self.client = genai.GenerativeModel('gemini-1.5-flash')
+            logger.info("✅ KeywordAnalyzer initialized (Gemini)")
 
     def get_trending_keywords(self, category: str = "fashion", count: int = 10) -> List[Dict[str, Any]]:
         """
@@ -72,19 +73,11 @@ JSON 배열로만 응답하세요. 다른 설명은 불필요합니다.
                 logger.warning("⚠️ Using fallback keywords")
                 return self._get_fallback_keywords(category, count)
 
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a Korean e-commerce trend analyst. Always respond in valid JSON format."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=2000
-            )
+            response = self.client.generate_content(prompt)
 
             # Parse response
             import json
-            content = response.choices[0].message.content
+            content = response.text
 
             # Extract JSON from response (handle markdown code blocks)
             if "```json" in content:
@@ -133,18 +126,20 @@ JSON 배열로만 응답하세요. 다른 설명은 불필요합니다.
 JSON으로만 응답하세요.
 """
 
-            response = openai.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a keyword analysis expert. Always respond in valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.5,
-                max_tokens=1000
-            )
+            if not self.client:
+                logger.warning("⚠️ Gemini not configured, using fallback")
+                return {
+                    "keyword": keyword,
+                    "search_volume_estimate": 0,
+                    "trend_score": 0,
+                    "recommendation": False,
+                    "reason": "AI not configured"
+                }
+
+            response = self.client.generate_content(prompt)
 
             import json
-            content = response.choices[0].message.content
+            content = response.text
 
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()

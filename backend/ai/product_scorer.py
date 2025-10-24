@@ -4,7 +4,7 @@ Product Scorer - AI-powered product scoring and evaluation
 import os
 import logging
 from typing import Dict, Any
-import openai
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -13,14 +13,15 @@ class ProductScorer:
     """AI-powered product scoring system"""
 
     def __init__(self):
-        """Initialize with OpenAI API key"""
-        api_key = os.getenv('OPENAI_API_KEY')
+        """Initialize with Gemini API key"""
+        api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
-            logger.warning("⚠️ OPENAI_API_KEY not configured. Product scoring will use fallback.")
+            logger.warning("⚠️ GEMINI_API_KEY not configured. Product scoring will use fallback.")
             self.client = None
         else:
-            self.client = openai.OpenAI(api_key=api_key)
-            logger.info("✅ ProductScorer initialized")
+            genai.configure(api_key=api_key)
+            self.client = genai.GenerativeModel('gemini-1.5-flash')
+            logger.info("✅ ProductScorer initialized (Gemini)")
 
     def score_product(self, product: Dict[str, Any], keyword: str) -> Dict[str, Any]:
         """
