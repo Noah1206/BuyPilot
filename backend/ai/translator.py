@@ -24,6 +24,45 @@ class AITranslator:
             self.client = genai.GenerativeModel('gemini-2.5-flash')
             logger.info("✅ AI Translator initialized (Gemini 2.5 Flash)")
 
+    def translate_korean_to_chinese(self, korean_text: str) -> Optional[str]:
+        """
+        Translate Korean text to Chinese (for Taobao search)
+
+        Args:
+            korean_text: Korean product title or keyword
+
+        Returns:
+            Chinese translation optimized for Taobao search
+        """
+        if not self.client or not korean_text:
+            return None
+
+        try:
+            logger.info(f"🔄 Translating Korean to Chinese: {korean_text[:50]}...")
+
+            prompt = f"""You are a professional translator specializing in e-commerce product search.
+Translate the following Korean product title/keyword to Chinese (Simplified Chinese).
+
+Requirements:
+- Focus on common Taobao search terms
+- Keep it concise and searchable
+- Use popular product terminology
+- Return ONLY the Chinese translation, no explanations
+
+Korean text: {korean_text}
+
+Chinese translation:"""
+
+            response = self.client.generate_content(prompt)
+            chinese_text = response.text.strip()
+            logger.info(f"✅ Korean→Chinese: {chinese_text[:50]}...")
+            return chinese_text
+
+        except Exception as e:
+            logger.error(f"❌ Korean to Chinese translation failed: {str(e)}")
+            # Fallback: return original text
+            return korean_text
+
     def translate_product_title(self, chinese_title: str) -> Optional[str]:
         """
         Translate product title from Chinese to Korean

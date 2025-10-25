@@ -1,0 +1,94 @@
+{
+  "training_examples": [
+    {
+      "keyword": "기모 맨투맨",
+      "season": "겨울",
+      "success_metrics": {
+        "monthly_sales": 5000000,
+        "profit_margin": 35,
+        "search_volume": 50000,
+        "competition": "medium"
+      },
+      "taobao_search_terms": ["加绒卫衣", "加厚卫衣", "秋冬卫衣"],
+      "price_strategy": {
+        "taobao_price": 15000,
+        "selling_price": 25000,
+        "profit": 10000
+      },
+      "notes": "겨울 시즌 베스트셀러, 기모 소재가 핵심"
+    },
+    {
+      "keyword": "오버핏 티셔츠",
+      "season": "봄/여름",
+      "success_metrics": {
+        "monthly_sales": 3000000,
+        "profit_margin": 40,
+        "search_volume": 35000,
+        "competition": "low"
+      },
+      "taobao_search_terms": ["宽松T恤", "oversized短袖", "韩版宽松"],
+      "price_strategy": {
+        "taobao_price": 8000,
+        "selling_price": 15000,
+        "profit": 7000
+      },
+      "notes": "저렴한 원가, 높은 마진율"
+    },
+    {
+      "keyword": "와이드 팬츠",
+      "season": "사계절",
+      "success_metrics": {
+        "monthly_sales": 4000000,
+        "profit_margin": 30,
+        "search_volume": 40000,
+        "competition": "high"
+      },
+      "taobao_search_terms": ["阔腿裤", "宽松裤", "直筒裤"],
+      "price_strategy": {
+        "taobao_price": 20000,
+        "selling_price": 30000,
+        "profit": 10000
+      },
+      "notes": "사계절 판매 가능, 안정적인 수요"
+    }
+  ],
+  "keyword_patterns": {
+    "high_profit": [
+      "기모 + {상품명}",
+      "오버핏 + {상품명}",
+      "루즈핏 + {상품명}",
+      "데일리 + {상품명}"
+    ],
+    "seasonal": {
+      "winter": ["기모", "양털", "패딩", "목폴라", "니트"],
+      "spring": ["린넨", "면", "가디건", "얇은", "봄"],
+      "summer": ["반팔", "반바지", "원피스", "민소매", "시원한"],
+      "fall": ["맨투맨", "후드", "긴팔", "가을", "데님"]
+    },
+    "modifiers": ["데일리", "베이직", "심플", "무지", "루즈핏", "오버핏"]
+  },
+  "learning_rules": [
+    {
+      "rule": "계절성 키워드 우선",
+      "description": "현재 시즌에 맞는 키워드를 우선 추천"
+    },
+    {
+      "rule": "마진율 30% 이상",
+      "description": "타오바오 원가 대비 한국 판매가 마진율 30% 이상 확보"
+    },
+    {
+      "rule": "검색량 vs 경쟁도 균형",
+      "description": "검색량은 높지만 경쟁도가 낮은 키워드 선호"
+    },
+    {
+      "rule": "타오바오 검색 가능성",
+      "description": "타오바오에서 실제로 저렴하게 구매 가능한 상품"
+    }
+  ],
+  "user_customization": {
+    "preferred_categories": ["fashion", "accessories"],
+    "target_margin": 35,
+    "budget_per_item": 30000,
+    "notes": "여기에 본인만의 성공 키워드를 추가하세요!"
+  }
+}

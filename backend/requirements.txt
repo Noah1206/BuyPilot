@@ -23,3 +23,7 @@ selenium==4.16.0
 beautifulsoup4==4.12.2
 webdriver-manager==4.0.1
 lxml==5.1.0
+
+# Excel generation (Phase 4 competitor analysis)
+pandas==2.2.0
+openpyxl==3.1.2

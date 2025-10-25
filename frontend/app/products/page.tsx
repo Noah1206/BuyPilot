@@ -147,6 +147,12 @@ export default function ProductsPage() {
             >
               상품 관리
             </a>
+            <a
+              href="/competitor"
+              className="block w-full text-left px-2 py-1 rounded text-xs text-[#8d96a0] hover:bg-[#21262d] transition-colors"
+            >
+              경쟁사 분석
+            </a>
           </div>
         </div>
       </aside>
