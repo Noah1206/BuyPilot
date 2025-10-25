@@ -130,13 +130,23 @@ export default function CompetitorAnalysisPage() {
 
   // Step 2: Match with Taobao
   const handleMatchTaobao = async (products: SmartStoreProduct[]) => {
+    console.log('🔍 Starting Taobao matching with products:', products.length)
+
+    if (!products || products.length === 0) {
+      setError('매칭할 상품이 없습니다. 먼저 크롤링을 완료해주세요.')
+      setCurrentStep(1)
+      return
+    }
+
     setLoading(true)
     setError(null)
     setCurrentStep(2)
     setMatchProgress({ current: 0, total: products.length })
 
     try {
+      console.log('📤 Sending request to match-taobao-batch with', products.length, 'products')
       const response = await matchTaobaoBatch(products, 3)
+      console.log('📥 Received response:', response)
 
       if (response.ok && response.data) {
         setMatches(response.data.matches)
@@ -160,10 +170,14 @@ export default function CompetitorAnalysisPage() {
           handleCalculatePrices(response.data!.matches)
         }, 1500)
       } else {
-        setError(response.error?.message || '타오바오 매칭에 실패했습니다.')
+        const errorMsg = response.error?.message || '타오바오 매칭에 실패했습니다.'
+        const errorDetails = response.error?.details ? JSON.stringify(response.error.details) : ''
+        console.error('❌ API Error:', response.error)
+        setError(`${errorMsg}${errorDetails ? ` (${errorDetails})` : ''}`)
         setCurrentStep(1)
       }
     } catch (err: any) {
+      console.error('❌ Network Error:', err)
       setError(err.message || '네트워크 오류가 발생했습니다.')
       setCurrentStep(1)
     } finally {
