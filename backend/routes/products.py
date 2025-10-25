@@ -8,6 +8,10 @@ import uuid
 from datetime import datetime
 from sqlalchemy import desc
 import logging
+import os
+from werkzeug.utils import secure_filename
+from PIL import Image
+import io
 
 from models import get_db, Product
 from connectors.taobao_api import get_taobao_connector
@@ -462,6 +466,119 @@ def delete_product(product_id):
             'error': {
                 'code': 'DATABASE_ERROR',
                 'message': 'Failed to delete product',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+@bp.route('/products/<product_id>/upload-image', methods=['POST'])
+def upload_edited_image(product_id):
+    """
+    Upload edited image from ImageEditor
+    Expects multipart/form-data with 'image' field containing PNG blob
+    """
+    try:
+        # Validate product exists
+        with get_db() as db:
+            product = db.query(Product).filter(Product.id == product_id).first()
+
+            if not product:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PRODUCT_NOT_FOUND',
+                        'message': f'Product {product_id} not found',
+                        'details': {}
+                    }
+                }), 404
+
+        # Check if file is present
+        if 'image' not in request.files:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'NO_FILE',
+                    'message': 'No image file provided',
+                    'details': {}
+                }
+            }), 400
+
+        file = request.files['image']
+
+        if file.filename == '':
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'EMPTY_FILENAME',
+                    'message': 'Empty filename',
+                    'details': {}
+                }
+            }), 400
+
+        # Generate unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"edited_{product_id}_{timestamp}.png"
+
+        # Ensure storage directory exists
+        storage_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'storage', 'images')
+        os.makedirs(storage_dir, exist_ok=True)
+
+        # Save file
+        filepath = os.path.join(storage_dir, filename)
+
+        # Optimize image before saving
+        image = Image.open(file.stream)
+
+        # Convert RGBA to RGB if necessary (for JPEG compatibility)
+        if image.mode == 'RGBA':
+            # Create white background
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            background.paste(image, mask=image.split()[3])  # Use alpha channel as mask
+            image = background
+
+        # Optimize and save
+        image.save(filepath, 'PNG', optimize=True, quality=85)
+
+        logger.info(f"✅ Saved edited image: {filename}")
+
+        # Generate public URL
+        image_service = get_image_service()
+        public_url = image_service.get_public_url(f"images/{filename}")
+
+        # Update product with new image URL
+        with get_db() as db:
+            product = db.query(Product).filter(Product.id == product_id).first()
+            product.image_url = public_url
+            product.updated_at = datetime.utcnow()
+
+            # Add to downloaded_images array in data
+            if not product.data:
+                product.data = {}
+            if 'downloaded_images' not in product.data:
+                product.data['downloaded_images'] = []
+
+            product.data['downloaded_images'].insert(0, public_url)  # Add at beginning
+
+            db.commit()
+
+            logger.info(f"✅ Updated product {product_id} with edited image")
+
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'image_url': public_url,
+                    'filename': filename,
+                    'message': 'Image uploaded successfully'
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Error uploading image: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'UPLOAD_ERROR',
+                'message': 'Failed to upload image',
                 'details': {'error': str(e)}
             }
         }), 500

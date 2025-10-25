@@ -1,14 +1,16 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
+import { uploadProductImage } from '@/lib/api'
 
 interface ImageEditorProps {
   imageUrl: string
+  productId: string
   onSave?: (editedImageUrl: string) => void
   onCancel?: () => void
 }
 
-export default function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorProps) {
+export default function ImageEditor({ imageUrl, productId, onSave, onCancel }: ImageEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [brushSize, setBrushSize] = useState(20)
@@ -16,6 +18,7 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorP
   const [tool, setTool] = useState<'eraser' | 'brush'>('eraser')
   const [history, setHistory] = useState<ImageData[]>([])
   const [historyStep, setHistoryStep] = useState(-1)
+  const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
     const img = new Image()
@@ -127,15 +130,40 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorP
     ctx.fill()
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || isUploading) return
 
-    canvas.toBlob((blob) => {
-      if (!blob) return
-      const url = URL.createObjectURL(blob)
-      onSave?.(url)
-    }, 'image/png')
+    setIsUploading(true)
+
+    try {
+      // Convert canvas to blob
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png')
+      })
+
+      if (!blob) {
+        console.error('Failed to create blob from canvas')
+        setIsUploading(false)
+        return
+      }
+
+      // Upload to backend
+      const response = await uploadProductImage(productId, blob)
+
+      if (response.ok && response.data) {
+        // Pass the permanent image URL back to parent
+        onSave?.(response.data.image_url)
+      } else {
+        console.error('Upload failed:', response.error)
+        alert(`업로드 실패: ${response.error?.message || '알 수 없는 오류'}`)
+      }
+    } catch (error) {
+      console.error('Error saving image:', error)
+      alert('이미지 저장 중 오류가 발생했습니다.')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleReset = () => {
@@ -309,12 +337,14 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorP
             </button>
             <button
               onClick={handleSave}
+              disabled={isUploading}
               className="px-8 py-3 bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#238636]
                 text-white font-bold rounded-lg transition-all shadow-lg shadow-[#238636]/30
-                hover:shadow-xl hover:shadow-[#238636]/40 flex items-center gap-2"
+                hover:shadow-xl hover:shadow-[#238636]/40 flex items-center gap-2
+                disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="text-lg">💾</span>
-              저장하기
+              <span className="text-lg">{isUploading ? '⏳' : '💾'}</span>
+              {isUploading ? '업로드 중...' : '저장하기'}
             </button>
           </div>
         </div>

@@ -263,3 +263,35 @@ export async function deleteProduct(productId: string): Promise<ApiResponse<{ pr
     method: 'DELETE',
   })
 }
+
+/**
+ * Upload edited image for product
+ */
+export async function uploadProductImage(
+  productId: string,
+  imageBlob: Blob
+): Promise<ApiResponse<{ image_url: string; filename: string; message: string }>> {
+  try {
+    const formData = new FormData()
+    formData.append('image', imageBlob, 'edited.png')
+
+    const response = await fetch(`${API_URL}/api/v1/products/${productId}/upload-image`, {
+      method: 'POST',
+      body: formData,
+      // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
+    })
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Image upload error:', error)
+    return {
+      ok: false,
+      error: {
+        code: 'UPLOAD_ERROR',
+        message: 'Failed to upload image',
+        details: error,
+      },
+    }
+  }
+}

@@ -348,6 +348,7 @@ export default function ProductsPage() {
       {editingImage && (
         <ImageEditor
           imageUrl={editingImage.imageUrl}
+          productId={editingImage.productId}
           onSave={handleSaveImage}
           onCancel={() => setEditingImage(null)}
         />
