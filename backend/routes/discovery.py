@@ -905,3 +905,84 @@ def translate_batch():
                 'details': {'error': str(e)}
             }
         }), 500
+
+
+# ============================================================
+# Shopify Discovery Routes
+# ============================================================
+
+@bp.route('/discovery/shopify/export-excel', methods=['POST'])
+def shopify_export_excel():
+    """
+    Shopify CSV 파일 생성 및 다운로드
+
+    Body: {
+        products: [
+            {
+                taobao_id: string,
+                title: string,
+                korean_title: string,
+                selling_price: number,
+                original_price: number,
+                main_image: string,
+                image_1: string,
+                ...
+                category: string,
+                brand: string,
+                notes: string
+            }
+        ]
+    }
+
+    Returns: CSV file (Shopify Product Import format)
+    """
+    try:
+        data = request.get_json()
+        products = data.get('products', [])
+
+        if not products:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'NO_PRODUCTS',
+                    'message': 'No products provided'
+                }
+            }), 400
+
+        logger.info(f"📦 Generating Shopify CSV for {len(products)} products...")
+
+        # Shopify CSV 생성
+        from utils.shopify_excel_generator import get_shopify_generator
+        generator = get_shopify_generator()
+
+        filepath = generator.generate_excel(products)
+
+        logger.info(f"✅ Shopify CSV generated: {filepath}")
+
+        # 파일 전송
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=os.path.basename(filepath),
+            mimetype='text/csv'
+        )
+
+    except ValueError as e:
+        logger.warning(f"⚠️ Invalid input: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'INVALID_INPUT',
+                'message': str(e)
+            }
+        }), 400
+    except Exception as e:
+        logger.error(f"❌ Shopify Excel export failed: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'EXPORT_ERROR',
+                'message': 'Failed to generate Shopify CSV',
+                'details': {'error': str(e)}
+            }
+        }), 500

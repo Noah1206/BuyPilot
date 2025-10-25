@@ -113,6 +113,18 @@ export default function Dashboard() {
             >
               상품 관리
             </a>
+            <a
+              href="/competitor"
+              className="block w-full text-left px-2 py-1 rounded text-xs text-vscode-text-secondary hover:bg-vscode-bg-tertiary/50 transition-colors"
+            >
+              스마트스토어
+            </a>
+            <a
+              href="/shopify"
+              className="block w-full text-left px-2 py-1 rounded text-xs text-vscode-text-secondary hover:bg-vscode-bg-tertiary/50 transition-colors"
+            >
+              쇼피파이
+            </a>
           </div>
 
           <div className="text-xs font-semibold text-vscode-text-muted uppercase tracking-wider mb-2">
