@@ -17,6 +17,7 @@ class SmartStoreExcelGenerator:
     # 스마트스토어 필수 컬럼
     REQUIRED_COLUMNS = [
         '상품명',
+        '한글제목',  # AI 번역된 한글 제목
         '판매가',
         '대표이미지',
         '추가이미지1',
@@ -129,7 +130,8 @@ class SmartStoreExcelGenerator:
 
             return [
                 # 기본 정보
-                product.get('title', '')[:50],  # 상품명 (50자 제한)
+                product.get('title', '')[:100],  # 상품명 (원본 중국어)
+                product.get('korean_title', '')[:100],  # 한글제목 (AI 번역)
                 selling_price,  # 판매가
 
                 # 이미지 (최대 5개)

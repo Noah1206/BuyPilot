@@ -7,23 +7,29 @@ import { useState } from 'react'
 import { ProductMatch, PricedProduct } from '@/lib/api-competitor'
 import TaobaoCandidateCard from './TaobaoCandidateCard'
 import PriceBreakdownTooltip from './PriceBreakdownTooltip'
+import TranslationButton from './TranslationButton'
+import TranslationEditor from './TranslationEditor'
 
 interface ProductSelectionTableProps {
   matches: ProductMatch[]
   pricedProducts: PricedProduct[]
   selectedProducts: Set<string> // Set of taobao_ids
+  translations: Map<string, string> // Map of taobao_id → Korean title
   onToggleSelect: (taobaoId: string, match: ProductMatch) => void
   onSelectAll: () => void
   onDeselectAll: () => void
+  onTranslationChange: (taobaoId: string, translation: string) => void
 }
 
 export default function ProductSelectionTable({
   matches,
   pricedProducts,
   selectedProducts,
+  translations,
   onToggleSelect,
   onSelectAll,
   onDeselectAll,
+  onTranslationChange,
 }: ProductSelectionTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'rank' | 'price' | 'profit'>('rank')
@@ -232,6 +238,33 @@ export default function ProductSelectionTable({
                       />
                     ))}
                   </div>
+
+                  {/* Translation Section */}
+                  {selectedProducts.has(match.best_match.taobao_id) && (
+                    <div className="mt-4 p-4 bg-[#0d1117] border border-[#30363d] rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="text-sm font-semibold text-[#e6edf3]">
+                          한글 제목 번역
+                        </h5>
+                        {!translations.get(match.best_match.taobao_id) && (
+                          <TranslationButton
+                            title={match.best_match.title}
+                            onTranslate={(translated) =>
+                              onTranslationChange(match.best_match.taobao_id, translated)
+                            }
+                          />
+                        )}
+                      </div>
+
+                      <TranslationEditor
+                        original={match.best_match.title}
+                        translated={translations.get(match.best_match.taobao_id) || null}
+                        onSave={(newTranslation) =>
+                          onTranslationChange(match.best_match.taobao_id, newTranslation)
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

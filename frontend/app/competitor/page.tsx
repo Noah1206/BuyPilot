@@ -10,6 +10,9 @@ import {
   saveAnalysisState,
   loadAnalysisState,
   clearAnalysisState,
+  saveTranslations,
+  loadTranslations,
+  clearTranslations,
   type SmartStoreProduct,
   type ProductMatch,
   type PricedProduct,
@@ -28,9 +31,10 @@ export default function CompetitorAnalysisPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   // Step 0: Input
-  const [url, setUrl] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [maxProducts, setMaxProducts] = useState(100)
-  const [minSales, setMinSales] = useState(1000)
+  const [minPrice, setMinPrice] = useState(0)
+  const [maxPrice, setMaxPrice] = useState(0)
 
   // Step 1: Scraping results
   const [smartstoreProducts, setSmartStoreProducts] = useState<SmartStoreProduct[]>([])
@@ -49,6 +53,24 @@ export default function CompetitorAnalysisPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const [selectedMatches, setSelectedMatches] = useState<Map<string, ProductMatch>>(new Map())
   const [downloading, setDownloading] = useState(false)
+
+  // Translations: Map of taobao_id → Korean title
+  const [translations, setTranslations] = useState<Map<string, string>>(new Map())
+
+  // Load translations on mount
+  useEffect(() => {
+    const savedTranslations = loadTranslations()
+    if (savedTranslations.size > 0) {
+      setTranslations(savedTranslations)
+    }
+  }, [])
+
+  // Save translations when they change
+  useEffect(() => {
+    if (translations.size > 0) {
+      saveTranslations(translations)
+    }
+  }, [translations])
 
   // Load saved state on mount
   useEffect(() => {
@@ -81,15 +103,10 @@ export default function CompetitorAnalysisPage() {
     }
   }, [smartstoreProducts, matches, pricedProducts, currentStep])
 
-  // Step 1: Start analysis - Scrape SmartStore
+  // Step 1: Start analysis - Search Naver Shopping
   const handleStartAnalysis = async () => {
-    if (!url.trim()) {
-      setError('스마트스토어 URL을 입력해주세요.')
-      return
-    }
-
-    if (!url.includes('smartstore.naver.com')) {
-      setError('올바른 스마트스토어 URL이 아닙니다.')
+    if (!keyword.trim()) {
+      setError('검색 키워드를 입력해주세요.')
       return
     }
 
@@ -100,7 +117,7 @@ export default function CompetitorAnalysisPage() {
     setCrawlProgress({ current: 0, total: maxProducts })
 
     try {
-      const response = await analyzeCompetitor(url, maxProducts, minSales)
+      const response = await analyzeCompetitor(keyword, maxProducts, minPrice, maxPrice)
 
       if (response.ok && response.data) {
         setSmartStoreProducts(response.data.products)
@@ -108,8 +125,11 @@ export default function CompetitorAnalysisPage() {
           current: response.data.products.length,
           total: response.data.products.length,
         })
+        const priceFilter = minPrice > 0 || maxPrice > 0
+          ? ` (${minPrice > 0 ? minPrice.toLocaleString() + '원 이상' : ''}${minPrice > 0 && maxPrice > 0 ? ', ' : ''}${maxPrice > 0 ? maxPrice.toLocaleString() + '원 이하' : ''})`
+          : ''
         setSuccess(
-          `${response.data.filtered_products}개 상품을 수집했습니다 (총 ${response.data.total_products}개 중 ${minSales}개 이상 구매 필터링)`
+          `"${keyword}" 검색 결과: ${response.data.total_count}개 상품 수집${priceFilter}`
         )
         // Auto-advance to step 2
         setTimeout(() => {
@@ -117,7 +137,7 @@ export default function CompetitorAnalysisPage() {
           handleMatchTaobao(response.data!.products)
         }, 1500)
       } else {
-        setError(response.error?.message || '크롤링에 실패했습니다.')
+        setError(response.error?.message || '상품 검색에 실패했습니다.')
         setCurrentStep(0)
       }
     } catch (err: any) {
@@ -294,10 +314,13 @@ export default function CompetitorAnalysisPage() {
     setError(null)
 
     try {
-      // Filter priced products by selection
-      const selectedPricedProducts = pricedProducts.filter((p) =>
-        selectedProducts.has(p.taobao_id)
-      )
+      // Filter priced products by selection and add translations
+      const selectedPricedProducts = pricedProducts
+        .filter((p) => selectedProducts.has(p.taobao_id))
+        .map((p) => ({
+          ...p,
+          korean_title: translations.get(p.taobao_id) || '', // Add Korean translation
+        }))
 
       const response = await exportExcel(selectedPricedProducts)
 
@@ -314,6 +337,15 @@ export default function CompetitorAnalysisPage() {
     }
   }
 
+  // Handle translation change
+  const handleTranslationChange = (taobaoId: string, translation: string) => {
+    setTranslations((prev) => {
+      const newMap = new Map(prev)
+      newMap.set(taobaoId, translation)
+      return newMap
+    })
+  }
+
   // Reset analysis
   const handleReset = () => {
     if (confirm('분석을 처음부터 다시 시작하시겠습니까?')) {
@@ -324,10 +356,12 @@ export default function CompetitorAnalysisPage() {
       setFailedProducts([])
       setSelectedProducts(new Set())
       setSelectedMatches(new Map())
-      setUrl('')
+      setTranslations(new Map())
+      setKeyword('')
       setError(null)
       setSuccess(null)
       clearAnalysisState()
+      clearTranslations()
     }
   }
 
@@ -369,9 +403,9 @@ export default function CompetitorAnalysisPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold mb-2">경쟁사 분석</h1>
+                <h1 className="text-3xl font-bold mb-2">인기 상품 분석</h1>
                 <p className="text-[#8d96a0]">
-                  스마트스토어 베스트 상품을 분석하고 타오바오에서 매칭되는 상품을 찾아보세요
+                  네이버 쇼핑 인기 상품을 검색하고 타오바오에서 매칭되는 상품을 찾아보세요
                 </p>
               </div>
               {currentStep > 0 && (
@@ -403,7 +437,7 @@ export default function CompetitorAnalysisPage() {
           {/* Step 0: Input Form */}
           {currentStep === 0 && (
             <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">분석 시작</h2>
+              <h2 className="text-xl font-semibold mb-4">상품 검색</h2>
               <form
                 onSubmit={(e) => {
                   e.preventDefault()
@@ -412,24 +446,24 @@ export default function CompetitorAnalysisPage() {
                 className="space-y-4"
               >
                 <div>
-                  <label htmlFor="url" className="block text-sm font-medium mb-2">
-                    스마트스토어 베스트 상품 페이지 URL *
+                  <label htmlFor="keyword" className="block text-sm font-medium mb-2">
+                    검색 키워드 *
                   </label>
                   <input
-                    id="url"
+                    id="keyword"
                     type="text"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://smartstore.naver.com/판매자ID/best?cp=1"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    placeholder="예: 청바지, 맨투맨, 운동화"
                     className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#1f6feb] focus:ring-1 focus:ring-[#1f6feb]"
                     required
                   />
                   <p className="text-xs text-[#8d96a0] mt-1">
-                    예: https://smartstore.naver.com/wg0057/best?cp=1
+                    카테고리나 상품명을 입력하세요
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label htmlFor="maxProducts" className="block text-sm font-medium mb-2">
                       최대 상품 수
@@ -440,22 +474,39 @@ export default function CompetitorAnalysisPage() {
                       value={maxProducts}
                       onChange={(e) => setMaxProducts(parseInt(e.target.value) || 100)}
                       min="10"
-                      max="200"
+                      max="100"
                       className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:border-[#1f6feb]"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="minSales" className="block text-sm font-medium mb-2">
-                      최소 구매수
+                    <label htmlFor="minPrice" className="block text-sm font-medium mb-2">
+                      최소 가격 (선택)
                     </label>
                     <input
-                      id="minSales"
+                      id="minPrice"
                       type="number"
-                      value={minSales}
-                      onChange={(e) => setMinSales(parseInt(e.target.value) || 1000)}
+                      value={minPrice || ''}
+                      onChange={(e) => setMinPrice(parseInt(e.target.value) || 0)}
                       min="0"
-                      step="100"
+                      step="1000"
+                      placeholder="0"
+                      className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:border-[#1f6feb]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="maxPrice" className="block text-sm font-medium mb-2">
+                      최대 가격 (선택)
+                    </label>
+                    <input
+                      id="maxPrice"
+                      type="number"
+                      value={maxPrice || ''}
+                      onChange={(e) => setMaxPrice(parseInt(e.target.value) || 0)}
+                      min="0"
+                      step="1000"
+                      placeholder="제한없음"
                       className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:border-[#1f6feb]"
                     />
                   </div>
@@ -463,18 +514,18 @@ export default function CompetitorAnalysisPage() {
 
                 <button
                   type="submit"
-                  disabled={loading || !url}
+                  disabled={loading || !keyword}
                   className="w-full px-6 py-3 bg-[#238636] hover:bg-[#2ea043] disabled:bg-[#21262d] disabled:text-[#6e7681] disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
                 >
-                  {loading ? '분석 시작 중...' : '분석 시작'}
+                  {loading ? '검색 중...' : '검색 시작'}
                 </button>
 
                 <div className="mt-4 p-4 bg-[#58a6ff]/10 border border-[#58a6ff] rounded-lg">
                   <p className="text-sm text-[#e6edf3]">
-                    <strong>⏱️ 예상 소요 시간:</strong> 100개 상품 기준 약 8-12분
+                    <strong>⏱️ 예상 소요 시간:</strong> 100개 상품 기준 약 6-10분
                   </p>
                   <ul className="mt-2 text-xs text-[#8d96a0] space-y-1 ml-4 list-disc">
-                    <li>크롤링: 2-3분</li>
+                    <li>상품 검색: 5-10초</li>
                     <li>타오바오 매칭: 5-8분 (가장 오래 걸림)</li>
                     <li>가격 계산: 10초</li>
                   </ul>
@@ -570,9 +621,11 @@ export default function CompetitorAnalysisPage() {
                 matches={matches}
                 pricedProducts={pricedProducts}
                 selectedProducts={selectedProducts}
+                translations={translations}
                 onToggleSelect={handleToggleSelect}
                 onSelectAll={handleSelectAll}
                 onDeselectAll={handleDeselectAll}
+                onTranslationChange={handleTranslationChange}
               />
             </div>
           )}

@@ -146,31 +146,36 @@ async function apiFetch<T>(
 }
 
 /**
- * Step 1: Analyze competitor's SmartStore best products
+ * Step 1: Search popular products by keyword (Naver Shopping API)
  *
- * @param sellerUrl - SmartStore best products page URL
- * @param maxProducts - Maximum number of products to scrape (default: 100)
- * @param minSales - Minimum purchase count filter (default: 1000)
- * @returns Scraped SmartStore products sorted by popularity
+ * @param keyword - Search keyword (예: "청바지", "맨투맨")
+ * @param maxProducts - Maximum number of products (default: 100)
+ * @param minPrice - Minimum price filter (optional)
+ * @param maxPrice - Maximum price filter (optional)
+ * @param filterSmartstore - Filter only SmartStore products (optional)
+ * @returns Popular products from Naver Shopping
  */
 export async function analyzeCompetitor(
-  sellerUrl: string,
+  keyword: string,
   maxProducts: number = 100,
-  minSales: number = 1000
+  minPrice?: number,
+  maxPrice?: number,
+  filterSmartstore?: boolean
 ): Promise<ApiResponse<{
-  seller_id: string
-  total_products: number
-  filtered_products: number
+  keyword: string
+  total_count: number
   products: SmartStoreProduct[]
 }>> {
   return apiFetch('/api/v1/discovery/analyze-competitor', {
     method: 'POST',
     body: JSON.stringify({
-      seller_url: sellerUrl,
+      keyword,
       max_products: maxProducts,
-      min_sales: minSales,
+      min_price: minPrice || 0,
+      max_price: maxPrice || 0,
+      filter_smartstore: filterSmartstore || false,
     }),
-  }, 180000) // 3 minutes timeout for scraping
+  }, 30000) // 30 seconds timeout for API call
 }
 
 /**
@@ -354,5 +359,93 @@ export function clearAnalysisState(): void {
     localStorage.removeItem('competitor-analysis-timestamp')
   } catch (error) {
     console.error('Failed to clear analysis state:', error)
+  }
+}
+
+// ============================================================
+// TRANSLATION FUNCTIONS
+// ============================================================
+
+export interface TranslationResult {
+  original: string
+  translated: string
+  style: string
+}
+
+/**
+ * Translate single product title (Chinese → Korean)
+ */
+export async function translateTitle(
+  title: string,
+  style: 'marketing' | 'formal' | 'casual' | 'seo' = 'marketing'
+): Promise<ApiResponse<TranslationResult>> {
+  return apiFetch('/api/v1/discovery/translate-title', {
+    method: 'POST',
+    body: JSON.stringify({ title, style }),
+  }, 30000) // 30 seconds timeout
+}
+
+/**
+ * Translate multiple titles in batch
+ */
+export async function translateBatch(
+  titles: string[],
+  style: 'marketing' | 'formal' | 'casual' | 'seo' = 'marketing'
+): Promise<ApiResponse<{
+  translations: Array<{
+    original: string
+    translated: string
+    index: number
+  }>
+  total: number
+  succeeded: number
+  failed: number
+}>> {
+  return apiFetch('/api/v1/discovery/translate-batch', {
+    method: 'POST',
+    body: JSON.stringify({ titles, style }),
+  }, 120000) // 2 minutes timeout for batch
+}
+
+// ============================================================
+// TRANSLATION STATE MANAGEMENT
+// ============================================================
+
+/**
+ * Save translations to localStorage
+ */
+export function saveTranslations(translations: Map<string, string>): void {
+  try {
+    const obj = Object.fromEntries(translations)
+    localStorage.setItem('product-translations', JSON.stringify(obj))
+  } catch (error) {
+    console.error('Failed to save translations:', error)
+  }
+}
+
+/**
+ * Load translations from localStorage
+ */
+export function loadTranslations(): Map<string, string> {
+  try {
+    const stored = localStorage.getItem('product-translations')
+    if (!stored) return new Map()
+
+    const obj = JSON.parse(stored)
+    return new Map(Object.entries(obj))
+  } catch (error) {
+    console.error('Failed to load translations:', error)
+    return new Map()
+  }
+}
+
+/**
+ * Clear translations from localStorage
+ */
+export function clearTranslations(): void {
+  try {
+    localStorage.removeItem('product-translations')
+  } catch (error) {
+    console.error('Failed to clear translations:', error)
   }
 }

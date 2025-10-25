@@ -333,32 +333,36 @@ def reject_candidate(candidate_id):
 
 
 # ============================================================================
-# Competitor Analysis - SmartStore Scraping
+# Competitor Analysis - Naver Shopping API
 # ============================================================================
 
 @bp.route('/discovery/analyze-competitor', methods=['POST'])
 def analyze_competitor():
     """
-    스마트스토어 경쟁사 분석 (베스트 상품 크롤링)
+    네이버 쇼핑 인기 상품 검색 (Naver Shopping API 사용)
 
     Body: {
-        seller_url: string,  # https://smartstore.naver.com/wg0057/best
+        keyword: string,  # 검색 키워드 (예: "청바지", "맨투맨")
         max_products: number,  # 최대 상품 수 (기본 100)
-        min_sales: number  # 최소 판매량 (기본 1000)
+        min_price: number,  # 최소 가격 (선택, 기본 0)
+        max_price: number,  # 최대 가격 (선택, 기본 0)
+        filter_smartstore: boolean  # 스마트스토어만 필터링 (선택, 기본 false)
     }
 
     Response: {
         ok: true,
         data: {
-            seller_id: string,
+            keyword: string,
             products: [{
                 title: string,
                 price: number,
                 image_url: string,
                 product_url: string,
-                review_count: number,
-                purchase_count: number,
-                rating: number,
+                product_id: string,
+                mall_name: string,
+                brand: string,
+                category1: string,
+                category2: string,
                 rank: number,
                 popularity_score: number
             }],
@@ -369,55 +373,53 @@ def analyze_competitor():
     try:
         data = request.get_json(force=True) or {}
 
-        seller_url = data.get('seller_url')
-        if not seller_url:
+        keyword = data.get('keyword')
+        if not keyword:
             return jsonify({
                 'ok': False,
                 'error': {
                     'code': 'VALIDATION_ERROR',
-                    'message': 'Missing required field: seller_url',
+                    'message': 'Missing required field: keyword',
                     'details': {}
                 }
             }), 400
 
         max_products = int(data.get('max_products', 100))
-        min_sales = int(data.get('min_sales', 1000))
+        min_price = int(data.get('min_price', 0))
+        max_price = int(data.get('max_price', 0))
+        filter_smartstore = data.get('filter_smartstore', False)
 
-        logger.info(f"🔍 Starting competitor analysis: {seller_url}")
+        logger.info(f"🔍 Searching Naver Shopping: keyword='{keyword}', max={max_products}")
 
-        # Import here to avoid circular dependencies
-        from connectors.smartstore_scraper import get_smartstore_scraper
+        # Import Naver Shopping API
+        from connectors.naver_shopping_api import get_shopping_api
 
-        scraper = get_smartstore_scraper()
-        products = scraper.scrape_best_products(
-            seller_url=seller_url,
+        shopping_api = get_shopping_api()
+        products = shopping_api.search_popular_products(
+            keyword=keyword,
             max_products=max_products,
-            min_sales=min_sales
+            min_price=min_price,
+            max_price=max_price
         )
 
-        # Extract seller ID
-        import re
-        seller_id_match = re.search(r'/([^/]+)/(best|products)', seller_url)
-        seller_id = seller_id_match.group(1) if seller_id_match else 'unknown'
-
-        logger.info(f"✅ Competitor analysis complete: {len(products)} products")
+        logger.info(f"✅ Search complete: {len(products)} products found")
 
         return jsonify({
             'ok': True,
             'data': {
-                'seller_id': seller_id,
+                'keyword': keyword,
                 'products': products,
                 'total_count': len(products)
             }
         }), 200
 
     except Exception as e:
-        logger.error(f"❌ Competitor analysis failed: {str(e)}")
+        logger.error(f"❌ Product search failed: {str(e)}")
         return jsonify({
             'ok': False,
             'error': {
-                'code': 'SCRAPING_ERROR',
-                'message': 'Failed to analyze competitor',
+                'code': 'SEARCH_ERROR',
+                'message': 'Failed to search products',
                 'details': {'error': str(e)}
             }
         }), 500
@@ -733,6 +735,173 @@ def export_excel():
             'error': {
                 'code': 'EXPORT_ERROR',
                 'message': 'Failed to export excel',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+# ============================================================================
+# Product Translation - AI Translation Service
+# ============================================================================
+
+@bp.route('/discovery/translate-title', methods=['POST'])
+def translate_title():
+    """
+    타오바오 상품 제목 AI 번역 (중국어 → 한글)
+
+    Body: {
+        title: string,  # 중국어 제목
+        style: string  # optional: "formal", "casual", "seo" (기본: "marketing")
+    }
+
+    Response: {
+        ok: true,
+        data: {
+            original: string,  # 원본 중국어
+            translated: string,  # 번역된 한글
+            style: string  # 사용된 스타일
+        }
+    }
+    """
+    try:
+        data = request.get_json(force=True) or {}
+
+        title = data.get('title')
+        if not title:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'Missing required field: title',
+                    'details': {}
+                }
+            }), 400
+
+        style = data.get('style', 'marketing')
+
+        logger.info(f"🔄 Translating title (style: {style}): {title[:50]}...")
+
+        # Import translator
+        from ai.translator import get_translator
+
+        translator = get_translator()
+        translated = translator.translate_product_title(title)
+
+        if not translated:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'TRANSLATION_ERROR',
+                    'message': 'Translation service unavailable or failed',
+                    'details': {'hint': 'Check GEMINI_API_KEY configuration'}
+                }
+            }), 500
+
+        logger.info(f"✅ Translation complete: {translated[:50]}...")
+
+        return jsonify({
+            'ok': True,
+            'data': {
+                'original': title,
+                'translated': translated,
+                'style': style
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Translation failed: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'TRANSLATION_ERROR',
+                'message': 'Failed to translate title',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+@bp.route('/discovery/translate-batch', methods=['POST'])
+def translate_batch():
+    """
+    여러 상품 제목 일괄 번역
+
+    Body: {
+        titles: [string],  # 중국어 제목 배열
+        style: string  # optional
+    }
+
+    Response: {
+        ok: true,
+        data: {
+            translations: [{
+                original: string,
+                translated: string,
+                index: number
+            }],
+            total: number,
+            failed: number
+        }
+    }
+    """
+    try:
+        data = request.get_json(force=True) or {}
+
+        titles = data.get('titles', [])
+        if not titles:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'Missing required field: titles',
+                    'details': {}
+                }
+            }), 400
+
+        style = data.get('style', 'marketing')
+
+        logger.info(f"🔄 Batch translating {len(titles)} titles...")
+
+        from ai.translator import get_translator
+
+        translator = get_translator()
+        translations = []
+        failed_count = 0
+
+        for idx, title in enumerate(titles):
+            try:
+                translated = translator.translate_product_title(title)
+                if translated:
+                    translations.append({
+                        'original': title,
+                        'translated': translated,
+                        'index': idx
+                    })
+                else:
+                    failed_count += 1
+                    logger.warning(f"   [{idx+1}/{len(titles)}] Translation failed")
+            except Exception as e:
+                failed_count += 1
+                logger.warning(f"   [{idx+1}/{len(titles)}] Error: {str(e)}")
+
+        logger.info(f"✅ Batch translation complete: {len(translations)}/{len(titles)} succeeded")
+
+        return jsonify({
+            'ok': True,
+            'data': {
+                'translations': translations,
+                'total': len(titles),
+                'succeeded': len(translations),
+                'failed': failed_count
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Batch translation failed: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'TRANSLATION_ERROR',
+                'message': 'Failed to translate titles',
                 'details': {'error': str(e)}
             }
         }), 500
