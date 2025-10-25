@@ -239,16 +239,48 @@ export default function ProductsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {products.map((product) => (
+              {products.map((product) => {
+                // Filter out blob URLs and use fallback image
+                const getValidImageUrl = (product: Product): string => {
+                  // If image_url is valid (not blob), use it
+                  if (product.image_url && !product.image_url.startsWith('blob:')) {
+                    return product.image_url
+                  }
+
+                  // Try to find a valid image from data
+                  if (product.data) {
+                    // Try downloaded_images
+                    if (product.data.downloaded_images && Array.isArray(product.data.downloaded_images)) {
+                      const validImage = product.data.downloaded_images.find((img: string) => !img.startsWith('blob:'))
+                      if (validImage) return validImage
+                    }
+
+                    // Try pic_url
+                    if (product.data.pic_url && !product.data.pic_url.startsWith('blob:')) {
+                      return product.data.pic_url
+                    }
+
+                    // Try images array
+                    if (product.data.images && Array.isArray(product.data.images) && product.data.images.length > 0) {
+                      return product.data.images[0]
+                    }
+                  }
+
+                  return '' // No valid image found
+                }
+
+                const validImageUrl = getValidImageUrl(product)
+
+                return (
                 <div
                   key={product.id}
                   className="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hover:border-[#58a6ff] transition-colors group"
                 >
                   {/* Product Image */}
-                  {product.image_url && (
+                  {validImageUrl && (
                     <div className="aspect-square bg-[#0d1117] overflow-hidden">
                       <img
-                        src={product.image_url}
+                        src={validImageUrl}
                         alt={product.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -294,9 +326,9 @@ export default function ProductsPage() {
                         >
                           원본 보기
                         </a>
-                        {product.image_url && (
+                        {validImageUrl && (
                           <button
-                            onClick={() => handleEditImage(product.id, product.image_url!)}
+                            onClick={() => handleEditImage(product.id, validImageUrl)}
                             className="flex-1 px-3 py-1.5 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 border border-[#58a6ff] text-[#58a6ff] text-xs rounded transition-colors"
                           >
                             이미지 편집
@@ -312,7 +344,8 @@ export default function ProductsPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
