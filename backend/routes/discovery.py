@@ -2,10 +2,11 @@
 Discovery API routes
 Handles AI-powered product discovery and candidate management
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from datetime import datetime
 from sqlalchemy import desc
 import logging
+import os
 
 from models import get_db, ProductCandidate, CandidateStatus
 from ai.discovery_service import get_discovery_service
@@ -983,6 +984,231 @@ def shopify_export_excel():
             'error': {
                 'code': 'EXPORT_ERROR',
                 'message': 'Failed to generate Shopify CSV',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+# ============================================================
+# Amazon to Shopify Routes
+# ============================================================
+
+@bp.route('/discovery/amazon/search', methods=['POST'])
+def amazon_search():
+    """
+    Amazon 상품 검색
+
+    Body: {
+        keyword: string,
+        max_results: number (default: 20),
+        min_price: number (optional, USD),
+        max_price: number (optional, USD)
+    }
+
+    Returns: {
+        ok: boolean,
+        data: {
+            products: [...],
+            total: number
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        keyword = data.get('keyword', '').strip()
+        max_results = int(data.get('max_results', 20))
+        min_price = data.get('min_price')
+        max_price = data.get('max_price')
+
+        if not keyword:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'MISSING_KEYWORD',
+                    'message': 'Keyword is required'
+                }
+            }), 400
+
+        logger.info(f"🔍 Amazon search: keyword='{keyword}', max={max_results}")
+
+        # Import Amazon scraper
+        from connectors.amazon_scraper import get_amazon_scraper
+        scraper = get_amazon_scraper()
+
+        # Search products
+        products = scraper.search_products(
+            keyword=keyword,
+            max_results=max_results,
+            min_price=float(min_price) if min_price else None,
+            max_price=float(max_price) if max_price else None
+        )
+
+        logger.info(f"✅ Found {len(products)} Amazon products")
+
+        return jsonify({
+            'ok': True,
+            'data': {
+                'products': products,
+                'total': len(products),
+                'keyword': keyword
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Amazon search failed: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'SEARCH_ERROR',
+                'message': 'Failed to search Amazon products',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+@bp.route('/discovery/amazon/product/<asin>', methods=['GET'])
+def amazon_product_details(asin: str):
+    """
+    Amazon 상품 상세 정보 조회
+
+    Path: /discovery/amazon/product/{asin}
+
+    Returns: {
+        ok: boolean,
+        data: {
+            product: {...}
+        }
+    }
+    """
+    try:
+        logger.info(f"🔍 Fetching Amazon product: {asin}")
+
+        from connectors.amazon_scraper import get_amazon_scraper
+        scraper = get_amazon_scraper()
+
+        product = scraper.get_product_details(asin)
+
+        if not product:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'PRODUCT_NOT_FOUND',
+                    'message': f'Product {asin} not found'
+                }
+            }), 404
+
+        logger.info(f"✅ Product details fetched: {product['title'][:50]}...")
+
+        return jsonify({
+            'ok': True,
+            'data': {
+                'product': product
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Failed to fetch product details: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'FETCH_ERROR',
+                'message': 'Failed to fetch product details',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+@bp.route('/discovery/amazon/export-shopify', methods=['POST'])
+def amazon_export_shopify():
+    """
+    Amazon 상품을 Shopify CSV로 변환
+
+    Body: {
+        products: [
+            {
+                asin: string,
+                title: string,
+                price: number,
+                images: [string],
+                description: string,
+                features: [string],
+                details: {...},
+                ...
+            }
+        ]
+    }
+
+    Returns: Shopify CSV file
+    """
+    try:
+        data = request.get_json()
+        amazon_products = data.get('products', [])
+
+        if not amazon_products:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'NO_PRODUCTS',
+                    'message': 'No products provided'
+                }
+            }), 400
+
+        logger.info(f"📦 Converting {len(amazon_products)} Amazon products to Shopify CSV...")
+
+        # Convert Amazon products to Shopify format
+        shopify_products = []
+        for amazon_product in amazon_products:
+            shopify_product = {
+                'taobao_id': amazon_product.get('asin', ''),  # Use ASIN as ID
+                'title': amazon_product.get('title', ''),
+                'korean_title': amazon_product.get('korean_title', amazon_product.get('title', '')),
+                'selling_price': amazon_product.get('price', 0),
+                'original_price': amazon_product.get('price', 0),
+                'main_image': amazon_product.get('images', [None])[0] if amazon_product.get('images') else None,
+                'category': amazon_product.get('category', 'General'),
+                'brand': amazon_product.get('details', {}).get('Brand', ''),
+                'notes': f"Rating: {amazon_product.get('rating', 'N/A')}/5, Reviews: {amazon_product.get('review_count', 0)}",
+            }
+
+            # Add additional images
+            images = amazon_product.get('images', [])
+            for idx, img_url in enumerate(images[1:10], start=1):
+                shopify_product[f'image_{idx}'] = img_url
+
+            shopify_products.append(shopify_product)
+
+        # Generate Shopify CSV
+        from utils.shopify_excel_generator import get_shopify_generator
+        generator = get_shopify_generator()
+
+        filepath = generator.generate_excel(shopify_products)
+
+        logger.info(f"✅ Shopify CSV generated: {filepath}")
+
+        # Send file
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=os.path.basename(filepath),
+            mimetype='text/csv'
+        )
+
+    except ValueError as e:
+        logger.warning(f"⚠️ Invalid input: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'INVALID_INPUT',
+                'message': str(e)
+            }
+        }), 400
+    except Exception as e:
+        logger.error(f"❌ Amazon to Shopify export failed: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'EXPORT_ERROR',
+                'message': 'Failed to convert Amazon products to Shopify CSV',
                 'details': {'error': str(e)}
             }
         }), 500
