@@ -34,7 +34,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
         page_size: int = 20
     ) -> Dict[str, Any]:
         """
-        Search products on Taobao via RapidAPI
+        Search products on Taobao via RapidAPI with scraper fallback
 
         Args:
             keyword: Search keyword
@@ -48,8 +48,8 @@ class TaobaoRapidAPIConnector(BaseConnector):
             logger.info(f"🔍 Searching Taobao via RapidAPI: {keyword}")
 
             if not self.api_key:
-                logger.error("⚠️ RapidAPI key not available")
-                return {'items': [], 'total': 0, 'error': 'API key missing'}
+                logger.warning("⚠️ RapidAPI key not available, using scraper fallback")
+                return self._fallback_to_scraper(keyword, page, page_size)
 
             # RapidAPI endpoint for Taobao search
             url = f"{self.base_url}/api/taobao/search-item-list/v1"
@@ -71,9 +71,15 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 timeout=15
             )
 
+            # Check for quota exceeded (429)
+            if response.status_code == 429:
+                logger.warning(f"⚠️ RapidAPI quota exceeded, falling back to scraper")
+                return self._fallback_to_scraper(keyword, page, page_size)
+
             if response.status_code != 200:
                 logger.error(f"❌ RapidAPI returned {response.status_code}: {response.text[:200]}")
-                return {'items': [], 'total': 0, 'error': f'API error {response.status_code}'}
+                logger.warning(f"⚠️ API error, falling back to scraper")
+                return self._fallback_to_scraper(keyword, page, page_size)
 
             data = response.json()
 
@@ -88,14 +94,40 @@ class TaobaoRapidAPIConnector(BaseConnector):
             }
 
         except requests.exceptions.Timeout:
-            logger.error("❌ RapidAPI request timeout")
-            return {'items': [], 'total': 0, 'error': 'Request timeout'}
+            logger.warning("⚠️ RapidAPI request timeout, falling back to scraper")
+            return self._fallback_to_scraper(keyword, page, page_size)
         except requests.exceptions.RequestException as e:
-            logger.error(f"❌ RapidAPI request failed: {str(e)}")
-            return {'items': [], 'total': 0, 'error': str(e)}
+            logger.warning(f"⚠️ RapidAPI request failed: {str(e)}, falling back to scraper")
+            return self._fallback_to_scraper(keyword, page, page_size)
         except Exception as e:
             logger.error(f"❌ Error searching products: {str(e)}")
-            return {'items': [], 'total': 0, 'error': str(e)}
+            return self._fallback_to_scraper(keyword, page, page_size)
+
+    def _fallback_to_scraper(self, keyword: str, page: int, page_size: int) -> Dict[str, Any]:
+        """
+        Fallback to web scraper when RapidAPI is unavailable or quota exceeded
+
+        Args:
+            keyword: Search keyword
+            page: Page number
+            page_size: Items per page
+
+        Returns:
+            Dictionary with items and total count
+        """
+        try:
+            logger.info(f"🔄 Using Taobao scraper as fallback for: {keyword}")
+            from connectors.taobao_scraper import TaobaoScraper
+
+            scraper = TaobaoScraper(headless=True)
+            products = scraper.search_products(keyword, page=page, page_size=page_size)
+
+            logger.info(f"✅ Scraper found {len(products.get('items', []))} products")
+            return products
+
+        except Exception as scraper_error:
+            logger.error(f"❌ Scraper fallback also failed: {str(scraper_error)}")
+            return {'items': [], 'total': 0, 'error': f'Both API and scraper failed: {str(scraper_error)}'}
 
     def _parse_rapid_api_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Parse RapidAPI response to standard format"""
@@ -189,7 +221,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
 
     def get_product_info(self, product_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get product details by ID via RapidAPI
+        Get product details by ID via RapidAPI with scraper fallback
 
         Args:
             product_id: Taobao item ID
@@ -201,8 +233,8 @@ class TaobaoRapidAPIConnector(BaseConnector):
             logger.info(f"🔍 Getting product info for ID: {product_id}")
 
             if not self.api_key:
-                logger.error("⚠️ RapidAPI key not available")
-                return None
+                logger.warning("⚠️ RapidAPI key not available, using scraper fallback")
+                return self._fallback_get_product_info(product_id)
 
             # RapidAPI endpoint for product details (matching curl example)
             url = f"{self.base_url}/api/taobao/get-item-detail/v5"
@@ -223,9 +255,14 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 timeout=15
             )
 
+            # Check for quota exceeded (429)
+            if response.status_code == 429:
+                logger.warning(f"⚠️ RapidAPI quota exceeded, falling back to scraper")
+                return self._fallback_get_product_info(product_id)
+
             if response.status_code != 200:
-                logger.error(f"❌ RapidAPI returned {response.status_code}")
-                return None
+                logger.warning(f"⚠️ RapidAPI returned {response.status_code}, falling back to scraper")
+                return self._fallback_get_product_info(product_id)
 
             data = response.json()
 
@@ -234,8 +271,8 @@ class TaobaoRapidAPIConnector(BaseConnector):
             if not item:
                 item = data.get('data', {})
             if not item:
-                logger.warning(f"⚠️ No product data found for ID: {product_id}")
-                return None
+                logger.warning(f"⚠️ No product data found for ID: {product_id}, trying scraper")
+                return self._fallback_get_product_info(product_id)
 
             product_info = {
                 'taobao_item_id': str(item.get('num_iid', product_id)),
@@ -250,7 +287,38 @@ class TaobaoRapidAPIConnector(BaseConnector):
             return product_info
 
         except Exception as e:
-            logger.error(f"❌ Error getting product info: {str(e)}")
+            logger.warning(f"⚠️ Error getting product info: {str(e)}, trying scraper")
+            return self._fallback_get_product_info(product_id)
+
+    def _fallback_get_product_info(self, product_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Fallback to web scraper for product info when RapidAPI unavailable
+
+        Args:
+            product_id: Taobao item ID
+
+        Returns:
+            Product information dictionary or None if not found
+        """
+        try:
+            logger.info(f"🔄 Using Taobao scraper as fallback for product ID: {product_id}")
+            from connectors.taobao_scraper import TaobaoScraper
+
+            # Construct Taobao URL from product ID
+            taobao_url = f"https://item.taobao.com/item.htm?id={product_id}"
+
+            scraper = TaobaoScraper(headless=True)
+            product_info = scraper.get_product_info(taobao_url)
+
+            if product_info:
+                logger.info(f"✅ Scraper retrieved product: {product_info.get('title', '')[:50]}...")
+            else:
+                logger.warning(f"⚠️ Scraper could not retrieve product ID: {product_id}")
+
+            return product_info
+
+        except Exception as scraper_error:
+            logger.error(f"❌ Scraper fallback also failed: {str(scraper_error)}")
             return None
 
 
