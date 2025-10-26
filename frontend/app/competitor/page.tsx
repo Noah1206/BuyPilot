@@ -451,86 +451,114 @@ export default function CompetitorAnalysisPage() {
 
           {/* Step 0: Input Form */}
           {currentStep === 0 && (
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-              <h2 className="text-xl font-semibold mb-4">상품 검색</h2>
+            <div className="bg-gradient-to-br from-white to-purple-50/30 rounded-3xl border-2 border-purple-100 shadow-xl shadow-purple-100/50 p-8 hover:shadow-2xl hover:shadow-purple-200/50 transition-all duration-300">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900">상품 검색</h2>
+                  <p className="text-sm text-slate-500">네이버 쇼핑에서 인기 상품을 찾아보세요</p>
+                </div>
+              </div>
               <form
                 onSubmit={(e) => {
                   e.preventDefault()
                   handleStartAnalysis()
                 }}
-                className="space-y-4"
+                className="space-y-6"
               >
-                <div>
-                  <label htmlFor="keyword" className="block text-sm font-medium mb-2">
+                <div className="group">
+                  <label htmlFor="keyword" className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                     검색 키워드 *
                   </label>
-                  <input
-                    id="keyword"
-                    type="text"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    placeholder="예: 청바지, 맨투맨, 운동화"
-                    className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#1f6feb] focus:ring-1 focus:ring-[#1f6feb]"
-                    required
-                  />
-                  <p className="text-xs text-[#8d96a0] mt-1">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition-opacity duration-300"></div>
+                    <input
+                      id="keyword"
+                      type="text"
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      placeholder="예: 청바지, 맨투맨, 운동화"
+                      className="relative w-full px-6 py-4 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200 shadow-sm hover:shadow-md"
+                      required
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2 ml-2 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                     카테고리나 상품명을 입력하세요
                   </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label htmlFor="maxProducts" className="block text-sm font-medium mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="group">
+                    <label htmlFor="maxProducts" className="block text-sm font-bold text-slate-700 mb-3">
                       최대 상품 수
                     </label>
-                    <input
-                      id="maxProducts"
-                      type="number"
-                      value={maxProducts}
-                      onChange={(e) => setMaxProducts(parseInt(e.target.value) || 100)}
-                      min="10"
-                      max="100"
-                      className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:border-[#1f6feb]"
-                    />
+                    <div className="relative">
+                      <input
+                        id="maxProducts"
+                        type="number"
+                        value={maxProducts}
+                        onChange={(e) => setMaxProducts(parseInt(e.target.value) || 100)}
+                        min="10"
+                        max="100"
+                        className="w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 focus:bg-white transition-all duration-200 font-semibold"
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                        개
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="minPrice" className="block text-sm font-medium mb-2">
-                      최소 가격 (선택)
+                  <div className="group">
+                    <label htmlFor="minPrice" className="block text-sm font-bold text-slate-700 mb-3">
+                      최소 가격
                     </label>
-                    <input
-                      id="minPrice"
-                      type="number"
-                      value={minPrice || ''}
-                      onChange={(e) => setMinPrice(parseInt(e.target.value) || 0)}
-                      min="0"
-                      step="1000"
-                      placeholder="0"
-                      className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:border-[#1f6feb]"
-                    />
+                    <div className="relative">
+                      <input
+                        id="minPrice"
+                        type="number"
+                        value={minPrice || ''}
+                        onChange={(e) => setMinPrice(parseInt(e.target.value) || 0)}
+                        min="0"
+                        step="1000"
+                        placeholder="0"
+                        className="w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 focus:bg-white transition-all duration-200 font-semibold"
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                        원
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="maxPrice" className="block text-sm font-medium mb-2">
-                      최대 가격 (선택)
+                  <div className="group">
+                    <label htmlFor="maxPrice" className="block text-sm font-bold text-slate-700 mb-3">
+                      최대 가격
                     </label>
-                    <input
-                      id="maxPrice"
-                      type="number"
-                      value={maxPrice || ''}
-                      onChange={(e) => setMaxPrice(parseInt(e.target.value) || 0)}
-                      min="0"
-                      step="1000"
-                      placeholder="제한없음"
-                      className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:border-[#1f6feb]"
-                    />
+                    <div className="relative">
+                      <input
+                        id="maxPrice"
+                        type="number"
+                        value={maxPrice || ''}
+                        onChange={(e) => setMaxPrice(parseInt(e.target.value) || 0)}
+                        min="0"
+                        step="1000"
+                        placeholder="제한없음"
+                        className="w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 focus:bg-white transition-all duration-200 font-semibold"
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                        원
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading || !keyword}
-                  className="w-full px-6 py-3 bg-[#238636] hover:bg-[#2ea043] disabled:bg-[#21262d] disabled:text-[#6e7681] disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                  className="group w-full px-8 py-5 bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 hover:from-purple-700 hover:via-pink-600 hover:to-red-600 disabled:from-slate-300 disabled:via-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white font-black text-lg rounded-2xl shadow-2xl shadow-purple-500/50 hover:shadow-3xl hover:shadow-purple-600/50 hover:scale-105 disabled:hover:scale-100 transition-all duration-200"
                 >
                   {loading ? '검색 중...' : '검색 시작'}
                 </button>

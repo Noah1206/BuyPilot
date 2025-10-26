@@ -155,52 +155,60 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              <h1 className="text-4xl font-black text-slate-900 mb-3 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
                 주문 관리
               </h1>
-              <p className="text-slate-600">
+              <p className="text-lg text-slate-600 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
                 {orders.length}개의 {statusFilter ? statusLabels[statusFilter] : '전체'} 주문
               </p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleCreateDemo}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md transition-all"
+                className="group flex items-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-bold bg-white text-slate-700 border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 shadow-sm hover:shadow-lg transition-all duration-200"
               >
-                <Plus size={18} />
-                데모 생성
+                <Plus size={20} className="group-hover:rotate-90 transition-transform duration-200" />
+                <span>데모 생성</span>
               </button>
               <button
                 onClick={() => mutate()}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md hover:shadow-lg transition-all"
+                className="group flex items-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/50 hover:shadow-xl hover:shadow-blue-600/50 hover:scale-105 transition-all duration-200"
                 title="새로고침"
               >
-                <RefreshCw size={18} />
-                새로고침
+                <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
+                <span>새로고침</span>
               </button>
             </div>
           </div>
 
           {/* Filter tabs */}
-          <div className="flex flex-wrap gap-2">
-            {['', 'PENDING', 'ORDERED_SUPPLIER', 'SENT_TO_FORWARDER', 'DONE'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`
-                  px-4 py-2 rounded-xl text-sm font-medium transition-all
-                  ${
-                    statusFilter === status
-                      ? `bg-gradient-to-r ${statusColors[status]} text-white shadow-md`
-                      : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                  }
-                `}
-              >
-                {statusLabels[status]}
-              </button>
-            ))}
+          <div className="bg-white rounded-3xl border-2 border-slate-200 p-3 shadow-lg">
+            <div className="flex flex-wrap gap-2">
+              {['', 'PENDING', 'ORDERED_SUPPLIER', 'SENT_TO_FORWARDER', 'DONE'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`
+                    group px-6 py-3 rounded-2xl text-sm font-bold transition-all duration-200
+                    ${
+                      statusFilter === status
+                        ? `bg-gradient-to-r ${statusColors[status]} text-white shadow-lg scale-105`
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:scale-105'
+                    }
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    {statusFilter === status && (
+                      <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                    )}
+                    {statusLabels[status]}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
