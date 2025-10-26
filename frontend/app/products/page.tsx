@@ -1,9 +1,13 @@
+/**
+ * Products page - Product management interface
+ * HeySeller inspired clean design
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
-import ImageEditorModal from '@/components/ImageEditorModal'
-import EnhancedImageEditor from '@/components/EnhancedImageEditor'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Home, Package, TrendingUp, Edit, Check, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Product {
   id: string
@@ -24,21 +28,21 @@ interface Product {
 export default function ProductsPage() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
-  const [editingImage, setEditingImage] = useState<{ productId: string; imageUrl: string } | null>(null)
-  const [useEnhancedEditor, setUseEnhancedEditor] = useState(false)
-  const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
   const limit = 12
 
-  // Load products on mount and when page changes
   useEffect(() => {
     loadProducts()
   }, [page, searchQuery])
+
+  const toast = (message: string, type: 'success' | 'error' = 'success') => {
+    setShowToast({ message, type })
+    setTimeout(() => setShowToast(null), 3000)
+  }
 
   const loadProducts = async () => {
     const response = await getProducts({
@@ -56,25 +60,23 @@ export default function ProductsPage() {
   const handleImport = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
-    setSuccess(null)
 
     try {
       const response = await importProduct(url)
 
       if (response.ok && response.data) {
         if (response.data.already_exists) {
-          setSuccess('상품이 이미 등록되어 있습니다.')
+          toast('상품이 이미 등록되어 있습니다.', 'error')
         } else {
-          setSuccess('상품을 성공적으로 가져왔습니다!')
+          toast('상품을 성공적으로 가져왔습니다!')
         }
         setUrl('')
-        loadProducts() // Reload list
+        loadProducts()
       } else {
-        setError(response.error?.message || '상품 가져오기 실패')
+        toast(response.error?.message || '상품 가져오기 실패', 'error')
       }
     } catch (err) {
-      setError('네트워크 오류가 발생했습니다.')
+      toast('네트워크 오류가 발생했습니다.', 'error')
     } finally {
       setLoading(false)
     }
@@ -85,409 +87,317 @@ export default function ProductsPage() {
 
     const response = await deleteProduct(productId)
     if (response.ok) {
-      setSuccess('상품이 삭제되었습니다.')
+      toast('상품이 삭제되었습니다.')
       loadProducts()
     } else {
-      setError(response.error?.message || '상품 삭제 실패')
+      toast(response.error?.message || '상품 삭제 실패', 'error')
     }
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPage(0) // Reset to first page
-    loadProducts()
-  }
-
-  const handleEditImage = (productId: string, imageUrl: string) => {
-    setEditingImage({ productId, imageUrl })
-  }
-
-  const handleSaveImage = async (editedImageUrl: string, editType?: 'thumbnail' | 'detail') => {
-    if (!editingImage) return
-
-    // Update the product with the edited image URL
-    const updateData: any = {
-      data: {
-        edited: true,
-        edited_at: new Date().toISOString(),
-      },
+  const getValidImageUrl = (product: Product): string => {
+    // Try image_url first
+    if (product.image_url && !product.image_url.startsWith('blob:')) {
+      return product.image_url.startsWith('//') ? `https:${product.image_url}` : product.image_url
     }
 
-    // Store different versions for thumbnail and detail
-    if (editType === 'thumbnail') {
-      updateData.data.thumbnail_image_url = editedImageUrl
-      updateData.image_url = editedImageUrl  // Also update main image_url for thumbnail
-    } else if (editType === 'detail') {
-      updateData.data.detail_image_url = editedImageUrl
-    } else {
-      // Legacy support for basic editor - update both
-      updateData.image_url = editedImageUrl
-      updateData.data.thumbnail_image_url = editedImageUrl
+    // Try images array
+    if (product.data?.images && Array.isArray(product.data.images) && product.data.images.length > 0) {
+      const firstImage = product.data.images[0]
+      if (firstImage && !firstImage.startsWith('blob:')) {
+        return firstImage.startsWith('//') ? `https:${firstImage}` : firstImage
+      }
     }
 
-    const response = await updateProduct(editingImage.productId, updateData)
-
-    if (response.ok) {
-      setSuccess(`${editType ? (editType === 'thumbnail' ? '썸네일' : '상세 페이지') : '이미지'}가 저장되었습니다.`)
-      setEditingImage(null)
-      loadProducts()
-    } else {
-      setError(response.error?.message || '이미지 저장 실패')
-    }
+    return ''
   }
 
   const totalPages = Math.ceil(total / limit)
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#e6edf3]">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-48 bg-[#161b22] border-r border-[#30363d]">
-        <div className="p-4">
-          <div className="text-xl font-bold text-[#e6edf3] mb-6">
-            BuyPilot
-          </div>
-          <div className="text-xs font-semibold text-[#8d96a0] uppercase tracking-wider mb-2">
-            메뉴
-          </div>
-          <div className="space-y-1">
-            <a
-              href="/"
-              className="block w-full text-left px-2 py-1 rounded text-xs text-[#8d96a0] hover:bg-[#21262d] transition-colors"
-            >
-              주문 관리
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      {/* Navigation */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">B</span>
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                BuyPilot
+              </span>
             </a>
-            <a
-              href="/products"
-              className="block w-full text-left px-2 py-1 rounded text-xs bg-[#21262d] text-[#e6edf3] font-semibold"
-            >
-              상품 관리
-            </a>
-            <a
-              href="/competitor"
-              className="block w-full text-left px-2 py-1 rounded text-xs text-[#8d96a0] hover:bg-[#21262d] transition-colors"
-            >
-              경쟁사 분석
-            </a>
+
+            <div className="hidden md:flex items-center gap-1">
+              <a href="/" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                <Home size={18} />
+                홈
+              </a>
+              <a href="/dashboard" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                <Package size={18} />
+                주문 관리
+              </a>
+              <a href="/products" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm">
+                <Package size={18} />
+                상품 관리
+              </a>
+              <a href="/competitor" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                <TrendingUp size={18} />
+                경쟁사 분석
+              </a>
+            </div>
           </div>
         </div>
-      </aside>
+      </nav>
 
-      <div className="ml-48 p-8">
-        <div className="max-w-7xl mx-auto">
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">상품 관리</h1>
-          <p className="text-[#8d96a0]">타오바오/1688 상품을 URL로 가져오기</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">상품 관리</h1>
+          <p className="text-slate-600">{total}개의 등록된 상품</p>
         </div>
 
-        {/* Import Form */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">상품 가져오기</h2>
-          <form onSubmit={handleImport} className="space-y-4">
-            <div>
-              <label htmlFor="url" className="block text-sm font-medium mb-2">
-                타오바오/1688 상품 URL
-              </label>
-              <input
-                id="url"
-                type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://item.taobao.com/item.htm?id=..."
-                className="w-full px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#1f6feb] focus:ring-1 focus:ring-[#1f6feb]"
-                disabled={loading}
-              />
-              <p className="text-xs text-[#8d96a0] mt-1">
-                지원: item.taobao.com, detail.tmall.com, m.taobao.com, 1688.com
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !url}
-              className="px-6 py-2 bg-[#238636] hover:bg-[#2ea043] disabled:bg-[#21262d] disabled:text-[#6e7681] disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-            >
-              {loading ? '가져오는 중...' : '상품 가져오기'}
-            </button>
-          </form>
-
-          {/* Success/Error Messages */}
-          {success && (
-            <div className="mt-4 px-4 py-3 bg-[#238636]/10 border border-[#238636] rounded-lg text-[#3fb950]">
-              ✓ {success}
-            </div>
-          )}
-          {error && (
-            <div className="mt-4 px-4 py-3 bg-[#da3633]/10 border border-[#da3633] rounded-lg text-[#f85149]">
-              ✕ {error}
-            </div>
-          )}
-        </div>
-
-        {/* Search Bar */}
-        <div className="mb-6">
-          <form onSubmit={handleSearch} className="flex gap-2">
+        {/* Import form */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">타오바오 상품 가져오기</h2>
+          <form onSubmit={handleImport} className="flex gap-3">
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="상품 검색..."
-              className="flex-1 px-4 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] placeholder-[#6e7681] focus:outline-none focus:border-[#1f6feb] focus:ring-1 focus:ring-[#1f6feb]"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="타오바오 상품 URL을 입력하세요"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-400 focus:outline-none transition-colors"
+              disabled={loading}
             />
             <button
               type="submit"
-              className="px-6 py-2 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#e6edf3] font-medium rounded-lg transition-colors"
+              disabled={loading || !url}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              검색
+              {loading ? (
+                <>
+                  <RefreshCw size={20} className="animate-spin" />
+                  가져오는 중...
+                </>
+              ) : (
+                <>
+                  <Plus size={20} />
+                  상품 가져오기
+                </>
+              )}
             </button>
           </form>
         </div>
 
-        {/* Products Grid */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">
-              등록된 상품 ({total}개)
-            </h2>
-          </div>
-
-          {products.length === 0 ? (
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-12 text-center">
-              <p className="text-[#8d96a0]">등록된 상품이 없습니다.</p>
-              <p className="text-sm text-[#6e7681] mt-2">
-                위에서 타오바오 URL로 상품을 가져오세요.
-              </p>
+        {/* Search */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="상품명으로 검색..."
+                className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-400 focus:outline-none transition-colors"
+              />
             </div>
-          ) : (
-            <div className="space-y-2">
+            <button
+              onClick={() => loadProducts()}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md transition-all"
+            >
+              <RefreshCw size={20} />
+              새로고침
+            </button>
+          </div>
+        </div>
+
+        {/* Products grid */}
+        {products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border-2 border-dashed border-slate-300">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-6">
+              <Package size={40} className="text-blue-600" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">상품이 없습니다</h3>
+            <p className="text-slate-600 mb-6">타오바오에서 상품을 가져와보세요</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {products.map((product) => {
-                // Get valid image URL with fallback logic
-                const getValidImageUrl = (product: Product): string => {
-                  // If image_url is valid (not blob), use it
-                  if (product.image_url && !product.image_url.startsWith('blob:')) {
-                    // If it's a relative URL, make it absolute to backend
-                    if (product.image_url.startsWith('/static/')) {
-                      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
-                      return `${backendUrl}${product.image_url}`
-                    }
-                    return product.image_url
-                  }
-
-                  // Try to find a valid image from data
-                  if (product.data) {
-                    // Try downloaded_images (these should be absolute URLs from backend)
-                    if (product.data.downloaded_images && Array.isArray(product.data.downloaded_images)) {
-                      const validImage = product.data.downloaded_images.find((img: string) =>
-                        img && !img.startsWith('blob:') && img.trim() !== ''
-                      )
-                      if (validImage) {
-                        // If it's a relative URL, make it absolute to backend
-                        if (validImage.startsWith('/static/')) {
-                          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
-                          return `${backendUrl}${validImage}`
-                        }
-                        return validImage
-                      }
-                    }
-
-                    // Try pic_url (original Taobao URL)
-                    if (product.data.pic_url && !product.data.pic_url.startsWith('blob:')) {
-                      // Fix protocol-relative URLs
-                      if (product.data.pic_url.startsWith('//')) {
-                        return `https:${product.data.pic_url}`
-                      }
-                      return product.data.pic_url
-                    }
-
-                    // Try images array (original Taobao URLs)
-                    if (product.data.images && Array.isArray(product.data.images) && product.data.images.length > 0) {
-                      const firstImage = product.data.images[0]
-                      if (firstImage && !firstImage.startsWith('blob:')) {
-                        // Fix protocol-relative URLs
-                        if (firstImage.startsWith('//')) {
-                          return `https:${firstImage}`
-                        }
-                        return firstImage
-                      }
-                    }
-                  }
-
-                  return '' // No valid image found
-                }
-
-                const validImageUrl = getValidImageUrl(product)
+                const imageUrl = getValidImageUrl(product)
+                const krwPrice = Math.round(product.price * 200)
 
                 return (
-                <div
-                  key={product.id}
-                  className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 hover:border-[#58a6ff] transition-colors flex items-center gap-4"
-                >
-                  {/* Checkbox */}
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-[#30363d] bg-[#0d1117] text-[#238636] focus:ring-[#238636] focus:ring-offset-0"
-                  />
-
-                  {/* Order number */}
-                  <div className="text-lg font-semibold text-[#8d96a0] w-10">
-                    {products.indexOf(product) + 1 + page * limit}
-                  </div>
-
-                  {/* Product Image */}
-                  <div className="flex-shrink-0">
-                    <div className="w-24 h-24 bg-[#0d1117] rounded-lg overflow-hidden border border-[#30363d]">
-                      {validImageUrl && (
+                  <div
+                    key={product.id}
+                    className="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-blue-300 transition-all duration-300"
+                  >
+                    {/* Image */}
+                    <div className="relative aspect-square bg-slate-100 overflow-hidden">
+                      {imageUrl ? (
                         <img
-                          src={validImageUrl}
+                          src={imageUrl}
                           alt={product.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package size={64} className="text-slate-300" />
+                        </div>
                       )}
-                    </div>
-                  </div>
 
-                  {/* Product Name */}
-                  <div className="flex-shrink-0 w-32">
-                    <div className="text-sm text-[#8d96a0] mb-1">판매가</div>
-                    <div className="text-lg font-bold text-[#e6edf3]">
-                      {Math.round(product.price * 200).toLocaleString()}
+                      {/* Source badge */}
+                      <div className="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm text-slate-700">
+                        {product.source === 'taobao' ? '타오바오' : product.source}
+                      </div>
                     </div>
-                    <div className="text-xs text-[#8d96a0]">¥ {product.price}</div>
-                  </div>
 
-                  {/* Options */}
-                  <div className="flex-1 min-w-0">
-                    {product.data?.options && product.data.options.length > 0 ? (
-                      <div className="space-y-2">
-                        {product.data.options.slice(0, 2).map((option: any, idx: number) => (
-                          <div key={idx} className="flex items-start gap-3">
-                            <div className="text-sm text-[#ffa657] font-medium w-16 flex-shrink-0 pt-1">
-                              {option.name}
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap flex-1">
-                              {option.values?.slice(0, 4).map((value: any, vidx: number) => (
-                                <div key={vidx} className="flex items-center gap-1">
-                                  <span className="text-xs text-[#6e7681]">
-                                    원문: {value.text}
-                                  </span>
-                                </div>
-                              ))}
-                              {option.values?.length > 4 && (
-                                <button
-                                  onClick={() => setExpandedProduct(expandedProduct === product.id ? null : product.id)}
-                                  className="text-xs text-[#58a6ff] hover:text-[#79c0ff] transition-colors"
-                                >
-                                  +{option.values.length - 4}개 더
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {expandedProduct === product.id && product.data.options.length > 2 && (
-                          <div className="space-y-2 mt-2">
-                            {product.data.options.slice(2).map((option: any, idx: number) => (
-                              <div key={idx} className="flex items-start gap-3">
-                                <div className="text-sm text-[#ffa657] font-medium w-16 flex-shrink-0 pt-1">
-                                  {option.name}
-                                </div>
-                                <div className="flex items-center gap-2 flex-wrap flex-1">
-                                  {option.values?.map((value: any, vidx: number) => (
-                                    <span key={vidx} className="text-xs text-[#6e7681]">
-                                      원문: {value.text}
-                                    </span>
-                                  ))}
-                                </div>
+                    {/* Content */}
+                    <div className="p-5">
+                      <h3 className="text-base font-semibold text-slate-900 mb-3 line-clamp-2 min-h-[3rem]">
+                        {product.title}
+                      </h3>
+
+                      {/* Price */}
+                      <div className="mb-4">
+                        <div className="text-2xl font-bold text-slate-900 mb-1">
+                          ₩{krwPrice.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          ¥{product.price.toLocaleString()} (타오바오)
+                        </div>
+                      </div>
+
+                      {/* Options preview */}
+                      {product.data?.options && product.data.options.length > 0 && (
+                        <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                          <div className="text-xs font-semibold text-slate-700 mb-2">옵션</div>
+                          <div className="space-y-1">
+                            {product.data.options.slice(0, 2).map((option: any, idx: number) => (
+                              <div key={idx} className="text-xs text-slate-600">
+                                <span className="font-medium">{option.name}:</span>{' '}
+                                {option.values?.length || 0}개
                               </div>
                             ))}
+                            {product.data.options.length > 2 && (
+                              <div className="text-xs text-blue-600 font-medium">
+                                +{product.data.options.length - 2}개 더
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-[#6e7681] line-clamp-2">
-                        {product.title}
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      )}
 
-                  {/* Quantity */}
-                  <div className="text-center flex-shrink-0 w-20">
-                    <div className="text-lg font-semibold text-[#e6edf3]">
-                      {product.stock || 0}
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <a
+                          href={product.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
+                        >
+                          <ExternalLink size={16} />
+                          원본 보기
+                        </a>
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {validImageUrl && (
-                      <button
-                        onClick={() => {
-                          setUseEnhancedEditor(true)
-                          handleEditImage(product.id, validImageUrl)
-                        }}
-                        className="p-2 bg-[#a855f7]/10 hover:bg-[#a855f7]/20 border border-[#a855f7] text-[#a855f7] rounded-lg transition-colors"
-                        title="이미지 편집"
-                      >
-                        ✏️
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="p-2 bg-[#da3633]/10 hover:bg-[#da3633]/20 border border-[#da3633] text-[#f85149] rounded-lg transition-colors"
-                      title="삭제"
-                    >
-                      ❌
-                    </button>
-                  </div>
-                </div>
                 )
               })}
             </div>
-          )}
-        </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2">
-            <button
-              onClick={() => setPage(Math.max(0, page - 1))}
-              disabled={page === 0}
-              className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] disabled:bg-[#161b22] disabled:text-[#6e7681] disabled:cursor-not-allowed border border-[#30363d] rounded-lg transition-colors"
-            >
-              이전
-            </button>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setPage(Math.max(0, page - 1))}
+                  disabled={page === 0}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronLeft size={18} />
+                  이전
+                </button>
 
-            <span className="px-4 py-2 text-[#8d96a0]">
-              {page + 1} / {totalPages}
-            </span>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = Math.max(0, Math.min(page - 2 + i, totalPages - 1))
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`w-10 h-10 rounded-xl text-sm font-semibold transition-all ${
+                          page === pageNum
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+                            : 'bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md'
+                        }`}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    )
+                  })}
+                </div>
 
-            <button
-              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-              disabled={page >= totalPages - 1}
-              className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] disabled:bg-[#161b22] disabled:text-[#6e7681] disabled:cursor-not-allowed border border-[#30363d] rounded-lg transition-colors"
-            >
-              다음
-            </button>
-          </div>
+                <button
+                  onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  다음
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+          </>
         )}
+      </main>
+
+      {/* Toast */}
+      {showToast && (
+        <div
+          className={`fixed bottom-8 right-8 px-6 py-4 rounded-xl shadow-2xl animate-slide-up ${
+            showToast.type === 'success'
+              ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+              : 'bg-gradient-to-r from-red-500 to-red-600 text-white'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {showToast.type === 'success' ? (
+              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                <Check size={16} />
+              </div>
+            ) : (
+              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                <AlertCircle size={16} />
+              </div>
+            )}
+            <span className="font-medium">{showToast.message}</span>
+          </div>
         </div>
-      </div>
-
-      {/* Image Editor Modals */}
-      {editingImage && !useEnhancedEditor && (
-        <ImageEditorModal
-          imageUrl={editingImage.imageUrl}
-          onClose={() => setEditingImage(null)}
-          onSave={handleSaveImage}
-        />
       )}
 
-      {editingImage && useEnhancedEditor && (
-        <EnhancedImageEditor
-          imageUrl={editingImage.imageUrl}
-          onClose={() => setEditingImage(null)}
-          onSave={handleSaveImage}
-        />
-      )}
+      <style jsx>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   )
 }

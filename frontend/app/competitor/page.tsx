@@ -366,52 +366,57 @@ export default function CompetitorAnalysisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#e6edf3]">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-48 bg-[#161b22] border-r border-[#30363d]">
-        <div className="p-4">
-          <div className="text-xl font-bold text-[#e6edf3] mb-6">BuyPilot</div>
-          <div className="text-xs font-semibold text-[#8d96a0] uppercase tracking-wider mb-2">
-            메뉴
-          </div>
-          <div className="space-y-1">
-            <a
-              href="/"
-              className="block w-full text-left px-2 py-1 rounded text-xs text-[#8d96a0] hover:bg-[#21262d] transition-colors"
-            >
-              주문 관리
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      {/* Navigation */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">B</span>
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                BuyPilot
+              </span>
             </a>
-            <a
-              href="/products"
-              className="block w-full text-left px-2 py-1 rounded text-xs text-[#8d96a0] hover:bg-[#21262d] transition-colors"
-            >
-              상품 관리
-            </a>
-            <a
-              href="/competitor"
-              className="block w-full text-left px-2 py-1 rounded text-xs bg-[#21262d] text-[#e6edf3] font-semibold"
-            >
-              경쟁사 분석
-            </a>
+
+            <div className="hidden md:flex items-center gap-1">
+              <a href="/" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                홈
+              </a>
+              <a href="/dashboard" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                주문 관리
+              </a>
+              <a href="/products" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                상품 관리
+              </a>
+              <a href="/competitor" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                경쟁사 분석
+              </a>
+            </div>
           </div>
         </div>
-      </aside>
+      </nav>
 
-      <div className="ml-48 p-8">
+      <div className="p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold mb-2">인기 상품 분석</h1>
-                <p className="text-[#8d96a0]">
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">경쟁사 상품 분석</h1>
+                <p className="text-slate-600">
                   네이버 쇼핑 인기 상품을 검색하고 타오바오에서 매칭되는 상품을 찾아보세요
                 </p>
               </div>
               {currentStep > 0 && (
                 <button
                   onClick={handleReset}
-                  className="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#f85149] rounded-lg transition-colors text-sm"
+                  className="px-4 py-2.5 bg-red-50 hover:bg-red-100 border-2 border-red-200 text-red-600 rounded-xl transition-all text-sm font-semibold"
                 >
                   처음부터 다시
                 </button>
@@ -424,19 +429,29 @@ export default function CompetitorAnalysisPage() {
 
           {/* Success/Error Messages */}
           {success && (
-            <div className="mb-6 px-4 py-3 bg-[#238636]/10 border border-[#238636] rounded-lg text-[#3fb950]">
-              ✓ {success}
+            <div className="mb-6 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <span className="font-medium">{success}</span>
+              </div>
             </div>
           )}
           {error && (
-            <div className="mb-6 px-4 py-3 bg-[#da3633]/10 border border-[#da3633] rounded-lg text-[#f85149]">
-              ✕ {error}
+            <div className="mb-6 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <span className="font-medium">{error}</span>
+              </div>
             </div>
           )}
 
           {/* Step 0: Input Form */}
           {currentStep === 0 && (
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-6">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
               <h2 className="text-xl font-semibold mb-4">상품 검색</h2>
               <form
                 onSubmit={(e) => {
