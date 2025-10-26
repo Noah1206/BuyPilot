@@ -375,7 +375,7 @@ export default function AmazonToShopifyPage() {
                     {(editedImages.get(product.asin) || product.main_image) ? (
                       <>
                         <img
-                          src={editedImages.get(product.asin) || product.main_image}
+                          src={editedImages.get(product.asin) || product.main_image || ''}
                           alt={product.title}
                           className="w-full h-48 object-contain bg-white"
                         />
