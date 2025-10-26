@@ -20,8 +20,8 @@ class TaobaoRapidAPIConnector(BaseConnector):
     def __init__(self):
         """Initialize with RapidAPI credentials and cache"""
         self.api_key = os.getenv('RAPIDAPI_KEY')
-        self.base_url = "https://taobao-tmall-all-api1.p.rapidapi.com"
-        self.api_host = "taobao-tmall-all-api1.p.rapidapi.com"
+        self.base_url = "https://taobao-api.p.rapidapi.com"
+        self.api_host = "taobao-api.p.rapidapi.com"
 
         # Simple in-memory cache (TTL: 1 hour)
         self._cache = {}
@@ -81,16 +81,19 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 return self._fallback_to_scraper(keyword, page, page_size)
 
             # RapidAPI endpoint for Taobao search
-            url = f"{self.base_url}/api/taobao/search-item-list/v1"
+            url = f"{self.base_url}/api"
 
             headers = {
-                "X-RapidAPI-Key": self.api_key,
-                "X-RapidAPI-Host": self.api_host
+                "x-rapidapi-key": self.api_key,
+                "x-rapidapi-host": self.api_host
             }
 
             params = {
+                "api": "item_search",
                 "q": keyword,
-                "page": page
+                "page": page,
+                "page_size": page_size,
+                "sort": "default"
             }
 
             response = requests.get(
@@ -277,15 +280,15 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 return self._fallback_get_product_info(product_id)
 
             # RapidAPI endpoint for product details (matching curl example)
-            url = f"{self.base_url}/api/taobao/get-item-detail/v5"
+            url = f"{self.base_url}/taobao_detail"
 
             headers = {
-                "X-RapidAPI-Key": self.api_key,
-                "X-RapidAPI-Host": self.api_host
+                "x-rapidapi-key": self.api_key,
+                "x-rapidapi-host": self.api_host
             }
 
             params = {
-                "itemId": product_id
+                "num_iid": product_id
             }
 
             response = requests.get(
