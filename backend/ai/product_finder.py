@@ -51,9 +51,10 @@ class ProductFinder:
         try:
             # Search products using Taobao API
             # Note: This requires taobao.items.search permission
+            # Changed from max_results * 2 to max_results to reduce API quota usage
             search_result = self.taobao.search_products(
                 keyword=keyword,
-                page_size=max_results * 2  # Get extra to filter
+                page_size=max_results  # Reduced to save API quota
             )
 
             # Extract products from search result

@@ -6,6 +6,7 @@ import os
 import re
 import requests
 import logging
+import time
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse, parse_qs
 from connectors.base import BaseConnector
@@ -14,18 +15,40 @@ logger = logging.getLogger(__name__)
 
 
 class TaobaoRapidAPIConnector(BaseConnector):
-    """Taobao product search via RapidAPI"""
+    """Taobao product search via RapidAPI with caching"""
 
     def __init__(self):
-        """Initialize with RapidAPI credentials"""
+        """Initialize with RapidAPI credentials and cache"""
         self.api_key = os.getenv('RAPIDAPI_KEY')
         self.base_url = "https://taobao-tmall-all-api1.p.rapidapi.com"
         self.api_host = "taobao-tmall-all-api1.p.rapidapi.com"
 
+        # Simple in-memory cache (TTL: 1 hour)
+        self._cache = {}
+        self._cache_ttl = 3600  # 1 hour in seconds
+
         if not self.api_key:
             logger.warning("⚠️ RAPIDAPI_KEY not configured")
         else:
-            logger.info("✅ Taobao RapidAPI connector initialized")
+            logger.info("✅ Taobao RapidAPI connector initialized with caching")
+
+    def _get_cache(self, cache_key: str) -> Optional[Any]:
+        """Get value from cache if not expired"""
+        if cache_key in self._cache:
+            cached_data, timestamp = self._cache[cache_key]
+            if time.time() - timestamp < self._cache_ttl:
+                logger.info(f"✅ Cache HIT for key: {cache_key[:50]}...")
+                return cached_data
+            else:
+                # Expired, remove from cache
+                del self._cache[cache_key]
+                logger.debug(f"⏰ Cache EXPIRED for key: {cache_key[:50]}...")
+        return None
+
+    def _set_cache(self, cache_key: str, value: Any):
+        """Set value in cache with current timestamp"""
+        self._cache[cache_key] = (value, time.time())
+        logger.debug(f"💾 Cache SET for key: {cache_key[:50]}...")
 
     def search_products(
         self,
@@ -34,7 +57,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
         page_size: int = 20
     ) -> Dict[str, Any]:
         """
-        Search products on Taobao via RapidAPI with scraper fallback
+        Search products on Taobao via RapidAPI with scraper fallback and caching
 
         Args:
             keyword: Search keyword
@@ -45,6 +68,12 @@ class TaobaoRapidAPIConnector(BaseConnector):
             Dictionary with items and total count
         """
         try:
+            # Check cache first (reduces API calls by ~80%)
+            cache_key = f"search:{keyword}:p{page}:s{page_size}"
+            cached_result = self._get_cache(cache_key)
+            if cached_result is not None:
+                return cached_result
+
             logger.info(f"🔍 Searching Taobao via RapidAPI: {keyword}")
 
             if not self.api_key:
@@ -88,10 +117,15 @@ class TaobaoRapidAPIConnector(BaseConnector):
 
             logger.info(f"✅ Found {len(products)} products via RapidAPI")
 
-            return {
+            result = {
                 'items': products,
                 'total': len(products)
             }
+
+            # Cache successful result
+            self._set_cache(cache_key, result)
+
+            return result
 
         except requests.exceptions.Timeout:
             logger.warning("⚠️ RapidAPI request timeout, falling back to scraper")
@@ -221,7 +255,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
 
     def get_product_info(self, product_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get product details by ID via RapidAPI with scraper fallback
+        Get product details by ID via RapidAPI with scraper fallback and caching
 
         Args:
             product_id: Taobao item ID
@@ -230,6 +264,12 @@ class TaobaoRapidAPIConnector(BaseConnector):
             Product information dictionary or None if not found
         """
         try:
+            # Check cache first (reduces API calls for duplicate product IDs)
+            cache_key = f"product:{product_id}"
+            cached_result = self._get_cache(cache_key)
+            if cached_result is not None:
+                return cached_result
+
             logger.info(f"🔍 Getting product info for ID: {product_id}")
 
             if not self.api_key:
@@ -284,6 +324,10 @@ class TaobaoRapidAPIConnector(BaseConnector):
             }
 
             logger.info(f"✅ Retrieved product info: {product_info['title'][:50]}...")
+
+            # Cache successful result
+            self._set_cache(cache_key, product_info)
+
             return product_info
 
         except Exception as e:

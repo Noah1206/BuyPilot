@@ -146,7 +146,7 @@ def import_product():
 
             # Step 1: Fetch product from RapidAPI
             logger.info("📥 Step 1/3: Fetching Taobao product from RapidAPI...")
-            product_info = rapidapi.get_product_detail(product_id)
+            product_info = rapidapi.get_product_info(product_id)
 
             if not product_info:
                 return jsonify({
