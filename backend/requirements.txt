@@ -12,6 +12,9 @@ cryptography==41.0.7
 # HTTP requests (for Taobao API)
 urllib3==2.0.7
 
+# Taobao Open Platform SDK
+top-api==3.0.0
+
 # Image processing
 Pillow==10.4.0
 

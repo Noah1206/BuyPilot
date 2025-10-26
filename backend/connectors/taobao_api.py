@@ -238,7 +238,7 @@ class TaobaoAPIConnector(BaseConnector):
 
             # Check if SDK and client are available
             if not HAS_TAOBAO_SDK or not self.client:
-                logger.warning("⚠️ Taobao SDK not available, returning empty results")
+                logger.error("⚠️ Taobao SDK not available - SDK must be installed")
                 return {'items': [], 'total': 0, 'error': 'SDK not available'}
 
             # Create API request
