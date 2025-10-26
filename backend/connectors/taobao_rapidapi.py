@@ -52,7 +52,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 return {'items': [], 'total': 0, 'error': 'API key missing'}
 
             # RapidAPI endpoint for Taobao search
-            url = f"{self.base_url}/api/taobao/search-item"
+            url = f"{self.base_url}/api/taobao/search-item-list/v1"
 
             headers = {
                 "X-RapidAPI-Key": self.api_key,
@@ -61,8 +61,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
 
             params = {
                 "q": keyword,
-                "page": page,
-                "pageSize": min(page_size, 100)  # RapidAPI may have limits
+                "page": page
             }
 
             response = requests.get(
