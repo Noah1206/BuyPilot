@@ -1,247 +1,143 @@
 """
-Taobao RapidAPI Connector
-Uses RapidAPI Taobao API service instead of web scraping
-More reliable and no bot detection issues
+Taobao Product Search using RapidAPI
+No SDK required - uses HTTP requests to RapidAPI Taobao endpoint
 """
 import os
-import logging
-from typing import Dict, Any, Optional, List
 import requests
-from urllib.parse import urlparse, parse_qs
-import re
+import logging
+from typing import Dict, Any, List
+from connectors.base import BaseConnector
 
 logger = logging.getLogger(__name__)
 
 
-class TaobaoRapidAPI:
-    """Taobao API connector using RapidAPI service"""
+class TaobaoRapidAPIConnector(BaseConnector):
+    """Taobao product search via RapidAPI"""
 
     def __init__(self):
-        """Initialize RapidAPI connector"""
+        """Initialize with RapidAPI credentials"""
         self.api_key = os.getenv('RAPIDAPI_KEY')
+        self.base_url = "https://taobao-tmall1.p.rapidapi.com"
+
         if not self.api_key:
-            logger.warning("⚠️ RAPIDAPI_KEY not configured. RapidAPI will not work.")
+            logger.warning("⚠️ RAPIDAPI_KEY not configured")
+        else:
+            logger.info("✅ Taobao RapidAPI connector initialized")
 
-        self.base_url = "https://taobao-api.p.rapidapi.com"
-        self.headers = {
-            "x-rapidapi-key": self.api_key,
-            "x-rapidapi-host": "taobao-api.p.rapidapi.com"
-        }
-
-        logger.info("✅ TaobaoRapidAPI initialized")
-
-    def parse_product_url(self, url: str) -> Optional[str]:
+    def search_products(
+        self,
+        keyword: str,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Dict[str, Any]:
         """
-        Extract product ID from Taobao/Tmall URL
+        Search products on Taobao via RapidAPI
 
         Args:
-            url: Product URL
+            keyword: Search keyword
+            page: Page number
+            page_size: Items per page
 
         Returns:
-            Product ID or None if invalid
+            Dictionary with items and total count
         """
         try:
-            logger.info(f"🔍 Parsing URL: {url}")
-            parsed = urlparse(url)
-            logger.info(f"📋 Parsed - netloc: {parsed.netloc}, query: {parsed.query}")
+            logger.info(f"🔍 Searching Taobao via RapidAPI: {keyword}")
 
-            # Check domain
-            valid_domains = ['taobao.com', 'tmall.com', '1688.com']
-            if not any(domain in parsed.netloc for domain in valid_domains):
-                logger.warning(f"⚠️ Invalid domain: {parsed.netloc}")
-                return None
+            if not self.api_key:
+                logger.error("⚠️ RapidAPI key not available")
+                return {'items': [], 'total': 0, 'error': 'API key missing'}
 
-            # Extract ID from query string (Taobao/Tmall)
-            query_params = parse_qs(parsed.query)
-            logger.info(f"🔎 Query params: {query_params}")
+            # RapidAPI endpoint for Taobao search
+            url = f"{self.base_url}/api/item/search"
 
-            if 'id' in query_params:
-                product_id = query_params['id'][0]
-                logger.info(f"✅ Extracted product ID from 'id' param: {product_id}")
-                return product_id
-
-            # Extract ID from path (1688)
-            match = re.search(r'/offer/(\d+)\.html', url)
-            if match:
-                product_id = match.group(1)
-                logger.info(f"✅ Extracted 1688 product ID: {product_id}")
-                return product_id
-
-            # Try to extract from path (mobile URLs)
-            match = re.search(r'/(\d{10,})\.htm', url)
-            if match:
-                product_id = match.group(1)
-                logger.info(f"✅ Extracted product ID from path: {product_id}")
-                return product_id
-
-            logger.warning(f"⚠️ Could not extract product ID from URL: {url}")
-            return None
-
-        except Exception as e:
-            logger.error(f"❌ Error parsing URL: {str(e)}")
-            return None
-
-    def get_product_detail(self, item_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get product details from RapidAPI using item_search
-
-        Since item_get is not available, we search by item ID
-
-        Args:
-            item_id: Taobao product ID
-
-        Returns:
-            Product information dictionary or None if failed
-        """
-        if not self.api_key:
-            logger.error("❌ RAPIDAPI_KEY not configured")
-            return None
-
-        try:
-            logger.info(f"🔄 Fetching product {item_id} from RapidAPI...")
-
-            # Taobao API - taobao_detail endpoint
-            url = f"{self.base_url}/taobao_detail"
-            params = {
-                "num_iid": item_id
+            headers = {
+                "X-RapidAPI-Key": self.api_key,
+                "X-RapidAPI-Host": "taobao-tmall1.p.rapidapi.com"
             }
 
-            response = requests.get(url, headers=self.headers, params=params, timeout=30)
+            params = {
+                "q": keyword,
+                "page": page,
+                "pageSize": min(page_size, 100)  # RapidAPI may have limits
+            }
 
-            # Log response status
-            logger.info(f"📡 RapidAPI response status: {response.status_code}")
+            response = requests.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=15
+            )
 
-            response.raise_for_status()
+            if response.status_code != 200:
+                logger.error(f"❌ RapidAPI returned {response.status_code}: {response.text[:200]}")
+                return {'items': [], 'total': 0, 'error': f'API error {response.status_code}'}
 
             data = response.json()
 
-            # Log full response for debugging
-            logger.info(f"📦 Full API response: {data}")
+            # Parse RapidAPI response format
+            products = self._parse_rapid_api_response(data)
 
-            # Check result structure
-            result = data.get('result', {})
+            logger.info(f"✅ Found {len(products)} products via RapidAPI")
 
-            # Check for errors
-            status = result.get('status', {})
-            logger.info(f"📊 Status: {status}")
-
-            if status.get('msg') != 'success':
-                error_msg = status.get('msg', 'Unknown error')
-                logger.error(f"❌ RapidAPI error: {error_msg}")
-                logger.error(f"❌ Full status: {status}")
-                return None
-
-            # Get item data
-            item = result.get('item', {})
-
-            if not item:
-                logger.error(f"❌ No product data found for ID: {item_id}")
-                return None
-
-            # Parse SKU pricing
-            skus = item.get('skus', {})
-            price_range = skus.get('price', '0')
-            # Get first price from range (e.g., "8.85 - 14.85" → "8.85")
-            price = self._parse_price(price_range.split('-')[0].strip() if '-' in str(price_range) else price_range)
-
-            # Parse images
-            images_raw = item.get('images', [])
-            images = [f"https:{img}" if img.startswith('//') else img for img in images_raw]
-
-            # Parse description images
-            desc_imgs = item.get('desc_imgs', [])
-            desc_images = [f"https:{img}" if img.startswith('//') else img for img in desc_imgs]
-
-            # Combine all images
-            all_images = images + desc_images
-
-            # Get seller info
-            seller = item.get('seller', {})
-
-            product_info = {
-                'source': 'taobao',
-                'taobao_item_id': item_id,
-                'title': item.get('title', ''),
-                'price': price,
-                'num': int(skus.get('quantity', 0)),
-                'pic_url': images[0] if images else '',
-                'images': all_images[:10],  # Limit to 10 images
-                'seller_nick': seller.get('shop_title', ''),
-                'location': '',  # Not provided in this API
-                'cid': '',  # Not provided in this API
-                'props': item.get('properties_cut', ''),
-                'modified': item.get('updated', ''),
-                'desc': '',  # Description is in desc_imgs
-                'detail_url': item.get('detail_url', ''),
-                'skus': skus,  # Include SKU data
+            return {
+                'items': products,
+                'total': len(products)
             }
 
-            logger.info(f"✅ Successfully fetched product: {product_info['title'][:50]}...")
-            return product_info
-
         except requests.exceptions.Timeout:
-            logger.error(f"❌ RapidAPI request timeout for item {item_id}")
-            return None
+            logger.error("❌ RapidAPI request timeout")
+            return {'items': [], 'total': 0, 'error': 'Request timeout'}
         except requests.exceptions.RequestException as e:
             logger.error(f"❌ RapidAPI request failed: {str(e)}")
-            return None
+            return {'items': [], 'total': 0, 'error': str(e)}
         except Exception as e:
-            logger.error(f"❌ Error fetching product from RapidAPI: {str(e)}")
-            return None
+            logger.error(f"❌ Error searching products: {str(e)}")
+            return {'items': [], 'total': 0, 'error': str(e)}
 
-    def _parse_price(self, price_value) -> float:
-        """Parse price from various formats"""
-        if not price_value:
-            return 0.0
+    def _parse_rapid_api_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Parse RapidAPI response to standard format"""
+        products = []
 
         try:
-            if isinstance(price_value, (int, float)):
-                return float(price_value)
+            # RapidAPI format varies, try common patterns
+            items = data.get('result', {}).get('item', [])
+            if not items:
+                items = data.get('items', [])
+            if not items:
+                items = data.get('data', {}).get('items', [])
 
-            # Remove currency symbols and commas
-            price_str = str(price_value).replace(',', '').replace('¥', '').strip()
-            return float(price_str)
-        except (ValueError, TypeError):
-            logger.warning(f"⚠️ Could not parse price: {price_value}")
-            return 0.0
+            for item in items:
+                try:
+                    product = {
+                        'taobao_item_id': str(item.get('num_iid', item.get('item_id', item.get('id', '')))),
+                        'title': item.get('title', item.get('raw_title', '')),
+                        'price': float(item.get('price', item.get('reserve_price', 0))),
+                        'pic_url': item.get('pic_url', item.get('pict_url', '')),
+                        'seller_nick': item.get('nick', item.get('seller_nick', '')),
+                        'score': 4.5  # Default score if not provided
+                    }
 
-    def _extract_images(self, item: dict) -> List[str]:
-        """Extract image URLs from item data"""
-        images = []
+                    # Only add if we have minimum required data
+                    if product['taobao_item_id'] and product['title']:
+                        products.append(product)
 
-        # Main image
-        pic_url = item.get('pic_url', '')
-        if pic_url:
-            if pic_url.startswith('//'):
-                pic_url = 'https:' + pic_url
-            images.append(pic_url)
-
-        # Additional images
-        item_imgs = item.get('item_imgs', [])
-        if isinstance(item_imgs, list):
-            for img in item_imgs:
-                if isinstance(img, dict):
-                    url = img.get('url', '')
-                elif isinstance(img, str):
-                    url = img
-                else:
+                except Exception as e:
+                    logger.debug(f"Failed to parse item: {e}")
                     continue
 
-                if url:
-                    if url.startswith('//'):
-                        url = 'https:' + url
-                    if url not in images:
-                        images.append(url)
+        except Exception as e:
+            logger.error(f"❌ Error parsing RapidAPI response: {e}")
 
-        return images[:10]  # Limit to 10 images
+        return products
 
 
 # Singleton instance
 _rapidapi_connector = None
 
-def get_taobao_rapidapi() -> TaobaoRapidAPI:
-    """Get singleton TaobaoRapidAPI instance"""
+def get_taobao_rapidapi() -> TaobaoRapidAPIConnector:
+    """Get or create RapidAPI connector singleton"""
     global _rapidapi_connector
     if _rapidapi_connector is None:
-        _rapidapi_connector = TaobaoRapidAPI()
+        _rapidapi_connector = TaobaoRapidAPIConnector()
     return _rapidapi_connector

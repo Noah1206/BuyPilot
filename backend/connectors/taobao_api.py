@@ -301,9 +301,16 @@ class TaobaoAPIConnector(BaseConnector):
 # Singleton instance
 _taobao_connector = None
 
-def get_taobao_connector() -> TaobaoAPIConnector:
-    """Get or create Taobao API connector singleton"""
+def get_taobao_connector():
+    """
+    Get Taobao connector - uses RapidAPI (no SDK required)
+
+    Returns connector compatible with TaobaoAPIConnector interface
+    """
     global _taobao_connector
     if _taobao_connector is None:
-        _taobao_connector = TaobaoAPIConnector()
+        # Use RapidAPI instead of official SDK (SDK has Python 2 dependency issues)
+        from connectors.taobao_rapidapi import get_taobao_rapidapi
+        _taobao_connector = get_taobao_rapidapi()
+        logger.info("✅ Using Taobao RapidAPI (SDK-free)")
     return _taobao_connector
