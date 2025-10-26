@@ -209,7 +209,7 @@ class ImageService:
 
     def get_public_url(self, filepath: str, base_url: str = "") -> str:
         """
-        Convert local file path to public URL
+        Convert local file path to public URL - Railway compatible
 
         Args:
             filepath: Local file path
@@ -222,10 +222,19 @@ class ImageService:
 
         if base_url:
             return f"{base_url.rstrip('/')}/{filename}"
-        else:
-            # Get backend URL from environment or use default
-            backend_url = os.getenv('BACKEND_URL', 'http://localhost:5000')
-            return f"{backend_url}/static/images/{filename}"
+
+        # Railway production environment
+        backend_url = os.getenv('BACKEND_URL')
+        if backend_url:
+            return f"{backend_url.rstrip('/')}/static/images/{filename}"
+
+        # Railway static URL (alternative)
+        railway_url = os.getenv('RAILWAY_STATIC_URL')
+        if railway_url:
+            return f"{railway_url.rstrip('/')}/static/images/{filename}"
+
+        # Local development fallback
+        return f"http://localhost:5000/static/images/{filename}"
 
 
 # Singleton instance
