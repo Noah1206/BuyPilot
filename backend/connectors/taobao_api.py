@@ -236,6 +236,11 @@ class TaobaoAPIConnector(BaseConnector):
         try:
             logger.info(f"🔍 Searching for: {keyword} (page {page})")
 
+            # Check if SDK and client are available
+            if not HAS_TAOBAO_SDK or not self.client:
+                logger.warning("⚠️ Taobao SDK not available, returning empty results")
+                return {'items': [], 'total': 0, 'error': 'SDK not available'}
+
             # Create API request
             req = top.api.ItemsSearchRequest()
             req.set_app_info(self.app_key, self.app_secret)

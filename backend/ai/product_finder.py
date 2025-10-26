@@ -51,10 +51,16 @@ class ProductFinder:
         try:
             # Search products using Taobao API
             # Note: This requires taobao.items.search permission
-            products = self.taobao.search_products(
+            search_result = self.taobao.search_products(
                 keyword=keyword,
                 page_size=max_results * 2  # Get extra to filter
             )
+
+            # Extract products from search result
+            if isinstance(search_result, dict):
+                products = search_result.get('items', [])
+            else:
+                products = search_result if search_result else []
 
             if not products:
                 logger.warning(f"No products found for keyword: {keyword}")
