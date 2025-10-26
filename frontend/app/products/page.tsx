@@ -240,7 +240,7 @@ export default function ProductsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
               {products.map((product) => {
                 const imageUrl = getValidImageUrl(product)
-                const krwPrice = Math.round(product.price * 200)
+                const krwPrice = Math.round((product.price || 0) * 200)
 
                 return (
                   <div
@@ -284,7 +284,7 @@ export default function ProductsPage() {
                           </span>
                         </div>
                         <div className="text-sm text-slate-600 mt-1 font-medium">
-                          ¥{product.price.toLocaleString()} <span className="text-slate-400">원가</span>
+                          ¥{(product.price || 0).toLocaleString()} <span className="text-slate-400">원가</span>
                         </div>
                       </div>
 
