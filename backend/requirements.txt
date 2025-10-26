@@ -17,6 +17,7 @@ Pillow==10.4.0
 
 # AI/ML
 google-generativeai==0.8.5
+iopaint==1.3.0  # AI image inpainting
 
 # Web scraping (HeySeller-style product parsing)
 selenium==4.16.0

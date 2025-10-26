@@ -14,9 +14,10 @@ import {
   translateAmazonTitle,
   type AmazonProduct,
 } from '@/lib/api-amazon'
-import { Search, Download, RefreshCw } from 'lucide-react'
+import { Search, Download, RefreshCw, Edit } from 'lucide-react'
 import TranslationButton from '@/components/competitor/TranslationButton'
 import TranslationEditor from '@/components/competitor/TranslationEditor'
+import ImageEditorModal from '@/components/ImageEditorModal'
 
 export default function AmazonToShopifyPage() {
   // UI State
@@ -36,6 +37,12 @@ export default function AmazonToShopifyPage() {
 
   // Translations: ASIN → Korean title
   const [translations, setTranslations] = useState<Map<string, string>>(new Map())
+
+  // Edited images: ASIN → edited image URL
+  const [editedImages, setEditedImages] = useState<Map<string, string>>(new Map())
+
+  // Image editor modal
+  const [editingImageASIN, setEditingImageASIN] = useState<string | null>(null)
 
   // Download state
   const [downloading, setDownloading] = useState(false)
@@ -164,12 +171,14 @@ export default function AmazonToShopifyPage() {
     setError(null)
 
     try {
-      // Add Korean titles to selected products
+      // Add Korean titles and edited images to selected products
       const selectedProductsData = products
         .filter((p) => selectedProducts.has(p.asin))
         .map((p) => ({
           ...p,
           korean_title: translations.get(p.asin) || p.title,
+          main_image: editedImages.get(p.asin) || p.main_image, // Use edited image if available
+          images: editedImages.get(p.asin) ? [editedImages.get(p.asin)!, ...(p.images || []).slice(1)] : p.images,
         }))
 
       const blob = await exportAmazonToShopify(selectedProductsData)
@@ -363,12 +372,19 @@ export default function AmazonToShopifyPage() {
                 >
                   {/* Product Image */}
                   <div className="relative">
-                    {product.main_image ? (
-                      <img
-                        src={product.main_image}
-                        alt={product.title}
-                        className="w-full h-48 object-contain bg-white"
-                      />
+                    {(editedImages.get(product.asin) || product.main_image) ? (
+                      <>
+                        <img
+                          src={editedImages.get(product.asin) || product.main_image}
+                          alt={product.title}
+                          className="w-full h-48 object-contain bg-white"
+                        />
+                        {editedImages.get(product.asin) && (
+                          <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs px-2 py-1 rounded">
+                            ✏️ 편집됨
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="w-full h-48 bg-gray-800 flex items-center justify-center">
                         <span className="text-gray-500">No Image</span>
@@ -429,6 +445,17 @@ export default function AmazonToShopifyPage() {
                       </div>
                     )}
 
+                    {/* Image Edit Button */}
+                    {product.main_image && (
+                      <button
+                        onClick={() => setEditingImageASIN(product.asin)}
+                        className="mt-3 w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Edit size={14} />
+                        이미지 편집
+                      </button>
+                    )}
+
                     {/* View on Amazon */}
                     <a
                       href={product.url}
@@ -453,6 +480,23 @@ export default function AmazonToShopifyPage() {
           </div>
         )}
       </div>
+
+      {/* Image Editor Modal */}
+      {editingImageASIN && (
+        <ImageEditorModal
+          imageUrl={editedImages.get(editingImageASIN) || products.find(p => p.asin === editingImageASIN)?.main_image || ''}
+          onClose={() => setEditingImageASIN(null)}
+          onSave={(editedImageUrl) => {
+            setEditedImages(prev => {
+              const newMap = new Map(prev)
+              newMap.set(editingImageASIN, editedImageUrl)
+              return newMap
+            })
+            setEditingImageASIN(null)
+            setSuccess('이미지가 편집되었습니다!')
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -18,6 +18,7 @@ from routes.forward import bp as forward_bp
 from routes.webhooks import bp as webhooks_bp
 from routes.products import bp as products_bp
 from routes.discovery import bp as discovery_bp
+from routes.image_edit import bp as image_edit_bp
 
 # Import scheduler
 from workers.scheduler import init_scheduler, shutdown_scheduler
@@ -52,6 +53,7 @@ app.register_blueprint(forward_bp, url_prefix='/api/v1')
 app.register_blueprint(webhooks_bp, url_prefix='/api/v1')
 app.register_blueprint(products_bp, url_prefix='/api/v1')
 app.register_blueprint(discovery_bp, url_prefix='/api/v1')
+app.register_blueprint(image_edit_bp)
 
 # Health check endpoint
 @app.route('/health', methods=['GET'])
