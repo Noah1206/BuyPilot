@@ -19,7 +19,8 @@ class TaobaoRapidAPIConnector(BaseConnector):
     def __init__(self):
         """Initialize with RapidAPI credentials"""
         self.api_key = os.getenv('RAPIDAPI_KEY')
-        self.base_url = "https://taobao-tmall1.p.rapidapi.com"
+        self.base_url = "https://taobao-tmall-all-api1.p.rapidapi.com"
+        self.api_host = "taobao-tmall-all-api1.p.rapidapi.com"
 
         if not self.api_key:
             logger.warning("⚠️ RAPIDAPI_KEY not configured")
@@ -51,11 +52,11 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 return {'items': [], 'total': 0, 'error': 'API key missing'}
 
             # RapidAPI endpoint for Taobao search
-            url = f"{self.base_url}/api/item/search"
+            url = f"{self.base_url}/api/taobao/search-item"
 
             headers = {
                 "X-RapidAPI-Key": self.api_key,
-                "X-RapidAPI-Host": "taobao-tmall1.p.rapidapi.com"
+                "X-RapidAPI-Host": self.api_host
             }
 
             params = {
@@ -204,12 +205,12 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 logger.error("⚠️ RapidAPI key not available")
                 return None
 
-            # RapidAPI endpoint for product details
-            url = f"{self.base_url}/api/item/detail"
+            # RapidAPI endpoint for product details (matching curl example)
+            url = f"{self.base_url}/api/taobao/get-item-detail/v5"
 
             headers = {
                 "X-RapidAPI-Key": self.api_key,
-                "X-RapidAPI-Host": "taobao-tmall1.p.rapidapi.com"
+                "X-RapidAPI-Host": self.api_host
             }
 
             params = {
