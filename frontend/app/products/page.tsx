@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
-import ImageEditor from '@/components/ImageEditor'
+import ImageEditorModal from '@/components/ImageEditorModal'
 
 interface Product {
   id: string
@@ -385,11 +385,10 @@ export default function ProductsPage() {
 
       {/* Image Editor Modal */}
       {editingImage && (
-        <ImageEditor
+        <ImageEditorModal
           imageUrl={editingImage.imageUrl}
-          productId={editingImage.productId}
+          onClose={() => setEditingImage(null)}
           onSave={handleSaveImage}
-          onCancel={() => setEditingImage(null)}
         />
       )}
     </div>
