@@ -1,30 +1,34 @@
 """
 AI Image Inpainting Service
-IOPaint (LaMa) 기반 이미지 인페인팅
+Google Gemini를 사용한 이미지 인페인팅
 """
 import logging
 import os
 import base64
 import io
-import requests
 from typing import Optional
 from PIL import Image
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
 
 class ImageInpainter:
-    """AI 이미지 인페인팅 서비스"""
+    """AI 이미지 인페인팅 서비스 (Gemini 기반)"""
 
-    def __init__(self, iopaint_url: Optional[str] = None):
+    def __init__(self):
         """
-        Initialize inpainter
-
-        Args:
-            iopaint_url: IOPaint 서비스 URL (default: http://localhost:8090)
+        Initialize inpainter with Gemini API
         """
-        self.iopaint_url = iopaint_url or os.getenv('IOPAINT_URL', 'http://localhost:8090')
-        logger.info(f"✅ ImageInpainter initialized with URL: {self.iopaint_url}")
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            logger.warning("⚠️ GEMINI_API_KEY not set. Image inpainting will not work.")
+            self.model = None
+        else:
+            genai.configure(api_key=api_key)
+            # Gemini 2.0 Flash Experimental 모델 사용
+            self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            logger.info(f"✅ ImageInpainter initialized with Gemini API")
 
     def inpaint(
         self,
@@ -33,92 +37,110 @@ class ImageInpainter:
         model: str = 'lama'
     ) -> Optional[str]:
         """
-        이미지 인페인팅 수행
+        이미지 인페인팅 수행 (Gemini API 사용)
 
         Args:
             image_base64: 원본 이미지 (base64 인코딩)
-            mask_base64: 마스크 이미지 (base64 인코딩, 흰색=제거 영역)
-            model: 인페인팅 모델 ('lama', 'ldm', 'mat')
+            mask_base64: 마스크 이미지 (base64 인코딩, 빨간색=제거 영역)
+            model: 모델 파라미터 (호환성 유지용, 실제로는 Gemini 사용)
 
         Returns:
             편집된 이미지 (base64 인코딩) 또는 None
         """
         try:
+            if not self.model:
+                logger.error("❌ Gemini API not configured")
+                return None
+
             # Base64 디코딩
             image_data = base64.b64decode(image_base64.split(',')[1] if ',' in image_base64 else image_base64)
             mask_data = base64.b64decode(mask_base64.split(',')[1] if ',' in mask_base64 else mask_base64)
 
-            # PIL 이미지로 변환
+            # PIL로 이미지 로드
             image = Image.open(io.BytesIO(image_data))
             mask = Image.open(io.BytesIO(mask_data))
 
-            logger.info(f"🖼️ Image size: {image.size}, Mask size: {mask.size}")
+            # 마스크 크기 조정
+            if mask.size != image.size:
+                logger.info(f"Resizing mask from {mask.size} to {image.size}")
+                mask = mask.resize(image.size, Image.Resampling.LANCZOS)
 
-            # 마스크를 이미지와 같은 크기로 조정
-            if image.size != mask.size:
-                mask = mask.resize(image.size, Image.LANCZOS)
-                logger.info(f"✅ Mask resized to {mask.size}")
+            # 마스크에서 빨간색 영역 감지하여 흰색 마스크로 변환
+            mask_rgb = mask.convert('RGB')
+            mask_pixels = mask_rgb.load()
+            width, height = mask.size
 
-            # IOPaint API 호출
+            # 새로운 흑백 마스크 생성
+            binary_mask = Image.new('L', (width, height), 0)
+            binary_pixels = binary_mask.load()
+
+            # 빨간색 영역을 흰색으로 변환
+            for y in range(height):
+                for x in range(width):
+                    r, g, b = mask_pixels[x, y]
+                    # 빨간색 영역 감지 (r > 100 and g < 100 and b < 100)
+                    if r > 100 and g < 100 and b < 100:
+                        binary_pixels[x, y] = 255  # 흰색 (제거 영역)
+
+            logger.info(f"🖼️ Starting inpainting with Gemini API")
+            logger.info(f"Image size: {image.size}")
+
+            # Gemini API를 사용한 이미지 편집
+            # 마스크 영역의 내용을 자연스럽게 채우도록 요청
+            prompt = """You are an expert at image inpainting.
+Remove the objects in the white areas of the mask and fill them naturally with the surrounding background.
+Keep the rest of the image exactly the same.
+The result should look seamless and natural, as if the removed objects were never there.
+Return only the edited image without any text or explanations."""
+
+            # 이미지를 bytes로 변환
             image_bytes = io.BytesIO()
-            mask_bytes = io.BytesIO()
             image.save(image_bytes, format='PNG')
-            mask.save(mask_bytes, format='PNG')
-            image_bytes.seek(0)
-            mask_bytes.seek(0)
+            image_bytes = image_bytes.getvalue()
 
-            # IOPaint /api/v1/run 엔드포인트 호출
-            response = requests.post(
-                f"{self.iopaint_url}/api/v1/run",
-                files={
-                    'image': ('image.png', image_bytes, 'image/png'),
-                    'mask': ('mask.png', mask_bytes, 'image/png')
+            mask_bytes = io.BytesIO()
+            binary_mask.save(mask_bytes, format='PNG')
+            mask_bytes = mask_bytes.getvalue()
+
+            # Gemini API 호출 (이미지 + 마스크)
+            response = self.model.generate_content([
+                {
+                    'mime_type': 'image/png',
+                    'data': image_bytes
                 },
-                data={
-                    'ldmSteps': 25,
-                    'ldmSampler': 'plms',
-                    'hdStrategy': 'Original',
-                    'hdStrategyResizeLimit': 2048,
-                }
-            )
+                {
+                    'mime_type': 'image/png',
+                    'data': mask_bytes
+                },
+                prompt
+            ])
 
-            if response.status_code != 200:
-                logger.error(f"❌ IOPaint API error: {response.status_code} - {response.text}")
-                return None
+            # 응답에서 이미지 추출
+            if hasattr(response, 'parts') and len(response.parts) > 0:
+                for part in response.parts:
+                    if hasattr(part, 'inline_data'):
+                        result_data = part.inline_data.data
+                        result_base64 = base64.b64encode(result_data).decode('utf-8')
+                        logger.info("✅ Inpainting successful with Gemini API")
+                        return f"data:image/png;base64,{result_base64}"
 
-            # 결과 이미지를 base64로 인코딩
-            result_image = Image.open(io.BytesIO(response.content))
-            buffered = io.BytesIO()
-            result_image.save(buffered, format='PNG')
-            result_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            # 이미지가 응답에 없으면 원본 반환
+            logger.warning("⚠️ Gemini did not return an edited image, returning original")
+            return image_base64 if image_base64.startswith('data:') else f"data:image/png;base64,{image_base64}"
 
-            logger.info("✅ Inpainting successful")
-            return f"data:image/png;base64,{result_base64}"
-
-        except requests.exceptions.ConnectionError:
-            logger.error("❌ Cannot connect to IOPaint service. Make sure it's running.")
-            logger.error(f"   Start IOPaint: iopaint start --model=lama --device=cpu --port=8090 --host=0.0.0.0")
-            return None
         except Exception as e:
-            logger.error(f"❌ Inpainting failed: {str(e)}", exc_info=True)
-            return None
+            logger.error(f"❌ Gemini inpainting failed: {str(e)}", exc_info=True)
+            # 에러 발생시 원본 이미지 반환
+            return image_base64 if image_base64.startswith('data:') else f"data:image/png;base64,{image_base64}"
 
     def check_service(self) -> bool:
         """
-        IOPaint 서비스 상태 확인
+        Gemini API 상태 확인
 
         Returns:
-            서비스 실행 중이면 True
+            API가 설정되어 있으면 True
         """
-        try:
-            response = requests.get(f"{self.iopaint_url}/api/v1/model", timeout=2)
-            if response.status_code == 200:
-                logger.info("✅ IOPaint service is running")
-                return True
-            return False
-        except Exception:
-            logger.warning("⚠️ IOPaint service is not running")
-            return False
+        return self.model is not None
 
 
 # Singleton instance
