@@ -430,6 +430,7 @@ def analyze_competitor():
 def match_taobao_batch():
     """
     스마트스토어 상품들에 대한 타오바오 배치 매칭
+    ⚠️ 타임아웃 방지: 최대 10개씩만 처리
 
     Body: {
         products: [{
@@ -472,6 +473,22 @@ def match_taobao_batch():
                     'code': 'VALIDATION_ERROR',
                     'message': 'Missing required field: products',
                     'details': {}
+                }
+            }), 400
+
+        # ⚠️ 타임아웃 방지: 최대 10개로 제한
+        MAX_BATCH_SIZE = 10
+        if len(products) > MAX_BATCH_SIZE:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'BATCH_TOO_LARGE',
+                    'message': f'Too many products. Maximum {MAX_BATCH_SIZE} products per request.',
+                    'details': {
+                        'max_batch_size': MAX_BATCH_SIZE,
+                        'received': len(products),
+                        'hint': 'Split into smaller batches on frontend'
+                    }
                 }
             }), 400
 

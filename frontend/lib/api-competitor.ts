@@ -180,6 +180,7 @@ export async function analyzeCompetitor(
 
 /**
  * Step 2: Match SmartStore products with Taobao listings
+ * ⚠️ Automatically splits into batches of 10 to prevent timeout
  *
  * @param products - Array of SmartStore products from step 1
  * @param maxCandidates - Number of Taobao candidates per product (default: 3)
@@ -195,13 +196,57 @@ export async function matchTaobaoBatch(
   matches: ProductMatch[]
   failed_products: FailedProduct[]
 }>> {
-  return apiFetch('/api/v1/discovery/match-taobao-batch', {
-    method: 'POST',
-    body: JSON.stringify({
-      products,
-      max_candidates: maxCandidates,
-    }),
-  }, 600000) // 10 minutes timeout for matching (longest operation)
+  const BATCH_SIZE = 10
+  const allMatches: ProductMatch[] = []
+  const allFailed: FailedProduct[] = []
+
+  console.log(`🔍 Starting Taobao matching with products:`, products.length)
+
+  // Split into batches of 10
+  for (let i = 0; i < products.length; i += BATCH_SIZE) {
+    const batch = products.slice(i, i + BATCH_SIZE)
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1
+    const totalBatches = Math.ceil(products.length / BATCH_SIZE)
+
+    console.log(`📤 Sending batch ${batchNum}/${totalBatches} (${batch.length} products)`)
+
+    const result = await apiFetch<{
+      matches: ProductMatch[]
+      total_count: number
+    }>('/api/v1/discovery/match-taobao-batch', {
+      method: 'POST',
+      body: JSON.stringify({
+        products: batch,
+        max_candidates: maxCandidates,
+      }),
+    }, 120000) // 2 minutes per batch
+
+    if (!result.ok || !result.data) {
+      console.error(`❌ Batch ${batchNum} failed:`, result.error)
+      // Add failed products
+      batch.forEach(product => {
+        allFailed.push({
+          title: product.title,
+          error: result.error?.message || 'Unknown error'
+        })
+      })
+      continue
+    }
+
+    console.log(`✅ Batch ${batchNum} complete: ${result.data.matches.length} matches`)
+    allMatches.push(...result.data.matches)
+  }
+
+  return {
+    ok: true,
+    data: {
+      total_products: products.length,
+      matched_count: allMatches.length,
+      failed_count: allFailed.length,
+      matches: allMatches,
+      failed_products: allFailed
+    }
+  }
 }
 
 /**
