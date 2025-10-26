@@ -144,16 +144,22 @@ def import_product():
                         }
                     }), 200
 
-            # Step 1: Fetch product from RapidAPI
+            # Step 1: Fetch product from RapidAPI (with HeySeller fallback)
             logger.info("📥 Step 1/3: Fetching Taobao product from RapidAPI...")
             product_info = rapidapi.get_product_info(product_id)
+
+            # Fallback to HeySeller scraper if RapidAPI fails
+            if not product_info:
+                logger.warning("⚠️ RapidAPI failed, falling back to HeySeller scraper...")
+                scraper = TaobaoScraper()
+                product_info = scraper.scrape_product(url)
 
             if not product_info:
                 return jsonify({
                     'ok': False,
                     'error': {
-                        'code': 'API_ERROR',
-                        'message': 'Failed to fetch product information from RapidAPI',
+                        'code': 'SCRAPER_ERROR',
+                        'message': 'Failed to fetch product information from both RapidAPI and HeySeller scraper',
                         'details': {'product_id': product_id}
                     }
                 }), 500
