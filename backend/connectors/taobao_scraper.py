@@ -312,6 +312,11 @@ class TaobaoScraper:
                 if stock_match:
                     product_data['num'] = int(stock_match.group())
 
+            # Extract product specifications and options
+            product_data['specifications'] = self._extract_specifications(soup)
+            product_data['options'] = self._extract_product_options(soup)
+            product_data['variants'] = self._extract_product_variants(soup)
+
             logger.info(f"✅ Scraped Taobao product: {product_data.get('title', '')[:50]}...")
             return product_data
 
@@ -384,6 +389,191 @@ class TaobaoScraper:
         except Exception as e:
             logger.error(f"❌ Error parsing 1688 page: {str(e)}")
             return None
+
+    def _extract_specifications(self, soup: BeautifulSoup) -> List[Dict[str, str]]:
+        """
+        Extract product specifications/attributes
+
+        Args:
+            soup: BeautifulSoup object
+
+        Returns:
+            List of specification dictionaries
+        """
+        specifications = []
+
+        try:
+            # Look for product attributes table
+            attr_selectors = [
+                {'name': 'ul', 'class': 'tb-attr'},
+                {'name': 'ul', 'class': 'attributes-list'},
+                {'name': 'table', 'class': 'tb-prop'},
+                {'name': 'div', 'class': 'tm-clear', 'id': 'attributes'},
+            ]
+
+            for selector in attr_selectors:
+                if 'id' in selector:
+                    element = soup.find(selector['name'], class_=selector.get('class'), id=selector['id'])
+                else:
+                    element = soup.find(selector['name'], class_=selector['class'])
+
+                if element:
+                    # Extract from list items
+                    items = element.find_all('li')
+                    for item in items:
+                        text = item.get_text(strip=True)
+                        if ':' in text or '：' in text:
+                            parts = text.replace('：', ':').split(':', 1)
+                            if len(parts) == 2:
+                                specifications.append({
+                                    'name': parts[0].strip(),
+                                    'value': parts[1].strip()
+                                })
+
+                    # Extract from table rows
+                    rows = element.find_all('tr')
+                    for row in rows:
+                        cells = row.find_all(['td', 'th'])
+                        if len(cells) >= 2:
+                            specifications.append({
+                                'name': cells[0].get_text(strip=True),
+                                'value': cells[1].get_text(strip=True)
+                            })
+
+                    if specifications:
+                        break
+
+            logger.info(f"✅ Extracted {len(specifications)} specifications")
+
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to extract specifications: {str(e)}")
+
+        return specifications
+
+    def _extract_product_options(self, soup: BeautifulSoup) -> List[Dict[str, Any]]:
+        """
+        Extract product options/variants (color, size, etc.)
+
+        Args:
+            soup: BeautifulSoup object
+
+        Returns:
+            List of option dictionaries
+        """
+        options = []
+
+        try:
+            # Import image service for downloading option images
+            from services.image_service import get_image_service
+            image_service = get_image_service()
+
+            # Look for SKU options (variants)
+            sku_selectors = [
+                {'name': 'div', 'class': 'tb-sku'},
+                {'name': 'div', 'class': 'tm-clear', 'attrs': {'data-property': True}},
+                {'name': 'ul', 'attrs': {'data-property': True}},
+                {'name': 'div', 'class': 'J_TSaleProp'},
+            ]
+
+            for selector in sku_selectors:
+                if 'attrs' in selector:
+                    elements = soup.find_all(selector['name'], attrs=selector['attrs'])
+                elif 'class' in selector:
+                    elements = soup.find_all(selector['name'], class_=selector['class'])
+                else:
+                    elements = soup.find_all(selector['name'])
+
+                for element in elements:
+                    # Extract option name (e.g., "颜色", "尺寸")
+                    name_elem = element.find(['dt', 'span', 'div'], class_=lambda x: x and 'name' in x.lower() if x else False)
+                    if not name_elem:
+                        name_elem = element.find(['dt', 'span', 'label'])
+
+                    option_name = name_elem.get_text(strip=True) if name_elem else "选项"
+                    option_name = option_name.replace(':', '').replace('：', '').strip()
+
+                    # Extract option values
+                    values = []
+                    value_elements = element.find_all(['li', 'span', 'a'], class_=lambda x: x and ('sku' in x.lower() or 'option' in x.lower()) if x else False)
+
+                    if not value_elements:
+                        # Fallback: find all clickable elements
+                        value_elements = element.find_all(['li', 'span', 'a'])
+
+                    for value_elem in value_elements:
+                        value_text = value_elem.get_text(strip=True)
+                        if value_text and len(value_text) < 50:  # Reasonable length filter
+                            # Check for images (color swatches)
+                            img_elem = value_elem.find('img')
+                            image_url = ''
+                            downloaded_image_url = ''
+
+                            if img_elem:
+                                image_url = img_elem.get('src', '') or img_elem.get('data-src', '')
+                                if image_url:
+                                    # Fix protocol-relative URLs
+                                    if image_url.startswith('//'):
+                                        image_url = 'https:' + image_url
+
+                                    # Download option image to Railway server
+                                    try:
+                                        local_path = image_service.download_image(image_url, optimize=True, max_size=(200, 200))
+                                        if local_path:
+                                            downloaded_image_url = image_service.get_public_url(local_path)
+                                            logger.info(f"✅ Downloaded option image: {downloaded_image_url}")
+                                    except Exception as e:
+                                        logger.warning(f"⚠️ Failed to download option image: {str(e)}")
+                                        downloaded_image_url = image_url  # Fallback to original URL
+
+                            values.append({
+                                'text': value_text,
+                                'image': downloaded_image_url or image_url,  # Use downloaded URL if available
+                                'original_image': image_url,  # Preserve original URL
+                                'available': 'disabled' not in value_elem.get('class', [])
+                            })
+
+                    if values:
+                        options.append({
+                            'name': option_name,
+                            'values': values
+                        })
+
+            logger.info(f"✅ Extracted {len(options)} product options")
+
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to extract product options: {str(e)}")
+
+        return options
+
+    def _extract_product_variants(self, soup: BeautifulSoup) -> List[Dict[str, Any]]:
+        """
+        Extract product variants with pricing
+
+        Args:
+            soup: BeautifulSoup object
+
+        Returns:
+            List of variant dictionaries
+        """
+        variants = []
+
+        try:
+            # Try to extract variant data from JavaScript
+            scripts = soup.find_all('script')
+            for script in scripts:
+                if script.string and ('skuMap' in script.string or 'valItemInfo' in script.string):
+                    # This would require more complex parsing of JavaScript
+                    # For now, we'll extract basic variant information
+                    logger.info("📍 Found variant data in script (advanced parsing needed)")
+                    break
+
+            # Basic variant extraction from option combinations
+            # This is a simplified approach - real implementation would need JS parsing
+
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to extract product variants: {str(e)}")
+
+        return variants
 
     def close(self):
         """Close scraper and cleanup"""

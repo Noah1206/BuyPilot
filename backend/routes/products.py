@@ -190,6 +190,27 @@ def import_product():
 
         logger.info(f"✅ Downloaded {len(downloaded_images)} images")
 
+        # Step 3.5: Download option images (if not already downloaded by scraper)
+        if product_info.get('options'):
+            logger.info("🎨 Downloading option images...")
+            option_images_downloaded = 0
+            for option in product_info['options']:
+                for value in option.get('values', []):
+                    # Check if image needs to be downloaded (external URL, not already on our server)
+                    if value.get('image') and not value['image'].startswith('/static/') and not 'railway.app' in value['image']:
+                        try:
+                            local_path = image_service.download_image(value['image'], optimize=True, max_size=(200, 200))
+                            if local_path:
+                                value['image'] = image_service.get_public_url(local_path)
+                                option_images_downloaded += 1
+                                logger.info(f"✅ Downloaded option image: {value['image']}")
+                        except Exception as e:
+                            logger.warning(f"⚠️ Option image download failed: {str(e)}")
+                            # Keep original URL as fallback
+
+            if option_images_downloaded > 0:
+                logger.info(f"✅ Downloaded {option_images_downloaded} option images")
+
         # Create product in database
         with get_db() as db:
             product = Product(
@@ -227,6 +248,11 @@ def import_product():
                     'cid': product_info.get('cid', ''),
                     'props': product_info.get('props', ''),
                     'modified': product_info.get('modified', ''),
+
+                    # Product specifications and options
+                    'specifications': product_info.get('specifications', []),
+                    'options': product_info.get('options', []),
+                    'variants': product_info.get('variants', []),
 
                     # Processing info
                     'translated': product_info.get('translated', False),
@@ -400,7 +426,21 @@ def update_product(product_id):
                 # Merge with existing data
                 if not product.data:
                     product.data = {}
-                product.data.update(data['data'])
+
+                update_data = data['data']
+
+                # Handle thumbnail and detail images separately
+                if 'thumbnail_image_url' in update_data:
+                    product.data['thumbnail_image_url'] = update_data['thumbnail_image_url']
+                    logger.info(f"✅ Updated thumbnail image for product {product_id}")
+
+                if 'detail_image_url' in update_data:
+                    product.data['detail_image_url'] = update_data['detail_image_url']
+                    logger.info(f"✅ Updated detail image for product {product_id}")
+
+                # Merge other data (exclude thumbnail/detail to avoid duplication)
+                product.data.update({k: v for k, v in update_data.items()
+                                   if k not in ['thumbnail_image_url', 'detail_image_url']})
 
             product.updated_at = datetime.utcnow()
 

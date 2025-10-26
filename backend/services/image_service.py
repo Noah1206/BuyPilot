@@ -223,8 +223,9 @@ class ImageService:
         if base_url:
             return f"{base_url.rstrip('/')}/{filename}"
         else:
-            # Return relative path for local development
-            return f"/static/images/{filename}"
+            # Get backend URL from environment or use default
+            backend_url = os.getenv('BACKEND_URL', 'http://localhost:5000')
+            return f"{backend_url}/static/images/{filename}"
 
 
 # Singleton instance

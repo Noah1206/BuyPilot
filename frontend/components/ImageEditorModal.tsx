@@ -35,7 +35,21 @@ export default function ImageEditorModal({ imageUrl, onClose, onSave }: ImageEdi
   useEffect(() => {
     const loadAndDrawImage = async () => {
       try {
-        const img = await loadImage(imageUrl)
+        // Fix image URL if needed
+        let fixedImageUrl = imageUrl
+
+        // Handle relative URLs
+        if (imageUrl.startsWith('/static/')) {
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+          fixedImageUrl = `${backendUrl}${imageUrl}`
+        }
+
+        // Handle protocol-relative URLs
+        if (imageUrl.startsWith('//')) {
+          fixedImageUrl = `https:${imageUrl}`
+        }
+
+        const img = await loadImage(fixedImageUrl)
         setOriginalImage(img)
 
         const imageCanvas = imageCanvasRef.current

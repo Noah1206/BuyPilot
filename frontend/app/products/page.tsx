@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
 import ImageEditorModal from '@/components/ImageEditorModal'
+import EnhancedImageEditor from '@/components/EnhancedImageEditor'
 
 interface Product {
   id: string
@@ -30,6 +31,8 @@ export default function ProductsPage() {
   const [page, setPage] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingImage, setEditingImage] = useState<{ productId: string; imageUrl: string } | null>(null)
+  const [useEnhancedEditor, setUseEnhancedEditor] = useState(false)
+  const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
   const limit = 12
 
   // Load products on mount and when page changes
@@ -99,21 +102,33 @@ export default function ProductsPage() {
     setEditingImage({ productId, imageUrl })
   }
 
-  const handleSaveImage = async (editedImageUrl: string) => {
+  const handleSaveImage = async (editedImageUrl: string, editType?: 'thumbnail' | 'detail') => {
     if (!editingImage) return
 
-    // In production, upload to Supabase Storage here
-    // For now, just update the product with the edited image URL
-    const response = await updateProduct(editingImage.productId, {
-      image_url: editedImageUrl,
+    // Update the product with the edited image URL
+    const updateData: any = {
       data: {
         edited: true,
         edited_at: new Date().toISOString(),
       },
-    })
+    }
+
+    // Store different versions for thumbnail and detail
+    if (editType === 'thumbnail') {
+      updateData.data.thumbnail_image_url = editedImageUrl
+      updateData.image_url = editedImageUrl  // Also update main image_url for thumbnail
+    } else if (editType === 'detail') {
+      updateData.data.detail_image_url = editedImageUrl
+    } else {
+      // Legacy support for basic editor - update both
+      updateData.image_url = editedImageUrl
+      updateData.data.thumbnail_image_url = editedImageUrl
+    }
+
+    const response = await updateProduct(editingImage.productId, updateData)
 
     if (response.ok) {
-      setSuccess('이미지가 저장되었습니다.')
+      setSuccess(`${editType ? (editType === 'thumbnail' ? '썸네일' : '상세 페이지') : '이미지'}가 저장되었습니다.`)
       setEditingImage(null)
       loadProducts()
     } else {
@@ -244,31 +259,56 @@ export default function ProductsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="space-y-2">
               {products.map((product) => {
-                // Filter out blob URLs and use fallback image
+                // Get valid image URL with fallback logic
                 const getValidImageUrl = (product: Product): string => {
                   // If image_url is valid (not blob), use it
                   if (product.image_url && !product.image_url.startsWith('blob:')) {
+                    // If it's a relative URL, make it absolute to backend
+                    if (product.image_url.startsWith('/static/')) {
+                      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+                      return `${backendUrl}${product.image_url}`
+                    }
                     return product.image_url
                   }
 
                   // Try to find a valid image from data
                   if (product.data) {
-                    // Try downloaded_images
+                    // Try downloaded_images (these should be absolute URLs from backend)
                     if (product.data.downloaded_images && Array.isArray(product.data.downloaded_images)) {
-                      const validImage = product.data.downloaded_images.find((img: string) => !img.startsWith('blob:'))
-                      if (validImage) return validImage
+                      const validImage = product.data.downloaded_images.find((img: string) =>
+                        img && !img.startsWith('blob:') && img.trim() !== ''
+                      )
+                      if (validImage) {
+                        // If it's a relative URL, make it absolute to backend
+                        if (validImage.startsWith('/static/')) {
+                          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+                          return `${backendUrl}${validImage}`
+                        }
+                        return validImage
+                      }
                     }
 
-                    // Try pic_url
+                    // Try pic_url (original Taobao URL)
                     if (product.data.pic_url && !product.data.pic_url.startsWith('blob:')) {
+                      // Fix protocol-relative URLs
+                      if (product.data.pic_url.startsWith('//')) {
+                        return `https:${product.data.pic_url}`
+                      }
                       return product.data.pic_url
                     }
 
-                    // Try images array
+                    // Try images array (original Taobao URLs)
                     if (product.data.images && Array.isArray(product.data.images) && product.data.images.length > 0) {
-                      return product.data.images[0]
+                      const firstImage = product.data.images[0]
+                      if (firstImage && !firstImage.startsWith('blob:')) {
+                        // Fix protocol-relative URLs
+                        if (firstImage.startsWith('//')) {
+                          return `https:${firstImage}`
+                        }
+                        return firstImage
+                      }
                     }
                   }
 
@@ -280,74 +320,123 @@ export default function ProductsPage() {
                 return (
                 <div
                   key={product.id}
-                  className="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hover:border-[#58a6ff] transition-colors group"
+                  className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 hover:border-[#58a6ff] transition-colors flex items-center gap-4"
                 >
+                  {/* Checkbox */}
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-[#30363d] bg-[#0d1117] text-[#238636] focus:ring-[#238636] focus:ring-offset-0"
+                  />
+
+                  {/* Order number */}
+                  <div className="text-lg font-semibold text-[#8d96a0] w-10">
+                    {products.indexOf(product) + 1 + page * limit}
+                  </div>
+
                   {/* Product Image */}
-                  {validImageUrl && (
-                    <div className="aspect-square bg-[#0d1117] overflow-hidden">
-                      <img
-                        src={validImageUrl}
-                        alt={product.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                  )}
-
-                  {/* Product Info */}
-                  <div className="p-4">
-                    <h3 className="text-sm font-medium text-[#e6edf3] mb-2 line-clamp-2 h-10">
-                      {product.title}
-                    </h3>
-
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-[#58a6ff] font-bold">
-                        ¥{product.price}
-                      </div>
-                      {product.score && (
-                        <div className="text-xs text-[#ffa657]">
-                          ★ {product.score}
-                        </div>
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 bg-[#0d1117] rounded-lg overflow-hidden border border-[#30363d]">
+                      {validImageUrl && (
+                        <img
+                          src={validImageUrl}
+                          alt={product.title}
+                          className="w-full h-full object-cover"
+                        />
                       )}
                     </div>
+                  </div>
 
-                    <div className="flex items-center gap-2 mb-3 text-xs text-[#8d96a0]">
-                      <span className="px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded">
-                        {product.source}
-                      </span>
-                      {product.stock !== undefined && (
-                        <span className="px-2 py-1 bg-[#0d1117] border border-[#30363d] rounded">
-                          재고 {product.stock}
-                        </span>
-                      )}
+                  {/* Product Name */}
+                  <div className="flex-shrink-0 w-32">
+                    <div className="text-sm text-[#8d96a0] mb-1">판매가</div>
+                    <div className="text-lg font-bold text-[#e6edf3]">
+                      {Math.round(product.price * 200).toLocaleString()}
                     </div>
+                    <div className="text-xs text-[#8d96a0]">¥ {product.price}</div>
+                  </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        <a
-                          href={product.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-xs text-center rounded transition-colors"
-                        >
-                          원본 보기
-                        </a>
-                        {validImageUrl && (
-                          <button
-                            onClick={() => handleEditImage(product.id, validImageUrl)}
-                            className="flex-1 px-3 py-1.5 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 border border-[#58a6ff] text-[#58a6ff] text-xs rounded transition-colors"
-                          >
-                            이미지 편집
-                          </button>
+                  {/* Options */}
+                  <div className="flex-1 min-w-0">
+                    {product.data?.options && product.data.options.length > 0 ? (
+                      <div className="space-y-2">
+                        {product.data.options.slice(0, 2).map((option: any, idx: number) => (
+                          <div key={idx} className="flex items-start gap-3">
+                            <div className="text-sm text-[#ffa657] font-medium w-16 flex-shrink-0 pt-1">
+                              {option.name}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap flex-1">
+                              {option.values?.slice(0, 4).map((value: any, vidx: number) => (
+                                <div key={vidx} className="flex items-center gap-1">
+                                  <span className="text-xs text-[#6e7681]">
+                                    원문: {value.text}
+                                  </span>
+                                </div>
+                              ))}
+                              {option.values?.length > 4 && (
+                                <button
+                                  onClick={() => setExpandedProduct(expandedProduct === product.id ? null : product.id)}
+                                  className="text-xs text-[#58a6ff] hover:text-[#79c0ff] transition-colors"
+                                >
+                                  +{option.values.length - 4}개 더
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {expandedProduct === product.id && product.data.options.length > 2 && (
+                          <div className="space-y-2 mt-2">
+                            {product.data.options.slice(2).map((option: any, idx: number) => (
+                              <div key={idx} className="flex items-start gap-3">
+                                <div className="text-sm text-[#ffa657] font-medium w-16 flex-shrink-0 pt-1">
+                                  {option.name}
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap flex-1">
+                                  {option.values?.map((value: any, vidx: number) => (
+                                    <span key={vidx} className="text-xs text-[#6e7681]">
+                                      원문: {value.text}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="w-full px-3 py-1.5 bg-[#da3633]/10 hover:bg-[#da3633]/20 border border-[#da3633] text-[#f85149] text-xs rounded transition-colors"
-                      >
-                        삭제
-                      </button>
+                    ) : (
+                      <div className="text-sm text-[#6e7681] line-clamp-2">
+                        {product.title}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quantity */}
+                  <div className="text-center flex-shrink-0 w-20">
+                    <div className="text-lg font-semibold text-[#e6edf3]">
+                      {product.stock || 0}
                     </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {validImageUrl && (
+                      <button
+                        onClick={() => {
+                          setUseEnhancedEditor(true)
+                          handleEditImage(product.id, validImageUrl)
+                        }}
+                        className="p-2 bg-[#a855f7]/10 hover:bg-[#a855f7]/20 border border-[#a855f7] text-[#a855f7] rounded-lg transition-colors"
+                        title="이미지 편집"
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="p-2 bg-[#da3633]/10 hover:bg-[#da3633]/20 border border-[#da3633] text-[#f85149] rounded-lg transition-colors"
+                      title="삭제"
+                    >
+                      ❌
+                    </button>
                   </div>
                 </div>
                 )
@@ -383,9 +472,17 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Image Editor Modal */}
-      {editingImage && (
+      {/* Image Editor Modals */}
+      {editingImage && !useEnhancedEditor && (
         <ImageEditorModal
+          imageUrl={editingImage.imageUrl}
+          onClose={() => setEditingImage(null)}
+          onSave={handleSaveImage}
+        />
+      )}
+
+      {editingImage && useEnhancedEditor && (
+        <EnhancedImageEditor
           imageUrl={editingImage.imageUrl}
           onClose={() => setEditingImage(null)}
           onSave={handleSaveImage}
