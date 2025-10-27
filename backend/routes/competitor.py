@@ -33,6 +33,7 @@ def analyze_competitor():
 
     Body: {
         keyword: string  # Search keyword (e.g., "캠핑용 화로", "공구")
+        count: number    # Number of products to analyze (default: 3, max: 100)
     }
 
     Returns: {
@@ -65,6 +66,8 @@ def analyze_competitor():
         data = request.get_json(force=True)
 
         keyword = data.get('keyword')
+        count = data.get('count', 3)  # Default to 3 if not provided
+
         if not keyword:
             return jsonify({
                 'ok': False,
@@ -75,11 +78,19 @@ def analyze_competitor():
                 }
             }), 400
 
-        logger.info(f"🔍 Starting competitor analysis for keyword: {keyword}")
+        # Validate count (1-100)
+        try:
+            count = int(count)
+            if count < 1 or count > 100:
+                count = min(max(count, 1), 100)  # Clamp to 1-100
+        except (ValueError, TypeError):
+            count = 3  # Default if invalid
 
-        # Step 1: Search Naver Shopping API and get top 3 products
+        logger.info(f"🔍 Starting competitor analysis for keyword: {keyword}, count: {count}")
+
+        # Step 1: Search Naver Shopping API and get top N products
         api = get_shopping_api()
-        top_products = api.search_popular_products(keyword=keyword, max_products=3)
+        top_products = api.search_popular_products(keyword=keyword, max_products=count)
 
         if not top_products:
             return jsonify({

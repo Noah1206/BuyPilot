@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Download, TrendingUp, Package, DollarSign, TruckIcon, ExternalLink } from 'lucide-react'
+import { Search, Download, TrendingUp, Package, DollarSign, TruckIcon, ExternalLink, Copy, ArrowLeft } from 'lucide-react'
 
 interface Product {
   title: string
@@ -32,6 +32,7 @@ interface AnalysisResult {
 
 export default function CompetitorAnalysisPage() {
   const [keyword, setKeyword] = useState('')
+  const [count, setCount] = useState(3)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState('')
@@ -55,7 +56,7 @@ export default function CompetitorAnalysisPage() {
       const response = await fetch(`${API_URL}/api/v1/competitor/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword })
+        body: JSON.stringify({ keyword, count })
       })
 
       const data = await response.json()
@@ -118,9 +119,33 @@ export default function CompetitorAnalysisPage() {
     return 'bg-red-50 border-red-200'
   }
 
+  const copyToClipboard = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      alert('URL이 복사되었습니다!')
+    } catch (err) {
+      alert('URL 복사에 실패했습니다')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="mb-6"
+        >
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all text-slate-700 hover:text-blue-600"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">홈으로</span>
+          </a>
+        </motion.div>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -131,7 +156,7 @@ export default function CompetitorAnalysisPage() {
             경쟁사 분석
           </h1>
           <p className="text-slate-600">
-            상품 키워드를 입력하면 네이버 쇼핑 상위 3개 제품을 분석하여 마진과 배송비를 자동 계산해드립니다
+            상품 키워드와 분석할 제품 개수를 입력하면 네이버 쇼핑 상위 제품들을 분석하여 마진과 배송비를 자동 계산해드립니다
           </p>
         </motion.div>
 
@@ -151,6 +176,18 @@ export default function CompetitorAnalysisPage() {
                 onChange={(e) => setKeyword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
                 placeholder="검색 키워드 입력 (예: 캠핑용 화로, 공구)"
+                className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+              />
+            </div>
+            <div className="w-32 relative">
+              <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="number"
+                value={count}
+                onChange={(e) => setCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 3)))}
+                min="1"
+                max="100"
+                placeholder="개수"
                 className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
               />
             </div>
@@ -249,14 +286,23 @@ export default function CompetitorAnalysisPage() {
                           <h3 className="text-lg font-bold text-slate-800 mb-2">
                             {product.title}
                           </h3>
-                          <a
-                            href={product.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-                          >
-                            상품 보기 <ExternalLink className="w-3 h-3" />
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={product.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                            >
+                              상품 보기 <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <button
+                              onClick={() => copyToClipboard(product.url)}
+                              className="text-sm text-slate-600 hover:text-blue-600 flex items-center gap-1 transition-colors"
+                              title="URL 복사"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                         <div className="text-right">
                           <div className={`text-3xl font-bold ${getProfitColor(product.profit_rate)}`}>
