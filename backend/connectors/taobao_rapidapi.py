@@ -20,8 +20,8 @@ class TaobaoRapidAPIConnector(BaseConnector):
     def __init__(self):
         """Initialize with RapidAPI credentials and cache"""
         self.api_key = os.getenv('RAPIDAPI_KEY')
-        self.base_url = "https://taobao-api.p.rapidapi.com"
-        self.api_host = "taobao-api.p.rapidapi.com"
+        self.base_url = "https://taobao-datahub.p.rapidapi.com"
+        self.api_host = "taobao-datahub.p.rapidapi.com"
 
         # Simple in-memory cache (TTL: 1 hour)
         self._cache = {}
@@ -30,7 +30,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
         if not self.api_key:
             logger.warning("⚠️ RAPIDAPI_KEY not configured")
         else:
-            logger.info("✅ Taobao RapidAPI connector initialized with caching")
+            logger.info("✅ Taobao DataHub RapidAPI connector initialized with caching")
 
     def _get_cache(self, cache_key: str) -> Optional[Any]:
         """Get value from cache if not expired"""
@@ -80,8 +80,8 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 logger.warning("⚠️ RapidAPI key not available, using scraper fallback")
                 return self._fallback_to_scraper(keyword, page, page_size)
 
-            # RapidAPI endpoint for Taobao search
-            url = f"{self.base_url}/api"
+            # Taobao DataHub API endpoint
+            url = f"{self.base_url}/item_search"
 
             headers = {
                 "x-rapidapi-key": self.api_key,
@@ -89,12 +89,9 @@ class TaobaoRapidAPIConnector(BaseConnector):
             }
 
             params = {
-                "api": "item_search",
-                "key": self.api_key,  # API key as query parameter (required by this API)
                 "q": keyword,
                 "page": page,
-                "page_size": page_size,
-                "sort": "default"
+                "pageSize": page_size
             }
 
             response = requests.get(
@@ -175,30 +172,53 @@ class TaobaoRapidAPIConnector(BaseConnector):
             return {'items': [], 'total': 0, 'error': f'Both API and scraper failed: {str(scraper_error)}'}
 
     def _parse_rapid_api_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Parse RapidAPI response to standard format"""
+        """Parse Taobao DataHub API response to standard format"""
         products = []
 
         try:
-            # RapidAPI format varies, try common patterns
-            items = data.get('result', {}).get('item', [])
-            if not items:
-                items = data.get('items', [])
-            if not items:
-                items = data.get('data', {}).get('items', [])
+            # Taobao DataHub format: result.resultList[]
+            result_list = data.get('result', {}).get('resultList', [])
 
-            for item in items:
+            if not result_list:
+                logger.warning("⚠️ No resultList in API response")
+                return products
+
+            for result_item in result_list:
                 try:
+                    item = result_item.get('item', {})
+                    if not item:
+                        continue
+
+                    # Extract price from SKU
+                    sku = item.get('sku', {}).get('def', {})
+                    price = sku.get('promotionPrice') or sku.get('price', '0')
+
+                    # Clean price string (remove non-numeric except dot)
+                    if isinstance(price, str):
+                        price = price.split(' - ')[0].strip()  # Take first price if range
+                        price = ''.join(c for c in price if c.isdigit() or c == '.')
+
+                    try:
+                        price_float = float(price) if price else 0.0
+                    except:
+                        price_float = 0.0
+
+                    # Extract item ID from encoded string (use as backup)
+                    item_id = item.get('itemId', '') or item.get('itemIdStr', '')[:20]
+
                     product = {
-                        'taobao_item_id': str(item.get('num_iid', item.get('item_id', item.get('id', '')))),
-                        'title': item.get('title', item.get('raw_title', '')),
-                        'price': float(item.get('price', item.get('reserve_price', 0))),
-                        'pic_url': item.get('pic_url', item.get('pict_url', '')),
-                        'seller_nick': item.get('nick', item.get('seller_nick', '')),
-                        'score': 4.5  # Default score if not provided
+                        'taobao_item_id': str(item_id),
+                        'title': item.get('title', ''),
+                        'price': price_float,
+                        'pic_url': item.get('image', ''),
+                        'seller_nick': result_item.get('seller', {}).get('storeTitle', ''),
+                        'sales': item.get('sales', '0'),
+                        'images': item.get('images', []),
+                        'score': 4.5  # Default score
                     }
 
                     # Only add if we have minimum required data
-                    if product['taobao_item_id'] and product['title']:
+                    if product['title'] and product['price'] > 0:
                         products.append(product)
 
                 except Exception as e:
@@ -206,7 +226,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
                     continue
 
         except Exception as e:
-            logger.error(f"❌ Error parsing RapidAPI response: {e}")
+            logger.error(f"❌ Error parsing Taobao DataHub response: {e}")
 
         return products
 
