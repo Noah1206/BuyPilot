@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Download, TrendingUp, Package, DollarSign, TruckIcon } from 'lucide-react'
+import { Search, Download, TrendingUp, Package, DollarSign, TruckIcon, ExternalLink } from 'lucide-react'
 
 interface Product {
   title: string
   price: number
+  url: string
   category: string
   estimated_weight: number
   cost_price: number
@@ -18,25 +19,26 @@ interface Product {
   recommendation: string
   status: string
   image_url?: string
-  url?: string
+  store_name?: string
+  rank: number
 }
 
 interface AnalysisResult {
-  store_url: string
-  domain: string
+  keyword: string
+  total_found: number
   products: Product[]
   analyzed_at: string
 }
 
 export default function CompetitorAnalysisPage() {
-  const [url, setUrl] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState('')
 
   const handleAnalyze = async () => {
-    if (!url) {
-      setError('경쟁사 URL을 입력해주세요')
+    if (!keyword) {
+      setError('검색 키워드를 입력해주세요')
       return
     }
 
@@ -48,7 +50,7 @@ export default function CompetitorAnalysisPage() {
       const response = await fetch('http://localhost:4070/api/v1/competitor/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ keyword })
       })
 
       const data = await response.json()
@@ -74,8 +76,7 @@ export default function CompetitorAnalysisPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           products: result.products,
-          store_url: result.store_url,
-          domain: result.domain
+          keyword: result.keyword
         })
       })
 
@@ -88,7 +89,7 @@ export default function CompetitorAnalysisPage() {
       const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = downloadUrl
-      a.download = `competitor_analysis_${new Date().getTime()}.xlsx`
+      a.download = `competitor_analysis_${result.keyword}_${new Date().getTime()}.xlsx`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(downloadUrl)
@@ -125,7 +126,7 @@ export default function CompetitorAnalysisPage() {
             경쟁사 분석
           </h1>
           <p className="text-slate-600">
-            경쟁사 URL을 입력하면 상위 3개 상품을 분석하여 마진과 배송비를 자동 계산해드립니다
+            상품 키워드를 입력하면 네이버 쇼핑 상위 3개 제품을 분석하여 마진과 배송비를 자동 계산해드립니다
           </p>
         </motion.div>
 
@@ -140,11 +141,11 @@ export default function CompetitorAnalysisPage() {
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
               <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
-                placeholder="경쟁사 스토어 URL 입력 (쿠팡, 네이버 스마트스토어 등)"
+                placeholder="검색 키워드 입력 (예: 캠핑용 화로, 공구)"
                 className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
               />
             </div>
@@ -180,21 +181,16 @@ export default function CompetitorAnalysisPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {/* Store Info */}
+            {/* Keyword Info */}
             <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-slate-800 mb-1">
-                    {result.domain}
+                    "{result.keyword}" 검색 결과
                   </h2>
-                  <a
-                    href={result.store_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    {result.store_url}
-                  </a>
+                  <p className="text-sm text-slate-600">
+                    상위 {result.products.length}개 제품 분석 완료
+                  </p>
                 </div>
                 <button
                   onClick={handleExport}
@@ -234,25 +230,28 @@ export default function CompetitorAnalysisPage() {
                         <div>
                           <div className="flex items-center gap-3 mb-2">
                             <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
-                              TOP {idx + 1}
+                              TOP {product.rank}
                             </span>
                             <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium">
                               {product.category}
                             </span>
+                            {product.store_name && (
+                              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium">
+                                {product.store_name}
+                              </span>
+                            )}
                           </div>
                           <h3 className="text-lg font-bold text-slate-800 mb-2">
                             {product.title}
                           </h3>
-                          {product.url && (
-                            <a
-                              href={product.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:underline"
-                            >
-                              상품 보기 →
-                            </a>
-                          )}
+                          <a
+                            href={product.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            상품 보기 <ExternalLink className="w-3 h-3" />
+                          </a>
                         </div>
                         <div className="text-right">
                           <div className={`text-3xl font-bold ${getProfitColor(product.profit_rate)}`}>
