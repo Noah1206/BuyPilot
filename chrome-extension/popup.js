@@ -120,6 +120,12 @@ async function importProduct() {
       body: JSON.stringify(currentProduct)
     });
 
+    // Check response status BEFORE parsing JSON
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`서버 응답 오류 (${response.status}): ${errorText.substring(0, 100)}`);
+    }
+
     const result = await response.json();
 
     if (result.ok) {
