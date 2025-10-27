@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Download, TrendingUp, Package, DollarSign, TruckIcon, ExternalLink, Copy, ArrowLeft } from 'lucide-react'
 
@@ -41,6 +41,34 @@ export default function CompetitorAnalysisPage() {
   const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
     ? window.location.origin
     : 'http://localhost:4070'
+
+  // Load saved results on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedResult = localStorage.getItem('competitor_analysis_result')
+      const savedKeyword = localStorage.getItem('competitor_analysis_keyword')
+      const savedCount = localStorage.getItem('competitor_analysis_count')
+
+      if (savedResult) {
+        try {
+          setResult(JSON.parse(savedResult))
+          if (savedKeyword) setKeyword(savedKeyword)
+          if (savedCount) setCount(parseInt(savedCount))
+        } catch (e) {
+          console.error('Failed to load saved results:', e)
+        }
+      }
+    }
+  }, [])
+
+  // Save results to localStorage whenever they change
+  useEffect(() => {
+    if (result && typeof window !== 'undefined') {
+      localStorage.setItem('competitor_analysis_result', JSON.stringify(result))
+      localStorage.setItem('competitor_analysis_keyword', keyword)
+      localStorage.setItem('competitor_analysis_count', count.toString())
+    }
+  }, [result, keyword, count])
 
   const handleAnalyze = async () => {
     if (!keyword) {
