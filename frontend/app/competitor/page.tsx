@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Download, TrendingUp, Package, DollarSign, TruckIcon, ExternalLink, Copy, ArrowLeft } from 'lucide-react'
+import Header from '@/components/Header'
+import { Search, Download, TrendingUp, Package, DollarSign, TruckIcon, ExternalLink, Copy } from 'lucide-react'
 
 interface Product {
   title: string
@@ -160,22 +161,11 @@ export default function CompetitorAnalysisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-6"
-        >
-          <a
-            href="/dashboard"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all text-slate-700 hover:text-blue-600"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">대시보드로</span>
-          </a>
-        </motion.div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      {/* Header */}
+      <Header />
+
+      <div className="max-w-7xl mx-auto p-8">
 
         {/* Header */}
         <motion.div
