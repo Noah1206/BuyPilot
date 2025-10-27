@@ -36,6 +36,8 @@ export default function CompetitorAnalysisPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 100
 
   // Use Railway URL in production, localhost in development
   const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
@@ -79,6 +81,7 @@ export default function CompetitorAnalysisPage() {
     setLoading(true)
     setError('')
     setResult(null)
+    setCurrentPage(1) // Reset to first page on new search
 
     try {
       const response = await fetch(`${API_URL}/api/v1/competitor/analyze`, {
@@ -212,9 +215,9 @@ export default function CompetitorAnalysisPage() {
               <input
                 type="number"
                 value={count}
-                onChange={(e) => setCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 3)))}
+                onChange={(e) => setCount(Math.max(1, Math.min(9999, parseInt(e.target.value) || 3)))}
                 min="1"
-                max="100"
+                max="9999"
                 placeholder="개수"
                 className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
               />
@@ -274,7 +277,9 @@ export default function CompetitorAnalysisPage() {
 
             {/* Products */}
             <div className="space-y-6">
-              {result.products.map((product, idx) => (
+              {result.products
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map((product, idx) => (
                 <motion.div
                   key={idx}
                   initial={{ opacity: 0, x: -20 }}
@@ -400,6 +405,41 @@ export default function CompetitorAnalysisPage() {
                 </motion.div>
               ))}
             </div>
+
+            {/* Pagination */}
+            {result.products.length > itemsPerPage && (
+              <div className="flex justify-center items-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-white border-2 border-slate-200 rounded-lg hover:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  이전
+                </button>
+
+                {Array.from({ length: Math.ceil(result.products.length / itemsPerPage) }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border-2 border-slate-200 hover:border-blue-500'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(result.products.length / itemsPerPage), p + 1))}
+                  disabled={currentPage === Math.ceil(result.products.length / itemsPerPage)}
+                  className="px-4 py-2 bg-white border-2 border-slate-200 rounded-lg hover:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  다음
+                </button>
+              </div>
+            )}
 
             {/* Summary */}
             <motion.div

@@ -78,19 +78,39 @@ def analyze_competitor():
                 }
             }), 400
 
-        # Validate count (1-100)
+        # Validate count (1-9999)
         try:
             count = int(count)
-            if count < 1 or count > 100:
-                count = min(max(count, 1), 100)  # Clamp to 1-100
+            if count < 1 or count > 9999:
+                count = min(max(count, 1), 9999)  # Clamp to 1-9999
         except (ValueError, TypeError):
             count = 3  # Default if invalid
 
         logger.info(f"🔍 Starting competitor analysis for keyword: {keyword}, count: {count}")
 
-        # Step 1: Search Naver Shopping API and get top N products
+        # Step 1: Search Naver Shopping API (max 100 per call, need multiple calls for > 100)
         api = get_shopping_api()
-        top_products = api.search_popular_products(keyword=keyword, max_products=count)
+        top_products = []
+
+        # Naver API allows max 100 results per call, so we need multiple calls
+        if count <= 100:
+            top_products = api.search_popular_products(keyword=keyword, max_products=count)
+        else:
+            # Make multiple API calls to get more than 100 products
+            calls_needed = (count + 99) // 100  # Ceiling division
+            for call_num in range(calls_needed):
+                start_idx = call_num * 100 + 1
+                fetch_count = min(100, count - call_num * 100)
+
+                try:
+                    batch = api.search_products(keyword, display=fetch_count, start=start_idx)
+                    top_products.extend(batch)
+                    logger.info(f"   Fetched batch {call_num + 1}/{calls_needed}: {len(batch)} products")
+                except Exception as e:
+                    logger.warning(f"   Failed to fetch batch {call_num + 1}: {str(e)}")
+                    break
+
+        top_products = top_products[:count]  # Ensure exact count
 
         if not top_products:
             return jsonify({
