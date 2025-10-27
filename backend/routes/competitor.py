@@ -12,7 +12,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils import get_column_letter
 
-from connectors.naver_shopping_scraper import get_naver_shopping_scraper
+from connectors.naver_shopping_api import get_shopping_api
 from utils.pricing import batch_calculate_costs
 from utils.shipping import get_all_rates
 
@@ -77,9 +77,9 @@ def analyze_competitor():
 
         logger.info(f"🔍 Starting competitor analysis for keyword: {keyword}")
 
-        # Step 1: Search Naver Shopping and get top 3 products
-        scraper = get_naver_shopping_scraper()
-        top_products = scraper.get_top_products(keyword, top_n=3)
+        # Step 1: Search Naver Shopping API and get top 3 products
+        api = get_shopping_api()
+        top_products = api.search_popular_products(keyword=keyword, max_products=3)
 
         if not top_products:
             return jsonify({
@@ -91,8 +91,20 @@ def analyze_competitor():
                 }
             }), 404
 
-        # Step 2: Calculate costs for top 3 products
-        analyzed_products = batch_calculate_costs(top_products)
+        # Step 2: Transform API format to match our internal format
+        standardized_products = []
+        for product in top_products:
+            standardized_products.append({
+                'title': product['title'],
+                'price': product['price'],
+                'url': product['product_url'],
+                'image_url': product['image_url'],
+                'store_name': product['mall_name'],
+                'rank': product['rank']
+            })
+
+        # Step 3: Calculate costs for top 3 products
+        analyzed_products = batch_calculate_costs(standardized_products)
 
         logger.info(f"✅ Analyzed {len(analyzed_products)} products for keyword: {keyword}")
 
