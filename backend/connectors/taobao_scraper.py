@@ -575,6 +575,112 @@ class TaobaoScraper:
 
         return variants
 
+    def search_products(self, keyword: str, page: int = 1, page_size: int = 40) -> List[Dict[str, Any]]:
+        """
+        Search products by keyword on Taobao
+
+        Args:
+            keyword: Search keyword
+            page: Page number (1-indexed)
+            page_size: Number of results per page
+
+        Returns:
+            List of product dictionaries
+        """
+        try:
+            self._init_driver()
+
+            # Taobao search URL
+            search_url = f"https://s.taobao.com/search?q={keyword}&s={((page - 1) * page_size)}"
+            logger.info(f"🔍 Searching Taobao for: {keyword} (page {page})")
+
+            self.driver.get(search_url)
+            time.sleep(3)  # Wait for page load
+
+            # Parse page content
+            soup = BeautifulSoup(self.driver.page_source, 'html.parser')
+
+            products = []
+
+            # Find product items (Taobao uses different class names)
+            # Try multiple selectors as Taobao's HTML structure varies
+            item_selectors = [
+                {'class': 'item J_MouserOnverReq'},
+                {'class': 'item'},
+                {'data-category': 'item'}
+            ]
+
+            items = []
+            for selector in item_selectors:
+                items = soup.find_all('div', selector)
+                if items:
+                    logger.info(f"✅ Found {len(items)} items with selector: {selector}")
+                    break
+
+            if not items:
+                logger.warning(f"⚠️ No products found for keyword: {keyword}")
+                return []
+
+            for item in items[:page_size]:
+                try:
+                    product = {}
+
+                    # Extract title
+                    title_elem = item.find('a', class_='title') or item.find('a', {'data-p4p': True})
+                    if title_elem:
+                        product['title'] = title_elem.get_text(strip=True)
+                        product['url'] = title_elem.get('href', '')
+                        if product['url'] and not product['url'].startswith('http'):
+                            product['url'] = 'https:' + product['url']
+
+                    # Extract price
+                    price_elem = item.find('strong') or item.find('span', class_='price')
+                    if price_elem:
+                        price_text = price_elem.get_text(strip=True)
+                        price_match = re.search(r'[\d,.]+', price_text)
+                        if price_match:
+                            product['price'] = float(price_match.group().replace(',', ''))
+
+                    # Extract image
+                    img_elem = item.find('img')
+                    if img_elem:
+                        img_url = img_elem.get('src') or img_elem.get('data-src')
+                        if img_url:
+                            if img_url.startswith('//'):
+                                img_url = 'https:' + img_url
+                            product['pic_url'] = img_url
+                            product['images'] = [img_url]
+
+                    # Extract sales count
+                    sales_elem = item.find('div', class_='deal-cnt')
+                    if sales_elem:
+                        sales_text = sales_elem.get_text(strip=True)
+                        sales_match = re.search(r'(\d+)', sales_text)
+                        if sales_match:
+                            product['sales'] = int(sales_match.group(1))
+
+                    # Extract shop name
+                    shop_elem = item.find('a', class_='shopname')
+                    if shop_elem:
+                        product['shop_name'] = shop_elem.get_text(strip=True)
+
+                    # Only add if we have minimum required data
+                    if product.get('title') and product.get('price'):
+                        product['source'] = 'taobao'
+                        product['currency'] = 'CNY'
+                        products.append(product)
+
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to parse product item: {str(e)}")
+                    continue
+
+            logger.info(f"✅ Successfully scraped {len(products)} products for keyword: {keyword}")
+            return products
+
+        except Exception as e:
+            logger.error(f"❌ Failed to search products: {str(e)}")
+            return []
+
     def close(self):
         """Close scraper and cleanup"""
         self._close_driver()

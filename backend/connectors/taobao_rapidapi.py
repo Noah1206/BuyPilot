@@ -153,10 +153,21 @@ class TaobaoRapidAPIConnector(BaseConnector):
             Dictionary with items and total count
         """
         try:
-            logger.warning(f"🔄 TaobaoScraper doesn't support search - returning empty results")
-            # TaobaoScraper only supports scrape_product(url), not search
-            # Would need to implement Taobao search page scraping separately
-            return {'items': [], 'total': 0, 'error': 'Search not supported by scraper fallback'}
+            logger.info(f"🔄 Using Taobao scraper for keyword search: {keyword}")
+            from connectors.taobao_scraper import get_taobao_scraper
+
+            scraper = get_taobao_scraper()
+            products = scraper.search_products(keyword, page, page_size)
+
+            if products:
+                logger.info(f"✅ Scraper found {len(products)} products for: {keyword}")
+            else:
+                logger.warning(f"⚠️ Scraper found no products for: {keyword}")
+
+            return {
+                'items': products,
+                'total': len(products)
+            }
 
         except Exception as scraper_error:
             logger.error(f"❌ Scraper fallback also failed: {str(scraper_error)}")
