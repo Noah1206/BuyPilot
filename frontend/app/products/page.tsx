@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
 import Header from '@/components/Header'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Edit, Check, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Edit, Check, AlertCircle, ChevronLeft, ChevronRight, Package } from 'lucide-react'
 
 interface Product {
   id: string
