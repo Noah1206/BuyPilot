@@ -6,11 +6,15 @@
 'use client'
 
 import { useState } from 'react'
+import Header from '@/components/Header'
 import { ArrowRight, TrendingUp, Zap, Shield, DollarSign, Package, BarChart3, Globe } from 'lucide-react'
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      {/* Header */}
+      <Header />
+
       {/* Hero Section */}
       <section className="relative px-4 pt-20 pb-32 overflow-hidden">
         {/* Background decoration */}
