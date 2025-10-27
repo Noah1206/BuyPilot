@@ -21,27 +21,33 @@ function extractTaobaoProduct() {
       throw new Error('Could not find product ID in URL');
     }
 
-    // Extract title
+    // Extract title - Updated for new Taobao structure
     let title = '';
     const titleSelectors = [
+      '[class*="MainTitle"]',     // New: MainTitle--PiA4nmJz
+      '[class*="mainTitle"]',     // New: mainTitle--R75fTcZL
       '.tb-main-title',
       '[data-spm="1000983"]',
       '.ItemTitle--mainTitle--',
       'h1.tb-title',
-      'h1[data-spm]'
+      'h1[data-spm]',
+      'h1'                        // Fallback to any h1
     ];
 
     for (const selector of titleSelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
         title = element.textContent.trim();
+        console.log(`✅ Title found with selector: ${selector}`);
         break;
       }
     }
 
-    // Extract price
+    // Extract price - Updated for new Taobao structure
     let price = 0;
     const priceSelectors = [
+      '[class*="Price"]',         // New: Works with current structure
+      '[class*="price"]',
       '.tb-rmb-num',
       '[class*="priceText"]',
       '[class*="Price--priceText"]',
@@ -52,17 +58,24 @@ function extractTaobaoProduct() {
     for (const selector of priceSelectors) {
       const element = document.querySelector(selector);
       if (element) {
-        const priceText = element.textContent.trim().replace(/[^0-9.]/g, '');
-        if (priceText) {
-          price = parseFloat(priceText);
+        // Extract numbers from text like "¥10.01200+ 판매"
+        const priceText = element.textContent.trim();
+        const priceMatch = priceText.match(/[\d.]+/);
+        if (priceMatch) {
+          price = parseFloat(priceMatch[0]);
+          console.log(`✅ Price found: ${price} from "${priceText}"`);
           break;
         }
       }
     }
 
-    // Extract images
+    // Extract images - Updated for new Taobao structure
     const images = [];
     const imageSelectors = [
+      '[class*="Pic"] img',       // New: Generic pic container
+      '[class*="pic"] img',
+      '[class*="Image"] img',
+      '[class*="image"] img',
       '#J_UlThumb img',
       '.tb-thumb img',
       '[class*="Picture--thumbImg"]',
@@ -73,18 +86,24 @@ function extractTaobaoProduct() {
       const imageElements = document.querySelectorAll(selector);
       if (imageElements.length > 0) {
         imageElements.forEach((img) => {
-          let src = img.src || img.getAttribute('data-src') || img.getAttribute('src');
-          if (src && !images.includes(src)) {
+          let src = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src');
+          if (src && !images.includes(src) && !src.startsWith('data:')) {
             // Fix protocol-relative URLs
             if (src.startsWith('//')) {
               src = 'https:' + src;
             }
             // Get high-resolution version
             src = src.replace(/_\d+x\d+\./, '_800x800.');
-            images.push(src);
+            // Filter out tiny placeholder images
+            if (!src.includes('1x1') && !src.includes('placeholder')) {
+              images.push(src);
+            }
           }
         });
-        break;
+        if (images.length > 0) {
+          console.log(`✅ Found ${images.length} images`);
+          break;
+        }
       }
     }
 
@@ -92,14 +111,50 @@ function extractTaobaoProduct() {
     if (images.length === 0) {
       const mainImage = document.querySelector('#J_ImgBooth') ||
                        document.querySelector('[class*="MainPic"]') ||
+                       document.querySelector('[class*="mainPic"]') ||
                        document.querySelector('.tb-booth img');
       if (mainImage) {
         let src = mainImage.src || mainImage.getAttribute('data-src');
-        if (src) {
+        if (src && !src.startsWith('data:')) {
           if (src.startsWith('//')) {
             src = 'https:' + src;
           }
           images.push(src);
+          console.log(`✅ Found main image`);
+        }
+      }
+    }
+
+    // Extract description/detail images
+    const descImages = [];
+    const descImageSelectors = [
+      '[class*="desc"] img',
+      '[class*="Desc"] img',
+      '[class*="detail"] img',
+      '[class*="Detail"] img',
+      '#J_DivItemDesc img',
+      '.detail-content img',
+      '[id*="description"] img'
+    ];
+
+    for (const selector of descImageSelectors) {
+      const descImgElements = document.querySelectorAll(selector);
+      if (descImgElements.length > 0) {
+        descImgElements.forEach((img) => {
+          let src = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src');
+          if (src && !descImages.includes(src) && !src.startsWith('data:')) {
+            if (src.startsWith('//')) {
+              src = 'https:' + src;
+            }
+            // Filter out tiny images and icons
+            if (!src.includes('1x1') && !src.includes('icon') && !src.includes('placeholder')) {
+              descImages.push(src);
+            }
+          }
+        });
+        if (descImages.length > 0) {
+          console.log(`✅ Found ${descImages.length} description images`);
+          break;
         }
       }
     }
@@ -176,6 +231,7 @@ function extractTaobaoProduct() {
       seller_nick: seller,
       images: images,
       pic_url: images[0] || '',
+      desc_imgs: descImages,           // 상세 페이지 이미지
       specifications: specifications,
       options: options,
       extracted_at: new Date().toISOString(),
