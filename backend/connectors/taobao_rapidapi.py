@@ -91,7 +91,8 @@ class TaobaoRapidAPIConnector(BaseConnector):
             params = {
                 "q": keyword,
                 "page": page,
-                "pageSize": page_size
+                "pageSize": page_size,
+                "api_key": self.api_key
             }
 
             response = requests.get(
