@@ -71,14 +71,13 @@ class NaverShoppingScraper:
             self.driver.get(search_url)
             time.sleep(3)
 
-            # Wait for product listings to load
+            # Wait for product listings to load - try multiple selectors
             try:
                 WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.basicList_list_basis__uNBZR"))
+                    lambda d: d.find_element(By.CSS_SELECTOR, "div[class*='product'], li[class*='product'], div[class*='item'], ul[class*='list']")
                 )
             except:
-                logger.warning("⚠️ Product listings did not load")
-                return []
+                logger.warning("⚠️ Product listings did not load, continuing anyway...")
 
             # Scroll to load more products
             for _ in range(3):  # Scroll 3 times to load more products
@@ -88,18 +87,46 @@ class NaverShoppingScraper:
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
             products = []
 
-            # Find all product items
-            items = soup.select('div.product_item__MDtDF')[:max_products * 2]  # Get extras for filtering
+            # Try multiple selectors for product items (네이버 쇼핑 구조 변경 대응)
+            items = []
+            selectors = [
+                'div.product_item__MDtDF',  # 최신 구조
+                'div[class*="product_item"]',  # 부분 일치
+                'li.product_item',  # 이전 구조
+                'div.product',  # 일반적 구조
+                'li[class*="product"]'  # 더 일반적
+            ]
+
+            for selector in selectors:
+                items = soup.select(selector)
+                if items:
+                    logger.info(f"✅ Found {len(items)} items with selector: {selector}")
+                    break
+
+            if not items:
+                logger.error("❌ No product items found with any selector")
+                return []
+
+            items = items[:max_products * 2]  # Get extras for filtering
 
             logger.info(f"📦 Found {len(items)} product items")
 
             for idx, item in enumerate(items):
                 try:
-                    # Product title
-                    title_elem = item.select_one('div.product_title__Mmw2K a')
+                    # Product title - try multiple selectors
+                    title_elem = (
+                        item.select_one('div.product_title__Mmw2K a') or
+                        item.select_one('div[class*="product_title"] a') or
+                        item.select_one('a.product_link') or
+                        item.select_one('a[class*="title"]') or
+                        item.select_one('h3 a') or
+                        item.select_one('a')
+                    )
                     if not title_elem:
                         continue
                     title = title_elem.get_text(strip=True)
+                    if not title:
+                        continue
 
                     # Product URL
                     product_url = title_elem.get('href', '')
@@ -107,17 +134,29 @@ class NaverShoppingScraper:
                         continue
                     # Make absolute URL
                     if not product_url.startswith('http'):
-                        product_url = f"https://search.shopping.naver.com{product_url}"
+                        if product_url.startswith('//'):
+                            product_url = f"https:{product_url}"
+                        elif product_url.startswith('/'):
+                            product_url = f"https://search.shopping.naver.com{product_url}"
 
-                    # Price
-                    price_elem = item.select_one('span.price_num__S2p_v em')
-                    if not price_elem:
-                        price_elem = item.select_one('span.price_num__S2p_v')
+                    # Price - try multiple selectors
+                    price_elem = (
+                        item.select_one('span.price_num__S2p_v em') or
+                        item.select_one('span.price_num__S2p_v') or
+                        item.select_one('span[class*="price"] em') or
+                        item.select_one('span[class*="price"]') or
+                        item.select_one('strong[class*="price"]')
+                    )
                     if not price_elem:
                         continue
-                    price_text = price_elem.get_text(strip=True).replace(',', '').replace('원', '')
+                    price_text = price_elem.get_text(strip=True).replace(',', '').replace('원', '').replace('₩', '')
+                    # Extract only numbers
+                    import re
+                    price_match = re.search(r'\d+', price_text)
+                    if not price_match:
+                        continue
                     try:
-                        price = int(price_text)
+                        price = int(price_match.group())
                     except:
                         continue
 
@@ -125,19 +164,29 @@ class NaverShoppingScraper:
                     img_elem = item.select_one('img')
                     image_url = ''
                     if img_elem:
-                        image_url = img_elem.get('src', '') or img_elem.get('data-src', '')
+                        image_url = img_elem.get('src', '') or img_elem.get('data-src', '') or img_elem.get('data-original', '')
 
-                    # Store name
-                    store_elem = item.select_one('a.product_mall__Ew_7K')
+                    # Store name - try multiple selectors
+                    store_elem = (
+                        item.select_one('a.product_mall__Ew_7K') or
+                        item.select_one('a[class*="mall"]') or
+                        item.select_one('span[class*="mall"]') or
+                        item.select_one('div[class*="seller"]')
+                    )
                     store_name = store_elem.get_text(strip=True) if store_elem else ''
 
-                    # Review count (판매량 지표로 사용)
-                    review_elem = item.select_one('span.product_num__fafe5 em')
+                    # Review count (판매량 지표로 사용) - try multiple selectors
+                    review_elem = (
+                        item.select_one('span.product_num__fafe5 em') or
+                        item.select_one('span[class*="review"] em') or
+                        item.select_one('span[class*="count"]') or
+                        item.select_one('em[class*="count"]')
+                    )
                     sales_count = 0
                     if review_elem:
-                        review_text = review_elem.get_text(strip=True).replace(',', '')
+                        review_text = review_elem.get_text(strip=True).replace(',', '').replace('(', '').replace(')', '')
                         try:
-                            sales_count = int(review_text)
+                            sales_count = int(re.search(r'\d+', review_text).group())
                         except:
                             sales_count = 0
 
