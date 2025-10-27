@@ -36,6 +36,11 @@ export default function CompetitorAnalysisPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState('')
 
+  // Use Railway URL in production, localhost in development
+  const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? window.location.origin
+    : 'http://localhost:4070'
+
   const handleAnalyze = async () => {
     if (!keyword) {
       setError('검색 키워드를 입력해주세요')
@@ -47,7 +52,7 @@ export default function CompetitorAnalysisPage() {
     setResult(null)
 
     try {
-      const response = await fetch('http://localhost:4070/api/v1/competitor/analyze', {
+      const response = await fetch(`${API_URL}/api/v1/competitor/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keyword })
@@ -71,7 +76,7 @@ export default function CompetitorAnalysisPage() {
     if (!result) return
 
     try {
-      const response = await fetch('http://localhost:4070/api/v1/competitor/export', {
+      const response = await fetch(`${API_URL}/api/v1/competitor/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
