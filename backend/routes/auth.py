@@ -15,7 +15,11 @@ bp = Blueprint('auth', __name__)
 
 # Database connection helper
 def get_db_connection():
-    return psycopg2.connect(os.getenv('SUPABASE_DB_URL'))
+    # Support both Railway (DATABASE_URL) and Supabase (SUPABASE_DB_URL)
+    db_url = os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL')
+    if not db_url:
+        raise Exception('DATABASE_URL or SUPABASE_DB_URL environment variable not set')
+    return psycopg2.connect(db_url)
 
 # JWT secret
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-super-secret-jwt-key-change-this-in-production')
