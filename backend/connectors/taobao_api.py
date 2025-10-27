@@ -9,13 +9,14 @@ from typing import Dict, Any, Optional
 from urllib.parse import urlparse, parse_qs
 
 # Optional import - taobao SDK may not be available
+# Note: SDK is not required as we use RapidAPI + Web Scraper instead
 try:
     import top.api
     from top import TOP
     HAS_TAOBAO_SDK = True
 except ImportError:
     HAS_TAOBAO_SDK = False
-    logging.warning("Taobao SDK not installed. Install 'top-api' package for full functionality.")
+    # SDK not used in production - using RapidAPI + Scraper instead
 
 from connectors.base import BaseConnector
 

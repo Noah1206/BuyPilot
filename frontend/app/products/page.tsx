@@ -96,9 +96,23 @@ export default function ProductsPage() {
   }
 
   const getValidImageUrl = (product: Product): string => {
-    // Try image_url first
+    // Try downloaded_images first (Railway-hosted)
+    if (product.data?.downloaded_images && Array.isArray(product.data.downloaded_images) && product.data.downloaded_images.length > 0) {
+      const firstDownloadedImage = product.data.downloaded_images[0]
+      if (firstDownloadedImage && !firstDownloadedImage.startsWith('blob:')) {
+        return firstDownloadedImage
+      }
+    }
+
+    // Try image_url
     if (product.image_url && !product.image_url.startsWith('blob:')) {
       return product.image_url.startsWith('//') ? `https:${product.image_url}` : product.image_url
+    }
+
+    // Try pic_url from data
+    if (product.data?.pic_url && !product.data.pic_url.startsWith('blob:')) {
+      const picUrl = product.data.pic_url
+      return picUrl.startsWith('//') ? `https:${picUrl}` : picUrl
     }
 
     // Try images array
@@ -110,6 +124,16 @@ export default function ProductsPage() {
     }
 
     return ''
+  }
+
+  const getProductTitle = (product: Product): string => {
+    // Priority: Korean title > Regular title > Chinese title
+    return product.data?.title_kr || product.title || product.data?.title_cn || '제품명 없음'
+  }
+
+  const getProductPrice = (product: Product): number => {
+    // Try different price fields
+    return product.price || product.data?.price || 0
   }
 
   const totalPages = Math.ceil(total / limit)
@@ -209,7 +233,10 @@ export default function ProductsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
               {products.map((product) => {
                 const imageUrl = getValidImageUrl(product)
-                const krwPrice = Math.round((product.price || 0) * 200)
+                const title = getProductTitle(product)
+                const price = getProductPrice(product)
+                const krwPrice = Math.round(price * 200)
+                const platform = product.data?.platform || (product.source === 'taobao' ? '타오바오' : product.source)
 
                 return (
                   <div
@@ -221,8 +248,19 @@ export default function ProductsPage() {
                       {imageUrl ? (
                         <img
                           src={imageUrl}
-                          alt={product.title}
+                          alt={title}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            target.parentElement!.innerHTML = `
+                              <div class="w-full h-full flex items-center justify-center">
+                                <svg class="text-slate-300" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                </svg>
+                              </div>
+                            `
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -235,26 +273,28 @@ export default function ProductsPage() {
 
                       {/* Source badge */}
                       <div className="absolute top-4 left-4 px-4 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg">
-                        {product.source === 'taobao' ? '타오바오' : product.source}
+                        {platform}
                       </div>
                     </div>
 
                     {/* Content */}
                     <div className="p-6">
                       <h3 className="text-lg font-bold text-slate-900 mb-4 line-clamp-2 min-h-[3.5rem] group-hover:text-blue-600 transition-colors">
-                        {product.title}
+                        {title}
                       </h3>
 
                       {/* Price */}
                       <div className="mb-5 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl">
                         <div className="flex items-baseline gap-2">
                           <span className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            ₩{krwPrice.toLocaleString()}
+                            {price > 0 ? `₩${krwPrice.toLocaleString()}` : '가격 미정'}
                           </span>
                         </div>
-                        <div className="text-sm text-slate-600 mt-1 font-medium">
-                          ¥{(product.price || 0).toLocaleString()} <span className="text-slate-400">원가</span>
-                        </div>
+                        {price > 0 && (
+                          <div className="text-sm text-slate-600 mt-1 font-medium">
+                            ¥{price.toLocaleString()} <span className="text-slate-400">원가</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Options preview */}

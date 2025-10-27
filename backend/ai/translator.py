@@ -182,6 +182,34 @@ Korean translation:"""
                     translated['desc'] = korean_desc
                     translated['desc_kr'] = korean_desc
 
+            # Translate product options (SKU variants)
+            if 'options' in translated and translated['options']:
+                logger.info(f"🔄 Translating {len(translated['options'])} option groups...")
+                for option in translated['options']:
+                    # Translate option name (e.g., "颜色" → "색상")
+                    if option.get('name'):
+                        try:
+                            korean_option_name = self.translate_product_title(option['name'])
+                            if korean_option_name:
+                                option['name_cn'] = option['name']
+                                option['name'] = korean_option_name
+                        except Exception as e:
+                            logger.warning(f"⚠️ Option name translation failed: {str(e)}")
+
+                    # Translate option values (e.g., "黑色" → "블랙")
+                    if option.get('values'):
+                        for value in option['values']:
+                            if value.get('name'):
+                                try:
+                                    korean_value_name = self.translate_product_title(value['name'])
+                                    if korean_value_name:
+                                        value['name_cn'] = value['name']
+                                        value['name'] = korean_value_name
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Option value translation failed: {str(e)}")
+
+                logger.info("✅ Options translation completed")
+
             # Mark as translated
             translated['translated'] = True
             translated['translation_provider'] = 'gemini'

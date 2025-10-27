@@ -1,6 +1,7 @@
 """
-Taobao Product Search using RapidAPI
-No SDK required - uses HTTP requests to RapidAPI Taobao endpoint
+Taobao Product API using RapidAPI
+Fetches product details from Taobao using RapidAPI's Taobao API service
+Supports dual endpoints: Item Details + Item SKU Info for complete product data
 """
 import os
 import re
@@ -15,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 class TaobaoRapidAPIConnector(BaseConnector):
-    """Taobao product search via RapidAPI with caching"""
+    """Taobao product API via RapidAPI with caching and scraper fallback"""
 
     def __init__(self):
         """Initialize with RapidAPI credentials and cache"""
         self.api_key = os.getenv('RAPIDAPI_KEY')
-        self.base_url = "https://taobao-datahub.p.rapidapi.com"
-        self.api_host = "taobao-datahub.p.rapidapi.com"
+        self.base_url = "https://taobao-api.p.rapidapi.com"
+        self.api_host = "taobao-api.p.rapidapi.com"
 
         # Simple in-memory cache (TTL: 1 hour)
         self._cache = {}
@@ -30,223 +31,40 @@ class TaobaoRapidAPIConnector(BaseConnector):
         if not self.api_key:
             logger.warning("⚠️ RAPIDAPI_KEY not configured")
         else:
-            logger.info("✅ Taobao DataHub RapidAPI connector initialized with caching")
+            logger.info("✅ Taobao RapidAPI connector initialized")
 
     def _get_cache(self, cache_key: str) -> Optional[Any]:
         """Get value from cache if not expired"""
         if cache_key in self._cache:
             cached_data, timestamp = self._cache[cache_key]
             if time.time() - timestamp < self._cache_ttl:
-                logger.info(f"✅ Cache HIT for key: {cache_key[:50]}...")
+                logger.info(f"✅ Cache HIT: {cache_key[:50]}")
                 return cached_data
             else:
-                # Expired, remove from cache
                 del self._cache[cache_key]
-                logger.debug(f"⏰ Cache EXPIRED for key: {cache_key[:50]}...")
+                logger.debug(f"⏰ Cache EXPIRED: {cache_key[:50]}")
         return None
 
     def _set_cache(self, cache_key: str, value: Any):
         """Set value in cache with current timestamp"""
         self._cache[cache_key] = (value, time.time())
-        logger.debug(f"💾 Cache SET for key: {cache_key[:50]}...")
-
-    def search_products(
-        self,
-        keyword: str,
-        page: int = 1,
-        page_size: int = 20
-    ) -> Dict[str, Any]:
-        """
-        Search products on Taobao via RapidAPI with scraper fallback and caching
-
-        Args:
-            keyword: Search keyword
-            page: Page number
-            page_size: Items per page
-
-        Returns:
-            Dictionary with items and total count
-        """
-        try:
-            # Check cache first (reduces API calls by ~80%)
-            cache_key = f"search:{keyword}:p{page}:s{page_size}"
-            cached_result = self._get_cache(cache_key)
-            if cached_result is not None:
-                return cached_result
-
-            logger.info(f"🔍 Searching Taobao via RapidAPI: {keyword}")
-
-            if not self.api_key:
-                logger.warning("⚠️ RapidAPI key not available, using scraper fallback")
-                return self._fallback_to_scraper(keyword, page, page_size)
-
-            # Taobao DataHub API endpoint
-            url = f"{self.base_url}/item_search"
-
-            headers = {
-                "x-rapidapi-key": self.api_key,
-                "x-rapidapi-host": self.api_host
-            }
-
-            params = {
-                "q": keyword,
-                "page": page,
-                "pageSize": page_size,
-                "api_key": self.api_key
-            }
-
-            response = requests.get(
-                url,
-                headers=headers,
-                params=params,
-                timeout=15
-            )
-
-            # Check for quota exceeded (429)
-            if response.status_code == 429:
-                logger.warning(f"⚠️ RapidAPI quota exceeded, falling back to scraper")
-                return self._fallback_to_scraper(keyword, page, page_size)
-
-            if response.status_code != 200:
-                logger.error(f"❌ RapidAPI returned {response.status_code}: {response.text[:200]}")
-                logger.warning(f"⚠️ API error, falling back to scraper")
-                return self._fallback_to_scraper(keyword, page, page_size)
-
-            data = response.json()
-
-            # Parse RapidAPI response format
-            products = self._parse_rapid_api_response(data)
-
-            logger.info(f"✅ Found {len(products)} products via RapidAPI")
-
-            result = {
-                'items': products,
-                'total': len(products)
-            }
-
-            # Cache successful result
-            self._set_cache(cache_key, result)
-
-            return result
-
-        except requests.exceptions.Timeout:
-            logger.warning("⚠️ RapidAPI request timeout, falling back to scraper")
-            return self._fallback_to_scraper(keyword, page, page_size)
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"⚠️ RapidAPI request failed: {str(e)}, falling back to scraper")
-            return self._fallback_to_scraper(keyword, page, page_size)
-        except Exception as e:
-            logger.error(f"❌ Error searching products: {str(e)}")
-            return self._fallback_to_scraper(keyword, page, page_size)
-
-    def _fallback_to_scraper(self, keyword: str, page: int, page_size: int) -> Dict[str, Any]:
-        """
-        Fallback to web scraper when RapidAPI is unavailable or quota exceeded
-
-        Args:
-            keyword: Search keyword
-            page: Page number
-            page_size: Items per page
-
-        Returns:
-            Dictionary with items and total count
-        """
-        try:
-            logger.info(f"🔄 Using Taobao scraper for keyword search: {keyword}")
-            from connectors.taobao_scraper import get_taobao_scraper
-
-            scraper = get_taobao_scraper()
-            products = scraper.search_products(keyword, page, page_size)
-
-            if products:
-                logger.info(f"✅ Scraper found {len(products)} products for: {keyword}")
-            else:
-                logger.warning(f"⚠️ Scraper found no products for: {keyword}")
-
-            return {
-                'items': products,
-                'total': len(products)
-            }
-
-        except Exception as scraper_error:
-            logger.error(f"❌ Scraper fallback also failed: {str(scraper_error)}")
-            return {'items': [], 'total': 0, 'error': f'Both API and scraper failed: {str(scraper_error)}'}
-
-    def _parse_rapid_api_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Parse Taobao DataHub API response to standard format"""
-        products = []
-
-        try:
-            # Taobao DataHub format: result.resultList[]
-            result_list = data.get('result', {}).get('resultList', [])
-
-            if not result_list:
-                logger.warning("⚠️ No resultList in API response")
-                return products
-
-            for result_item in result_list:
-                try:
-                    item = result_item.get('item', {})
-                    if not item:
-                        continue
-
-                    # Extract price from SKU
-                    sku = item.get('sku', {}).get('def', {})
-                    price = sku.get('promotionPrice') or sku.get('price', '0')
-
-                    # Clean price string (remove non-numeric except dot)
-                    if isinstance(price, str):
-                        price = price.split(' - ')[0].strip()  # Take first price if range
-                        price = ''.join(c for c in price if c.isdigit() or c == '.')
-
-                    try:
-                        price_float = float(price) if price else 0.0
-                    except:
-                        price_float = 0.0
-
-                    # Extract item ID from encoded string (use as backup)
-                    item_id = item.get('itemId', '') or item.get('itemIdStr', '')[:20]
-
-                    product = {
-                        'taobao_item_id': str(item_id),
-                        'title': item.get('title', ''),
-                        'price': price_float,
-                        'pic_url': item.get('image', ''),
-                        'seller_nick': result_item.get('seller', {}).get('storeTitle', ''),
-                        'sales': item.get('sales', '0'),
-                        'images': item.get('images', []),
-                        'score': 4.5  # Default score
-                    }
-
-                    # Only add if we have minimum required data
-                    if product['title'] and product['price'] > 0:
-                        products.append(product)
-
-                except Exception as e:
-                    logger.debug(f"Failed to parse item: {e}")
-                    continue
-
-        except Exception as e:
-            logger.error(f"❌ Error parsing Taobao DataHub response: {e}")
-
-        return products
+        logger.debug(f"💾 Cache SET: {cache_key[:50]}")
 
     def parse_product_url(self, url: str) -> Optional[str]:
         """
-        Extract product ID from Taobao/1688 URL
-        (Copied from taobao_scraper.py for code reuse)
+        Extract product ID from Taobao/Tmall/1688 URL
 
         Supported formats:
-        - https://item.taobao.com/item.htm?id=123456789
-        - https://detail.tmall.com/item.htm?id=123456789
-        - https://m.taobao.com/awp/core/detail.htm?id=123456789
-        - https://detail.1688.com/offer/123456789.html
+        - https://item.taobao.com/item.htm?id=681298346857
+        - https://detail.tmall.com/item.htm?id=681298346857
+        - https://m.taobao.com/awp/core/detail.htm?id=681298346857
+        - https://detail.1688.com/offer/681298346857.html
 
         Args:
             url: Product URL
 
         Returns:
-            Product ID or None if invalid
+            Product ID (num_iid) or None if invalid
         """
         try:
             parsed = urlparse(url)
@@ -287,28 +105,66 @@ class TaobaoRapidAPIConnector(BaseConnector):
 
     def get_product_info(self, product_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get product details by ID via RapidAPI with scraper fallback and caching
+        Get complete product information by ID via RapidAPI
+
+        Calls TWO endpoints for complete data:
+        1. /taobao_detail - Basic info (title, images, properties)
+        2. /taobao_detail - SKU info (price, options, stock)
 
         Args:
-            product_id: Taobao item ID
+            product_id: Taobao item ID (num_iid)
 
         Returns:
-            Product information dictionary or None if not found
+            Complete product information dictionary or None if failed
         """
         try:
-            # Check cache first (reduces API calls for duplicate product IDs)
+            # Check cache first
             cache_key = f"product:{product_id}"
             cached_result = self._get_cache(cache_key)
             if cached_result is not None:
                 return cached_result
 
-            logger.info(f"🔍 Getting product info for ID: {product_id}")
+            logger.info(f"🔍 Fetching product info for ID: {product_id}")
 
             if not self.api_key:
                 logger.warning("⚠️ RapidAPI key not available, using scraper fallback")
                 return self._fallback_get_product_info(product_id)
 
-            # RapidAPI endpoint for product details (matching curl example)
+            # Step 1: Get basic product details
+            logger.info("📥 Step 1/2: Fetching Item Details...")
+            details = self._get_item_details(product_id)
+
+            if not details:
+                logger.warning("⚠️ Item Details failed, falling back to scraper")
+                return self._fallback_get_product_info(product_id)
+
+            # Step 2: Get SKU information (price, options)
+            logger.info("📥 Step 2/2: Fetching SKU Info...")
+            sku_info = self._get_item_sku_info(product_id)
+
+            # Merge both responses
+            product_info = self._merge_product_data(details, sku_info, product_id)
+
+            logger.info(f"✅ Complete product info retrieved: {product_info.get('title', '')[:50]}")
+
+            # Cache successful result
+            self._set_cache(cache_key, product_info)
+
+            return product_info
+
+        except Exception as e:
+            logger.error(f"❌ Error getting product info: {str(e)}", exc_info=True)
+            logger.warning("⚠️ Falling back to scraper...")
+            return self._fallback_get_product_info(product_id)
+
+    def _get_item_details(self, product_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get basic product details from RapidAPI Item Details endpoint
+
+        Returns:
+            Dictionary with title, images, properties or None if failed
+        """
+        try:
             url = f"{self.base_url}/taobao_detail"
 
             headers = {
@@ -327,48 +183,211 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 timeout=15
             )
 
-            # Check for quota exceeded (429)
             if response.status_code == 429:
-                logger.warning(f"⚠️ RapidAPI quota exceeded, falling back to scraper")
-                return self._fallback_get_product_info(product_id)
+                logger.warning("⚠️ RapidAPI quota exceeded")
+                return None
 
             if response.status_code != 200:
-                logger.warning(f"⚠️ RapidAPI returned {response.status_code}, falling back to scraper")
-                return self._fallback_get_product_info(product_id)
+                logger.warning(f"⚠️ Item Details returned {response.status_code}")
+                logger.debug(f"Response: {response.text[:200]}")
+                return None
 
             data = response.json()
 
-            # Parse product data
-            item = data.get('result', {}).get('item', {})
-            if not item:
-                item = data.get('data', {})
-            if not item:
-                logger.warning(f"⚠️ No product data found for ID: {product_id}, trying scraper")
-                return self._fallback_get_product_info(product_id)
+            # Check for error response
+            result = data.get('result', {})
+            status = result.get('status', {})
 
-            product_info = {
-                'taobao_item_id': str(item.get('num_iid', product_id)),
+            if status.get('msg') == 'error':
+                logger.warning(f"⚠️ API error: {status.get('sub_code', 'unknown')}")
+                return None
+
+            # Parse item details
+            item = result.get('item', {})
+            if not item:
+                logger.warning("⚠️ No item data in response")
+                return None
+
+            # Fix image URLs (add https:)
+            images = item.get('images', [])
+            fixed_images = []
+            for img_url in images:
+                if img_url.startswith('//'):
+                    fixed_images.append(f"https:{img_url}")
+                elif not img_url.startswith('http'):
+                    fixed_images.append(f"https://{img_url}")
+                else:
+                    fixed_images.append(img_url)
+
+            details = {
+                'num_iid': item.get('num_iid', product_id),
                 'title': item.get('title', ''),
-                'price': float(item.get('price', 0)),
-                'pic_url': item.get('pic_url', ''),
-                'seller_nick': item.get('nick', ''),
-                'score': 4.5
+                'images': fixed_images,
+                'detail_url': f"https:{item.get('detail_url', '')}" if item.get('detail_url') else '',
+                'properties': item.get('properties', []),
+                'properties_cut': item.get('properties_cut', ''),
             }
 
-            logger.info(f"✅ Retrieved product info: {product_info['title'][:50]}...")
+            logger.info(f"✅ Item Details: {details['title'][:50]}")
+            return details
 
-            # Cache successful result
-            self._set_cache(cache_key, product_info)
+        except requests.exceptions.Timeout:
+            logger.warning("⚠️ Item Details request timeout")
+            return None
+        except Exception as e:
+            logger.error(f"❌ Error fetching Item Details: {str(e)}")
+            return None
 
-            return product_info
+    def _get_item_sku_info(self, product_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get SKU information from RapidAPI (same endpoint, different response)
+
+        Returns:
+            Dictionary with price, options, stock or None if failed
+        """
+        try:
+            url = f"{self.base_url}/taobao_detail"
+
+            headers = {
+                "x-rapidapi-key": self.api_key,
+                "x-rapidapi-host": self.api_host
+            }
+
+            params = {
+                "num_iid": product_id
+            }
+
+            response = requests.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=15
+            )
+
+            if response.status_code != 200:
+                logger.warning(f"⚠️ SKU Info returned {response.status_code}")
+                return None
+
+            data = response.json()
+
+            result = data.get('result', {})
+            item = result.get('item', {})
+            skus = item.get('skus', {})
+
+            if not skus:
+                logger.warning("⚠️ No SKU data in response")
+                return None
+
+            # Parse price (format: "8.85 - 14.85" or "8.85")
+            price_str = skus.get('price', '0')
+            if isinstance(price_str, str) and ' - ' in price_str:
+                price = float(price_str.split(' - ')[0])
+            else:
+                try:
+                    price = float(price_str)
+                except:
+                    price = 0.0
+
+            # Parse promotion price
+            promotion_price_str = skus.get('promotion_price', '0')
+            if isinstance(promotion_price_str, str) and ' - ' in promotion_price_str:
+                promotion_price = float(promotion_price_str.split(' - ')[0])
+            else:
+                try:
+                    promotion_price = float(promotion_price_str) if promotion_price_str else 0.0
+                except:
+                    promotion_price = 0.0
+
+            # Parse options from sku_props
+            options = []
+            sku_props = skus.get('sku_props', [])
+
+            for prop in sku_props:
+                option = {
+                    'pid': prop.get('pid', ''),
+                    'name': prop.get('name', ''),
+                    'values': []
+                }
+
+                for value in prop.get('values', []):
+                    img_url = value.get('image', '')
+                    if img_url and img_url.startswith('//'):
+                        img_url = f"https:{img_url}"
+
+                    option['values'].append({
+                        'vid': value.get('vid', ''),
+                        'name': value.get('name', ''),
+                        'image': img_url
+                    })
+
+                if option['values']:
+                    options.append(option)
+
+            sku_info = {
+                'price': price,
+                'promotion_price': promotion_price if promotion_price > 0 else price,
+                'quantity': int(skus.get('quantity', 0)),
+                'options': options,
+                'sku_base': skus.get('sku_base', []),
+            }
+
+            logger.info(f"✅ SKU Info: price=¥{price}, options={len(options)}")
+            return sku_info
 
         except Exception as e:
-            logger.warning(f"⚠️ Error getting product info: {str(e)}, trying scraper")
-            return self._fallback_get_product_info(product_id)
+            logger.error(f"❌ Error fetching SKU Info: {str(e)}")
+            return None
+
+    def _merge_product_data(
+        self,
+        details: Optional[Dict[str, Any]],
+        sku_info: Optional[Dict[str, Any]],
+        product_id: str
+    ) -> Dict[str, Any]:
+        """
+        Merge Item Details and SKU Info into complete product data
+
+        Args:
+            details: Item Details response
+            sku_info: SKU Info response
+            product_id: Product ID (fallback)
+
+        Returns:
+            Complete product information dictionary
+        """
+        # Base product info
+        product = {
+            'taobao_item_id': product_id,
+            'title': '',
+            'price': 0.0,
+            'pic_url': '',
+            'images': [],
+            'seller_nick': '',
+            'num': 0,
+            'score': 4.5,
+        }
+
+        # Merge details
+        if details:
+            product['taobao_item_id'] = details.get('num_iid', product_id)
+            product['title'] = details.get('title', '')
+            product['images'] = details.get('images', [])
+            product['pic_url'] = details['images'][0] if details.get('images') else ''
+            product['properties'] = details.get('properties', [])
+            product['detail_url'] = details.get('detail_url', '')
+
+        # Merge SKU info
+        if sku_info:
+            product['price'] = sku_info.get('promotion_price', sku_info.get('price', 0.0))
+            product['num'] = sku_info.get('quantity', 0)
+            product['options'] = sku_info.get('options', [])
+            product['sku_base'] = sku_info.get('sku_base', [])
+
+        return product
 
     def _fallback_get_product_info(self, product_id: str) -> Optional[Dict[str, Any]]:
         """
-        Fallback to web scraper for product info when RapidAPI unavailable
+        Fallback to web scraper when RapidAPI unavailable
 
         Args:
             product_id: Taobao item ID
@@ -387,7 +406,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
             product_info = scraper.scrape_product(taobao_url)
 
             if product_info:
-                logger.info(f"✅ Scraper retrieved product: {product_info.get('title', '')[:50]}...")
+                logger.info(f"✅ Scraper retrieved product: {product_info.get('title', '')[:50]}")
             else:
                 logger.warning(f"⚠️ Scraper could not retrieve product ID: {product_id}")
 
@@ -396,6 +415,61 @@ class TaobaoRapidAPIConnector(BaseConnector):
         except Exception as scraper_error:
             logger.error(f"❌ Scraper fallback also failed: {str(scraper_error)}")
             return None
+
+    def search_products(
+        self,
+        keyword: str,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Dict[str, Any]:
+        """
+        Search products on Taobao (not implemented for this API)
+
+        For now, falls back to scraper for search functionality.
+
+        Args:
+            keyword: Search keyword
+            page: Page number
+            page_size: Items per page
+
+        Returns:
+            Dictionary with items and total count
+        """
+        logger.info(f"🔍 Search not implemented in RapidAPI, using scraper")
+        return self._fallback_search(keyword, page, page_size)
+
+    def _fallback_search(self, keyword: str, page: int, page_size: int) -> Dict[str, Any]:
+        """
+        Fallback to web scraper for search
+
+        Args:
+            keyword: Search keyword
+            page: Page number
+            page_size: Items per page
+
+        Returns:
+            Dictionary with items and total count
+        """
+        try:
+            logger.info(f"🔄 Using Taobao scraper for search: {keyword}")
+            from connectors.taobao_scraper import get_taobao_scraper
+
+            scraper = get_taobao_scraper()
+            products = scraper.search_products(keyword, page, page_size)
+
+            if products:
+                logger.info(f"✅ Scraper found {len(products)} products")
+            else:
+                logger.warning(f"⚠️ Scraper found no products")
+
+            return {
+                'items': products,
+                'total': len(products)
+            }
+
+        except Exception as scraper_error:
+            logger.error(f"❌ Scraper search also failed: {str(scraper_error)}")
+            return {'items': [], 'total': 0}
 
 
 # Singleton instance
