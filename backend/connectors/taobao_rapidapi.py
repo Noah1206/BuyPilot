@@ -90,6 +90,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
 
             params = {
                 "api": "item_search",
+                "key": self.api_key,  # API key as query parameter (required by this API)
                 "q": keyword,
                 "page": page,
                 "page_size": page_size,
