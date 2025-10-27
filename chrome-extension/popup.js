@@ -109,7 +109,7 @@ async function importProduct() {
     importBtn.innerHTML = '<span class="loading-spinner"></span>가져오는 중...';
 
     const backendUrl = backendUrlInput.value || DEFAULT_BACKEND_URL;
-    const apiUrl = `${backendUrl}/api/products/import-from-extension`;
+    const apiUrl = `${backendUrl}/api/v1/products/import-from-extension`;
 
     // Send product data to backend
     const response = await fetch(apiUrl, {
