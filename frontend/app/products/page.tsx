@@ -95,31 +95,39 @@ export default function ProductsPage() {
     }
   }
 
+  const normalizeImageUrl = (url: string): string => {
+    if (!url || url.startsWith('blob:')) return url
+    if (url.startsWith('//')) return `https:${url}`
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`
+    }
+    return url
+  }
+
   const getValidImageUrl = (product: Product): string => {
     // Try downloaded_images first (Railway-hosted)
     if (product.data?.downloaded_images && Array.isArray(product.data.downloaded_images) && product.data.downloaded_images.length > 0) {
       const firstDownloadedImage = product.data.downloaded_images[0]
       if (firstDownloadedImage && !firstDownloadedImage.startsWith('blob:')) {
-        return firstDownloadedImage
+        return normalizeImageUrl(firstDownloadedImage)
       }
     }
 
     // Try image_url
     if (product.image_url && !product.image_url.startsWith('blob:')) {
-      return product.image_url.startsWith('//') ? `https:${product.image_url}` : product.image_url
+      return normalizeImageUrl(product.image_url)
     }
 
     // Try pic_url from data
     if (product.data?.pic_url && !product.data.pic_url.startsWith('blob:')) {
-      const picUrl = product.data.pic_url
-      return picUrl.startsWith('//') ? `https:${picUrl}` : picUrl
+      return normalizeImageUrl(product.data.pic_url)
     }
 
     // Try images array
     if (product.data?.images && Array.isArray(product.data.images) && product.data.images.length > 0) {
       const firstImage = product.data.images[0]
       if (firstImage && !firstImage.startsWith('blob:')) {
-        return firstImage.startsWith('//') ? `https:${firstImage}` : firstImage
+        return normalizeImageUrl(firstImage)
       }
     }
 
