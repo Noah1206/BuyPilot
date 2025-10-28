@@ -1,15 +1,15 @@
 /**
- * BuyPilot Shopping Analyzer - Content Script Styles
- * SellerLife-inspired design
+ * BuyPilot - Content Script Styles
+ * Redesigned to match homepage style
  */
 
 .buypilot-analyzer-panel {
   width: 100%;
   margin: 20px 0;
   background: #ffffff;
-  border: 1px solid #e5e8eb;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   overflow: hidden;
   animation: slideDown 0.3s ease-out;
@@ -32,8 +32,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(to right, #2563eb, #9333ea);
   color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .buypilot-panel-title {
@@ -54,24 +55,26 @@
 }
 
 .buypilot-panel-controls button {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   width: 32px;
   height: 32px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
   font-size: 14px;
 }
 
 .buypilot-panel-controls button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
 }
 
 /* Body */
 .buypilot-panel-body {
   padding: 20px;
+  background: #f8fafc;
 }
 
 /* Loading */
@@ -87,8 +90,8 @@
 .buypilot-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -99,8 +102,9 @@
 }
 
 .buypilot-loading p {
-  color: #666;
+  color: #64748b;
   font-size: 14px;
+  font-weight: 500;
 }
 
 /* Cards Container */
@@ -124,22 +128,24 @@
 
 /* Card */
 .buypilot-card {
-  background: #f8f9fa;
-  border: 1px solid #e5e8eb;
-  border-radius: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   padding: 16px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .buypilot-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
 }
 
 .buypilot-card-title {
   font-size: 13px;
   font-weight: 600;
-  color: #666;
+  color: #64748b;
   margin: 0 0 12px 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -161,13 +167,13 @@
 .buypilot-metric-value {
   font-size: 32px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #0f172a;
   line-height: 1;
 }
 
 .buypilot-metric-label {
   font-size: 14px;
-  color: #999;
+  color: #94a3b8;
   font-weight: 500;
 }
 
@@ -177,7 +183,7 @@
   flex-direction: column;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px solid #e5e8eb;
+  border-top: 1px solid #e2e8f0;
 }
 
 .buypilot-sub-metric {
@@ -188,11 +194,12 @@
 }
 
 .buypilot-sub-metric .buypilot-label {
-  color: #666;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .buypilot-sub-metric .buypilot-value {
-  color: #1a1a1a;
+  color: #0f172a;
   font-weight: 600;
 }
 
@@ -203,8 +210,9 @@
   gap: 4px;
   font-size: 13px;
   padding: 8px 12px;
-  background: white;
-  border-radius: 6px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
 
 .buypilot-trend-icon {
@@ -221,18 +229,19 @@
 }
 
 .buypilot-trend-icon.stable {
-  color: #6b7280;
+  color: #64748b;
 }
 
 .buypilot-trend-text {
-  color: #666;
+  color: #64748b;
+  font-weight: 500;
 }
 
 /* Competition Bar */
 .buypilot-competition-bar {
   width: 100%;
   height: 8px;
-  background: #e5e8eb;
+  background: #e2e8f0;
   border-radius: 4px;
   overflow: hidden;
 }
@@ -264,22 +273,29 @@
   color: #ef4444;
   font-size: 14px;
   text-align: center;
+  font-weight: 500;
 }
 
 .buypilot-retry-btn {
-  background: #667eea;
+  background: linear-gradient(to right, #2563eb, #9333ea);
   color: white;
   border: none;
   padding: 10px 20px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .buypilot-retry-btn:hover {
-  background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.buypilot-retry-btn:active {
+  transform: translateY(0);
 }
 
 /* Ensure panel doesn't break page layout */
