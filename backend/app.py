@@ -73,6 +73,7 @@ def health():
 @app.route('/debug/routes', methods=['GET'])
 def debug_routes():
     """List all registered routes for debugging"""
+    import sys
     routes = []
     for rule in app.url_map.iter_rules():
         routes.append({
@@ -82,8 +83,20 @@ def debug_routes():
         })
     return jsonify({
         'ok': True,
+        'python_version': sys.version,
         'total_routes': len(routes),
         'routes': sorted(routes, key=lambda x: x['path'])
+    }), 200
+
+# Test endpoint to verify deployment
+@app.route('/test-extension-endpoint', methods=['GET'])
+def test_extension_endpoint():
+    """Test endpoint to verify latest code is deployed"""
+    return jsonify({
+        'ok': True,
+        'message': 'Extension endpoint is available!',
+        'timestamp': '2025-10-28-14:40',
+        'endpoint': '/api/v1/products/import-from-extension'
     }), 200
 
 # Proxy to Next.js frontend
