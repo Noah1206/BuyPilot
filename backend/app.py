@@ -69,6 +69,23 @@ def health():
         'service': 'buypilot-backend'
     }), 200
 
+# Debug endpoint to list all registered routes
+@app.route('/debug/routes', methods=['GET'])
+def debug_routes():
+    """List all registered routes for debugging"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'path': str(rule)
+        })
+    return jsonify({
+        'ok': True,
+        'total_routes': len(routes),
+        'routes': sorted(routes, key=lambda x: x['path'])
+    }), 200
+
 # Proxy to Next.js frontend
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
