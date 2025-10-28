@@ -136,10 +136,17 @@ function extractTaobaoProduct() {
 
     // Extract description/detail images (상세페이지 이미지)
     const descImages = [];
+
+    // Wait for page to load detail section (lazy loaded)
+    console.log('🔍 Searching for detail images...');
+
     const descImageSelectors = [
-      '#container img',                      // PRIMARY: Container ID for detail section
-      '[class*="imageTextInfo"] img',        // NEW: imageTextInfo--SCgWFinK class
-      '[class*="imageDetailInfo"] img',      // imageDetailInfo variants
+      // 가장 구체적인 셀렉터들 먼저
+      '#container[class*="imageTextInfo"] img',     // container with imageTextInfo class
+      '#container[class*="imageDetailInfo"] img',   // container with imageDetailInfo class
+      'div[class*="imageTextInfo"] img',            // Any div with imageTextInfo
+      'div[class*="imageDetailInfo"] img',          // Any div with imageDetailInfo
+      '#container img',                              // Fallback to container ID
       '[class*="desc"] img',
       '[class*="Desc"] img',
       '[class*="detail"] img',
@@ -150,25 +157,57 @@ function extractTaobaoProduct() {
     ];
 
     for (const selector of descImageSelectors) {
+      console.log(`🔍 Trying selector: ${selector}`);
       const descImgElements = document.querySelectorAll(selector);
+      console.log(`   Found ${descImgElements.length} elements`);
+
       if (descImgElements.length > 0) {
         descImgElements.forEach((img) => {
+          // Skip if this image is in the product gallery (이미 images 배열에 있으면 skip)
           let src = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src');
-          if (src && !descImages.includes(src) && !src.startsWith('data:')) {
+
+          if (src) {
+            // Normalize URL
             if (src.startsWith('//')) {
               src = 'https:' + src;
             }
-            // Filter out tiny images and icons
-            if (!src.includes('1x1') && !src.includes('icon') && !src.includes('placeholder')) {
+
+            // Skip if already in main images array (대표이미지 제외)
+            if (images.includes(src)) {
+              console.log(`   ⏭️  Skipping (already in main images): ${src.substring(0, 50)}...`);
+              return;
+            }
+
+            // Skip tiny images, icons, placeholders
+            if (src.includes('1x1') || src.includes('icon') || src.includes('placeholder')) {
+              console.log(`   ⏭️  Skipping (tiny/icon): ${src.substring(0, 50)}...`);
+              return;
+            }
+
+            // Skip data URLs
+            if (src.startsWith('data:')) {
+              return;
+            }
+
+            // Add to descImages if not duplicate
+            if (!descImages.includes(src)) {
               descImages.push(src);
+              console.log(`   ✅ Added desc image: ${src.substring(0, 50)}...`);
             }
           }
         });
+
         if (descImages.length > 0) {
-          console.log(`✅ Found ${descImages.length} description images`);
+          console.log(`✅ Found ${descImages.length} description images with selector: ${selector}`);
           break;
         }
       }
+    }
+
+    if (descImages.length === 0) {
+      console.warn('⚠️  No description images found');
+    } else {
+      console.log(`📸 Total description images: ${descImages.length}`);
     }
 
     // Extract seller
