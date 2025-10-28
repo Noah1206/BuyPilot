@@ -156,7 +156,18 @@ async function openDashboard(e) {
   e.preventDefault();
   const backendUrl = backendUrlInput.value || DEFAULT_BACKEND_URL;
   const dashboardUrl = backendUrl.replace(':8080', ':3001') + '/products';
-  chrome.tabs.create({ url: dashboardUrl });
+
+  try {
+    await chrome.tabs.create({ url: dashboardUrl });
+  } catch (error) {
+    console.error('Could not open dashboard:', error);
+    // Fallback: try to open in a new window
+    try {
+      window.open(dashboardUrl, '_blank');
+    } catch (err) {
+      showStatus('대시보드를 열 수 없습니다. 브라우저 팝업을 허용해주세요.', 'error');
+    }
+  }
 }
 
 // Initialize on load

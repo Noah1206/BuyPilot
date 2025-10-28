@@ -24,10 +24,18 @@ chrome.runtime.onInstalled.addListener((details) => {
       backendUrl: 'https://buypilot-production.up.railway.app'
     });
 
-    // Open welcome page
-    chrome.tabs.create({
-      url: 'https://buypilot-production.up.railway.app'
-    });
+    // Open welcome page (with error handling)
+    setTimeout(() => {
+      try {
+        chrome.tabs.create({
+          url: 'https://buypilot-production.up.railway.app'
+        }).catch(err => {
+          console.log('ℹ️ Could not open welcome page:', err.message);
+        });
+      } catch (err) {
+        console.log('ℹ️ Could not open welcome page:', err.message);
+      }
+    }, 1000); // Wait 1 second to avoid timing issues
   } else if (details.reason === 'update') {
     console.log('🔄 BuyPilot Extension updated');
   }
@@ -77,13 +85,17 @@ async function processImportQueue() {
       const result = await handleProductImport(item.productData);
 
       // Show success notification
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon128.png',
-        title: '✅ 상품 가져오기 성공',
-        message: `"${item.productData.title.substring(0, 50)}..." 상품이 추가되었습니다.`,
-        priority: 2
-      });
+      try {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon128.png',
+          title: '✅ 상품 가져오기 성공',
+          message: `"${item.productData.title.substring(0, 50)}..." 상품이 추가되었습니다.`,
+          priority: 2
+        });
+      } catch (notifError) {
+        console.log('ℹ️ Could not show notification:', notifError.message);
+      }
 
       console.log('✅ Import successful');
 
@@ -91,13 +103,17 @@ async function processImportQueue() {
       console.error('❌ Import failed:', error);
 
       // Show error notification
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon128.png',
-        title: '❌ 상품 가져오기 실패',
-        message: `"${item.productData.title.substring(0, 50)}..." 가져오기 실패: ${error.message}`,
-        priority: 2
-      });
+      try {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon128.png',
+          title: '❌ 상품 가져오기 실패',
+          message: `"${item.productData.title.substring(0, 50)}..." 가져오기 실패: ${error.message}`,
+          priority: 2
+        });
+      } catch (notifError) {
+        console.log('ℹ️ Could not show notification:', notifError.message);
+      }
     }
 
     // Small delay between imports

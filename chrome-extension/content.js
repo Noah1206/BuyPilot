@@ -290,6 +290,17 @@ function extractTaobaoProduct() {
     };
 
     console.log('✅ Product data extracted:', productData);
+    console.log('📊 Summary:');
+    console.log(`   - Main images: ${images.length}`);
+    console.log(`   - Description images: ${descImages.length}`);
+    console.log(`   - Options: ${options.length}`);
+
+    // Alert if no description images found
+    if (descImages.length === 0) {
+      console.warn('🚨 WARNING: No description images were extracted!');
+      console.warn('Please check if #container exists on this page');
+    }
+
     return productData;
 
   } catch (error) {
