@@ -29,100 +29,100 @@ export default function Header() {
   const isDashboard = pathname === '/dashboard'
 
   return (
-    <nav className="bg-white border-b-4 border-[#0F172A] sticky top-0 z-50">
+    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 backdrop-blur-sm bg-white/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo with bold style */}
-          <a href="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 bg-[#FF6B00] rounded-xl flex items-center justify-center border-3 border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] group-hover:shadow-[5px_5px_0px_0px_rgba(15,23,42,1)] group-hover:-translate-y-0.5 transition-all">
-              <span className="text-white font-black text-2xl">B</span>
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2 group">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+              <span className="text-white font-semibold text-lg">B</span>
             </div>
-            <span className="text-2xl font-black text-[#0F172A]">
-              Buy<span className="text-[#FF6B00]">Pilot</span>
+            <span className="text-xl font-semibold text-slate-900">
+              Buy<span className="text-blue-600">Pilot</span>
             </span>
           </a>
 
-          {/* Menu with bold buttons */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* Menu */}
+          <div className="hidden md:flex items-center gap-1">
             {!isDashboard ? (
               <>
                 <a
                   href="/"
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm border-3 transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive('/')
-                      ? 'text-white bg-[#FF6B00] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]'
-                      : 'text-[#0F172A] border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                      ? 'text-blue-600 bg-blue-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Home size={18} strokeWidth={3} />
+                  <Home size={18} />
                   홈
                 </a>
                 <a
                   href="/dashboard"
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm border-3 transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive('/dashboard')
-                      ? 'text-white bg-[#FF6B00] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]'
-                      : 'text-[#0F172A] border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                      ? 'text-blue-600 bg-blue-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Package size={18} strokeWidth={3} />
+                  <Package size={18} />
                   주문 관리
                 </a>
                 <a
                   href="/products"
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm border-3 transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive('/products')
-                      ? 'text-white bg-[#FF6B00] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]'
-                      : 'text-[#0F172A] border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                      ? 'text-blue-600 bg-blue-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Package size={18} strokeWidth={3} />
+                  <Package size={18} />
                   상품 관리
                 </a>
                 <a
                   href="/competitor"
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm border-3 transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive('/competitor')
-                      ? 'text-white bg-[#FF6B00] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]'
-                      : 'text-[#0F172A] border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                      ? 'text-blue-600 bg-blue-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <TrendingUp size={18} strokeWidth={3} />
+                  <TrendingUp size={18} />
                   경쟁사 분석
                 </a>
               </>
             ) : null}
 
-            {/* Auth buttons with bold style */}
-            <div className={`${isDashboard ? '' : 'ml-4 pl-4 border-l-3 border-[#0F172A]'} flex items-center gap-2`}>
+            {/* Auth buttons */}
+            <div className={`${isDashboard ? '' : 'ml-4 pl-4 border-l border-slate-200'} flex items-center gap-2`}>
               {user ? (
                 <>
                   {isDashboard && (
                     <a
                       href="/settings"
-                      className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm border-3 transition-all ${
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                         isActive('/settings')
-                          ? 'text-white bg-[#FF6B00] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]'
-                          : 'text-[#0F172A] border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                          ? 'text-blue-600 bg-blue-50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
-                      <Settings size={18} strokeWidth={3} />
+                      <Settings size={18} />
                       설정
                     </a>
                   )}
                   {!isDashboard && (
-                    <div className="flex items-center gap-2 px-4 py-3 font-bold text-sm text-[#0F172A]">
-                      <div className="w-8 h-8 bg-[#FF6B00] rounded-lg flex items-center justify-center border-2 border-[#0F172A]">
-                        <User size={16} className="text-white" strokeWidth={3} />
+                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <User size={16} className="text-blue-600" />
                       </div>
-                      <span className="font-black">{user.name}</span>
+                      <span className="font-medium">{user.name}</span>
                     </div>
                   )}
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm text-[#FF3D00] border-3 border-[#FF3D00] hover:bg-[#FF3D00] hover:text-white hover:shadow-[2px_2px_0px_0px_rgba(255,61,0,1)] transition-all"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 transition-all"
                   >
-                    <LogOut size={18} strokeWidth={3} />
+                    <LogOut size={18} />
                     로그아웃
                   </button>
                 </>
@@ -130,16 +130,16 @@ export default function Header() {
                 <>
                   <a
                     href="/login"
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm text-[#0F172A] border-3 border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] transition-all"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all"
                   >
-                    <LogIn size={18} strokeWidth={3} />
+                    <LogIn size={18} />
                     로그인
                   </a>
                   <a
                     href="/register"
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm text-white bg-[#FF6B00] border-3 border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 transition-all"
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-lg transition-all"
                   >
-                    <UserPlus size={18} strokeWidth={3} />
+                    <UserPlus size={18} />
                     회원가입
                   </a>
                 </>
