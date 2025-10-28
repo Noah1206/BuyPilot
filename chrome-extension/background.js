@@ -17,12 +17,12 @@ chrome.runtime.onInstalled.addListener((details) => {
 
     // Set default backend URL
     chrome.storage.sync.set({
-      backendUrl: 'https://buypilot.railway.app'
+      backendUrl: 'https://buypilot-production.up.railway.app'
     });
 
     // Open welcome page
     chrome.tabs.create({
-      url: 'https://buypilot.railway.app'
+      url: 'https://buypilot-production.up.railway.app'
     });
   } else if (details.reason === 'update') {
     console.log('🔄 BuyPilot Extension updated');
@@ -49,7 +49,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleProductImport(productData) {
   try {
     const { backendUrl } = await chrome.storage.sync.get(['backendUrl']);
-    const apiUrl = `${backendUrl || 'https://buypilot.railway.app'}/api/products/import-from-extension`;
+    const apiUrl = `${backendUrl || 'https://buypilot-production.up.railway.app'}/api/v1/products/import-from-extension`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',

@@ -3,7 +3,7 @@
  */
 
 // Default backend URL
-const DEFAULT_BACKEND_URL = 'https://buypilot.railway.app';
+const DEFAULT_BACKEND_URL = 'https://buypilot-production.up.railway.app';
 const LOCAL_BACKEND_URL = 'http://localhost:8080';
 
 // DOM Elements
