@@ -5,7 +5,8 @@
   "description": "Import Taobao products directly to your BuyPilot dashboard",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "notifications"
   ],
   "host_permissions": [
     "https://item.taobao.com/*",

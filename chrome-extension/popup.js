@@ -95,7 +95,7 @@ function displayProduct(product) {
 }
 
 /**
- * Import product to BuyPilot
+ * Import product to BuyPilot (via background worker)
  */
 async function importProduct() {
   if (!currentProduct) {
@@ -105,41 +105,32 @@ async function importProduct() {
 
   try {
     importBtn.disabled = true;
-    showStatus('상품을 BuyPilot으로 가져오는 중...', 'loading');
-    importBtn.innerHTML = '<span class="loading-spinner"></span>가져오는 중...';
+    showStatus('상품을 대기열에 추가하는 중...', 'loading');
+    importBtn.innerHTML = '<span class="loading-spinner"></span>추가 중...';
 
-    const backendUrl = backendUrlInput.value || DEFAULT_BACKEND_URL;
-    const apiUrl = `${backendUrl}/api/v1/products/import-from-extension`;
-
-    // Send product data to backend
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(currentProduct)
+    // Send to background worker for processing
+    const response = await chrome.runtime.sendMessage({
+      action: 'importProduct',
+      data: currentProduct
     });
 
-    // Check response status BEFORE parsing JSON
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`서버 응답 오류 (${response.status}): ${errorText.substring(0, 100)}`);
-    }
+    if (response.success && response.queued) {
+      showStatus('✅ 백그라운드에서 처리됩니다!', 'success');
+      importBtn.innerHTML = '✅ 대기열 추가 완료';
 
-    const result = await response.json();
-
-    if (result.ok) {
-      showStatus('✅ 상품이 성공적으로 추가되었습니다!', 'success');
-      importBtn.innerHTML = '✅ 추가 완료';
-
-      // Show success for 2 seconds, then reset
+      // Reset button after 2 seconds
       setTimeout(() => {
         importBtn.innerHTML = '상품 가져오기';
         importBtn.disabled = false;
       }, 2000);
 
+      // Show instruction
+      setTimeout(() => {
+        showStatus('익스텐션을 닫아도 작업이 계속됩니다. 완료되면 알림이 표시됩니다.', 'success');
+      }, 2500);
+
     } else {
-      throw new Error(result.error?.message || 'Import failed');
+      throw new Error('대기열 추가 실패');
     }
 
   } catch (error) {
