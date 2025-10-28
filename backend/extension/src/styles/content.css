@@ -1,0 +1,288 @@
+/**
+ * BuyPilot Shopping Analyzer - Content Script Styles
+ * SellerLife-inspired design
+ */
+
+.buypilot-analyzer-panel {
+  width: 100%;
+  margin: 20px 0;
+  background: #ffffff;
+  border: 1px solid #e5e8eb;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  overflow: hidden;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.buypilot-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.buypilot-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.buypilot-icon {
+  font-size: 20px;
+}
+
+.buypilot-panel-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.buypilot-panel-controls button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 14px;
+}
+
+.buypilot-panel-controls button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Body */
+.buypilot-panel-body {
+  padding: 20px;
+}
+
+/* Loading */
+.buypilot-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+}
+
+.buypilot-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.buypilot-loading p {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Cards Container */
+.buypilot-cards-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1400px) {
+  .buypilot-cards-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .buypilot-cards-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card */
+.buypilot-card {
+  background: #f8f9fa;
+  border: 1px solid #e5e8eb;
+  border-radius: 8px;
+  padding: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.buypilot-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.buypilot-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.buypilot-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Main Metric */
+.buypilot-main-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.buypilot-metric-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+}
+
+.buypilot-metric-label {
+  font-size: 14px;
+  color: #999;
+  font-weight: 500;
+}
+
+/* Sub Metrics */
+.buypilot-sub-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e8eb;
+}
+
+.buypilot-sub-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.buypilot-sub-metric .buypilot-label {
+  color: #666;
+}
+
+.buypilot-sub-metric .buypilot-value {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+/* Trend */
+.buypilot-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+}
+
+.buypilot-trend-icon {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.buypilot-trend-icon.up {
+  color: #10b981;
+}
+
+.buypilot-trend-icon.down {
+  color: #ef4444;
+}
+
+.buypilot-trend-icon.stable {
+  color: #6b7280;
+}
+
+.buypilot-trend-text {
+  color: #666;
+}
+
+/* Competition Bar */
+.buypilot-competition-bar {
+  width: 100%;
+  height: 8px;
+  background: #e5e8eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.buypilot-competition-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+  border-radius: 4px;
+  transition: width 0.5s ease-out;
+}
+
+/* Price Chart */
+#price-distribution-chart {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Error */
+.buypilot-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+}
+
+.buypilot-error-message {
+  color: #ef4444;
+  font-size: 14px;
+  text-align: center;
+}
+
+.buypilot-retry-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.buypilot-retry-btn:hover {
+  background: #5568d3;
+}
+
+/* Ensure panel doesn't break page layout */
+.buypilot-analyzer-panel * {
+  box-sizing: border-box;
+}
