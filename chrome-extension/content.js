@@ -134,11 +134,12 @@ function extractTaobaoProduct() {
       }
     }
 
-    // Extract description/detail images
+    // Extract description/detail images (상세페이지 이미지)
     const descImages = [];
     const descImageSelectors = [
-      '[class*="imageDetailInfo"] img',  // New: Specific selector for detail images container
-      '#container img',                   // New: Container ID for detail section
+      '#container img',                      // PRIMARY: Container ID for detail section
+      '[class*="imageTextInfo"] img',        // NEW: imageTextInfo--SCgWFinK class
+      '[class*="imageDetailInfo"] img',      // imageDetailInfo variants
       '[class*="desc"] img',
       '[class*="Desc"] img',
       '[class*="detail"] img',
