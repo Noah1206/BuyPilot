@@ -584,8 +584,8 @@ def import_from_extension():
             data['translated'] = False
             data['translation_error'] = str(e)
 
-        # Download images
-        logger.info("📷 Downloading images...")
+        # Download main product images (대표 이미지)
+        logger.info("📷 Downloading main product images...")
         image_service = get_image_service()
 
         downloaded_images = []
@@ -593,13 +593,27 @@ def import_from_extension():
             downloaded_images = image_service.download_images(
                 data['images'],
                 optimize=True,
-                max_images=5
+                max_images=10  # Increased from 5 to 10
             )
 
         main_image_path = downloaded_images[0] if downloaded_images else None
         main_image_url = image_service.get_public_url(main_image_path) if main_image_path else data.get('pic_url', '')
 
-        logger.info(f"✅ Downloaded {len(downloaded_images)} images")
+        logger.info(f"✅ Downloaded {len(downloaded_images)} main images")
+
+        # Download description/detail images (상세페이지 이미지)
+        downloaded_desc_images = []
+        if data.get('desc_imgs'):
+            logger.info(f"📷 Downloading {len(data['desc_imgs'])} description images...")
+            try:
+                downloaded_desc_images = image_service.download_images(
+                    data['desc_imgs'],
+                    optimize=True,
+                    max_images=20  # Allow more detail images
+                )
+                logger.info(f"✅ Downloaded {len(downloaded_desc_images)} description images")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to download description images: {str(e)}")
 
         # Download option images
         if data.get('options'):
@@ -641,6 +655,8 @@ def import_from_extension():
                     'pic_url': data.get('pic_url', ''),
                     'images': data.get('images', []),
                     'downloaded_images': [image_service.get_public_url(img) for img in downloaded_images],
+                    'desc_imgs': data.get('desc_imgs', []),  # Original URLs
+                    'downloaded_desc_imgs': [image_service.get_public_url(img) for img in downloaded_desc_images],  # Downloaded URLs
                     'location': data.get('location', ''),
                     'specifications': data.get('specifications', []),
                     'options': data.get('options', []),
