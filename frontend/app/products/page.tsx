@@ -383,7 +383,7 @@ export default function ProductsPage() {
                   <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
                     <button
                       onClick={() => openEditModal(product, 'main-image')}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all"
                     >
                       <ImageIcon size={16} />
                       <span>대표이미지</span>
@@ -391,7 +391,7 @@ export default function ProductsPage() {
 
                     <button
                       onClick={() => openEditModal(product, 'detail-images')}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 transition-all shadow-sm"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all"
                     >
                       <FileText size={16} />
                       <span>상세페이지</span>
@@ -399,7 +399,7 @@ export default function ProductsPage() {
 
                     <button
                       onClick={() => openEditModal(product, 'pricing')}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all shadow-sm"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all"
                     >
                       <DollarSign size={16} />
                       <span>배송비&마진</span>
@@ -407,7 +407,7 @@ export default function ProductsPage() {
 
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-all"
                     >
                       <Trash2 size={16} />
                       <span>삭제</span>
@@ -418,7 +418,7 @@ export default function ProductsPage() {
                         href={product.source_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all text-sm"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all"
                       >
                         <ExternalLink size={16} />
                         <span>원본 보기</span>
