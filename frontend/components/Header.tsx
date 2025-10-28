@@ -34,9 +34,6 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <a href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-              <span className="text-white font-semibold text-lg">B</span>
-            </div>
             <span className="text-xl font-semibold text-slate-900">
               Buy<span className="text-orange-500">Pilot</span>
             </span>

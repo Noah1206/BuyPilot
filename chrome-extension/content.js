@@ -69,26 +69,53 @@ function extractTaobaoProduct() {
       }
     }
 
-    // Extract images - Updated for new Taobao structure
+    // Extract main product image FIRST (대표 이미지)
     const images = [];
-    const imageSelectors = [
-      '[class*="Pic"] img',       // New: Generic pic container
-      '[class*="pic"] img',
-      '[class*="Image"] img',
-      '[class*="image"] img',
-      '#J_UlThumb img',
-      '.tb-thumb img',
-      '[class*="Picture--thumbImg"]',
-      '.tb-gallery img'
+    const mainImageSelectors = [
+      '#J_ImgBooth',                    // Classic Taobao main image
+      '[class*="MainPic"] img',         // New structure main pic
+      '[class*="mainPic"] img',
+      '.tb-booth img'
     ];
 
-    for (const selector of imageSelectors) {
-      const imageElements = document.querySelectorAll(selector);
-      if (imageElements.length > 0) {
-        imageElements.forEach((img) => {
+    for (const selector of mainImageSelectors) {
+      const mainImage = document.querySelector(selector);
+      if (mainImage) {
+        let src = mainImage.src || mainImage.getAttribute('data-src') || mainImage.getAttribute('data-lazy-src');
+        if (src && !src.startsWith('data:')) {
+          if (src.startsWith('//')) {
+            src = 'https:' + src;
+          }
+          // Get high-resolution version
+          src = src.replace(/_\d+x\d+\./, '_800x800.');
+          images.push(src);
+          console.log(`✅ Found main image with selector: ${selector}`);
+          break;
+        }
+      }
+    }
+
+    // Extract thumbnail images (썸네일 이미지들) - ONLY from gallery, NOT recommended products
+    const thumbnailSelectors = [
+      '#J_UlThumb img',                          // Classic Taobao thumbnails
+      '[class*="Picture--thumbImg"]',            // New structure thumbnails
+      '.tb-thumb img',                           // Thumbnail gallery
+      '[id*="J_"] [class*="thumb"] img',        // J_ prefixed thumbnail containers
+      '[class*="Gallery"] [class*="thumb"] img'  // Gallery thumbnails
+    ];
+
+    for (const selector of thumbnailSelectors) {
+      const thumbElements = document.querySelectorAll(selector);
+      if (thumbElements.length > 0) {
+        thumbElements.forEach((img) => {
+          // Skip if parent has "recommend" or "related" in class (추천상품 제외)
+          const parent = img.closest('[class*="recommend"], [class*="related"], [class*="similar"], [class*="Recommend"], [class*="Related"], [class*="Similar"]');
+          if (parent) {
+            return; // Skip recommended products
+          }
+
           let src = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src');
           if (src && !images.includes(src) && !src.startsWith('data:')) {
-            // Fix protocol-relative URLs
             if (src.startsWith('//')) {
               src = 'https:' + src;
             }
@@ -100,27 +127,9 @@ function extractTaobaoProduct() {
             }
           }
         });
-        if (images.length > 0) {
-          console.log(`✅ Found ${images.length} images`);
+        if (images.length > 1) { // Have main + thumbnails
+          console.log(`✅ Found ${images.length} product images (excluding recommended products)`);
           break;
-        }
-      }
-    }
-
-    // Extract main image if thumb images not found
-    if (images.length === 0) {
-      const mainImage = document.querySelector('#J_ImgBooth') ||
-                       document.querySelector('[class*="MainPic"]') ||
-                       document.querySelector('[class*="mainPic"]') ||
-                       document.querySelector('.tb-booth img');
-      if (mainImage) {
-        let src = mainImage.src || mainImage.getAttribute('data-src');
-        if (src && !src.startsWith('data:')) {
-          if (src.startsWith('//')) {
-            src = 'https:' + src;
-          }
-          images.push(src);
-          console.log(`✅ Found main image`);
         }
       }
     }
@@ -128,6 +137,8 @@ function extractTaobaoProduct() {
     // Extract description/detail images
     const descImages = [];
     const descImageSelectors = [
+      '[class*="imageDetailInfo"] img',  // New: Specific selector for detail images container
+      '#container img',                   // New: Container ID for detail section
       '[class*="desc"] img',
       '[class*="Desc"] img',
       '[class*="detail"] img',

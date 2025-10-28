@@ -27,12 +27,13 @@
 
     .header h1 {
       font-size: 24px;
-      font-weight: 700;
+      font-weight: 600;
       margin-bottom: 4px;
-      background: linear-gradient(to right, #2563eb, #9333ea);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: #0f172a;
+    }
+
+    .header h1 .highlight {
+      color: #f97316;
     }
 
     .header p {
@@ -119,8 +120,8 @@
 
     .product-price {
       font-size: 20px;
-      font-weight: 700;
-      color: #2563eb;
+      font-weight: 600;
+      color: #f97316;
     }
 
     .product-id {
@@ -142,14 +143,15 @@
     }
 
     .button-primary {
-      background: linear-gradient(to right, #2563eb, #9333ea);
+      background: #f97316;
       color: white;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .button-primary:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      background: #ea580c;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
     }
 
     .button-primary:active:not(:disabled) {
@@ -193,6 +195,7 @@
     .settings-input {
       width: 100%;
       padding: 10px 12px;
+      background: white;
       border: 2px solid #e2e8f0;
       border-radius: 8px;
       font-size: 13px;
@@ -201,8 +204,8 @@
 
     .settings-input:focus {
       outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
     }
 
     .footer {
@@ -213,7 +216,7 @@
     }
 
     .footer-link {
-      color: #3b82f6;
+      color: #f97316;
       text-decoration: none;
       font-size: 13px;
       font-weight: 500;
@@ -245,7 +248,7 @@
 </head>
 <body>
   <div class="header">
-    <h1>BuyPilot</h1>
+    <h1>Buy<span class="highlight">Pilot</span></h1>
     <p>타오바오 소싱 자동화</p>
   </div>
 
