@@ -304,7 +304,7 @@ export default function ProductsPage() {
             <p className="text-slate-600">타오바오에서 상품을 가져와보세요</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {products.map((product) => {
               const imageUrl = getValidImageUrl(product)
               const title = getProductTitle(product)
@@ -316,11 +316,11 @@ export default function ProductsPage() {
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-6"
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-4"
                 >
-                  <div className="flex gap-6">
+                  <div className="flex gap-4">
                     {/* Product image */}
-                    <div className="relative w-48 h-48 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100">
+                    <div className="relative w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
@@ -332,31 +332,31 @@ export default function ProductsPage() {
                           <Package size={48} className="text-slate-300" />
                         </div>
                       )}
-                      <div className="absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
+                      <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500 text-white">
                         {platform}
                       </div>
                     </div>
 
                     {/* Product info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-bold text-slate-900 mb-2 line-clamp-2">
+                      <h3 className="text-lg font-bold text-slate-900 mb-1.5 line-clamp-2">
                         {title}
                       </h3>
 
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="text-2xl font-bold text-blue-600">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="text-xl font-bold text-blue-600">
                           ₩{krwPrice.toLocaleString()}
                         </div>
-                        <div className="text-sm text-slate-500">
+                        <div className="text-xs text-slate-500">
                           ¥{price.toLocaleString()} 원가
                         </div>
                       </div>
 
                       {/* Options */}
                       {product.data?.options && product.data.options.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="flex flex-wrap gap-1.5 mb-2">
                           {product.data.options.map((option: any, idx: number) => (
-                            <div key={idx} className="px-3 py-1 bg-slate-100 rounded-lg text-sm">
+                            <div key={idx} className="px-2 py-0.5 bg-slate-100 rounded text-xs">
                               <span className="font-semibold text-slate-700">{option.name}</span>
                               <span className="text-slate-500 ml-1">({option.values?.length || 0}개)</span>
                             </div>
@@ -365,49 +365,49 @@ export default function ProductsPage() {
                       )}
 
                       {/* Stats */}
-                      <div className="flex gap-6 text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <ImageIcon size={16} />
+                      <div className="flex gap-4 text-xs text-slate-600">
+                        <div className="flex items-center gap-1.5">
+                          <ImageIcon size={14} />
                           <span>{product.data?.images?.length || 0}개 이미지</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <FileText size={16} />
+                        <div className="flex items-center gap-1.5">
+                          <FileText size={14} />
                           <span>{hasDescImages ? `${product.data.desc_imgs.length}개 상세이미지` : '상세이미지 없음'}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Edit buttons */}
-                    <div className="flex flex-col gap-3 w-48 flex-shrink-0">
+                    <div className="flex flex-col gap-2 w-40 flex-shrink-0">
                       <button
                         onClick={() => openEditModal(product, 'main-image')}
-                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow-md"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm"
                       >
-                        <ImageIcon size={18} />
+                        <ImageIcon size={16} />
                         <span>대표이미지</span>
                       </button>
 
                       <button
                         onClick={() => openEditModal(product, 'detail-images')}
-                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 transition-all shadow-sm hover:shadow-md"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 transition-all shadow-sm"
                       >
-                        <FileText size={18} />
+                        <FileText size={16} />
                         <span>상세페이지</span>
                       </button>
 
                       <button
                         onClick={() => openEditModal(product, 'pricing')}
-                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all shadow-sm hover:shadow-md"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all shadow-sm"
                       >
-                        <DollarSign size={18} />
+                        <DollarSign size={16} />
                         <span>배송비&마진</span>
                       </button>
 
                       <button
                         onClick={() => handleDelete(product.id)}
-                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-all mt-auto"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-all mt-auto"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                         <span>삭제</span>
                       </button>
 
@@ -416,9 +416,9 @@ export default function ProductsPage() {
                           href={product.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all text-sm"
+                          className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all text-xs"
                         >
-                          <ExternalLink size={16} />
+                          <ExternalLink size={14} />
                           <span>원본 보기</span>
                         </a>
                       )}
