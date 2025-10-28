@@ -1,5 +1,5 @@
 /**
- * Products page - Product management with professional image editor
+ * Products page - Product management with bold Korean e-commerce style
  */
 
 'use client'
@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
 import Header from '@/components/Header'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings } from 'lucide-react'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles } from 'lucide-react'
 
 interface Product {
   id: string
@@ -232,40 +232,51 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-[#FFFBF5]">
       <Header />
 
       <main className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Header with bold style */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">상품 관리</h1>
-          <p className="text-slate-600 text-lg">{total}개의 등록된 상품</p>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-14 h-14 bg-[#FF6B00] rounded-xl flex items-center justify-center border-3 border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
+              <Package size={28} className="text-white" strokeWidth={3} />
+            </div>
+            <div>
+              <h1 className="text-5xl font-black text-[#0F172A]">상품 관리</h1>
+              <p className="text-xl font-bold text-[#FF6B00]">{total}개의 등록된 상품</p>
+            </div>
+          </div>
         </div>
 
-        {/* Import form */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
+        {/* Import form with bold style */}
+        <div className="bg-white rounded-2xl border-4 border-[#0F172A] shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles size={20} className="text-[#FF6B00]" strokeWidth={3} />
+            <h2 className="text-xl font-black text-[#0F172A]">타오바오에서 상품 가져오기</h2>
+          </div>
           <form onSubmit={handleImport} className="flex gap-3">
             <input
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="타오바오 상품 URL을 입력하세요..."
-              className="flex-1 px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              className="flex-1 px-6 py-4 rounded-xl border-3 border-[#0F172A] focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/20 outline-none transition-all text-lg font-medium placeholder:text-slate-400"
               disabled={loading}
             />
             <button
               type="submit"
               disabled={loading || !url}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-2 px-8 py-4 rounded-xl font-black text-lg bg-[#FF6B00] text-white border-3 border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? (
                 <>
-                  <RefreshCw size={20} className="animate-spin" />
+                  <RefreshCw size={20} className="animate-spin" strokeWidth={3} />
                   <span>가져오는 중...</span>
                 </>
               ) : (
                 <>
-                  <Plus size={20} />
+                  <Plus size={20} strokeWidth={3} />
                   <span>가져오기</span>
                 </>
               )}
@@ -273,38 +284,38 @@ export default function ProductsPage() {
           </form>
         </div>
 
-        {/* Search */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+        {/* Search with bold style */}
+        <div className="bg-white rounded-2xl border-4 border-[#0F172A] shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] p-6 mb-8">
           <div className="flex gap-3">
             <div className="relative flex-1">
-              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={24} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#FF6B00]" strokeWidth={3} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="상품명으로 검색..."
-                className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                className="w-full pl-14 pr-6 py-4 rounded-xl border-3 border-[#0F172A] focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/20 outline-none transition-all text-lg font-medium placeholder:text-slate-400"
               />
             </div>
             <button
               onClick={() => loadProducts()}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
+              className="flex items-center gap-2 px-8 py-4 rounded-xl font-black text-lg bg-[#0F172A] text-white border-3 border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(255,107,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(255,107,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
-              <RefreshCw size={20} />
+              <RefreshCw size={20} strokeWidth={3} />
               <span>새로고침</span>
             </button>
           </div>
         </div>
 
-        {/* Products list */}
+        {/* Products list with bold cards */}
         {products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-96 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300">
-            <Package size={64} className="text-slate-400 mb-4" />
-            <h3 className="text-xl font-bold text-slate-900 mb-2">상품이 없습니다</h3>
-            <p className="text-slate-600">타오바오에서 상품을 가져와보세요</p>
+          <div className="flex flex-col items-center justify-center h-96 bg-white rounded-2xl border-4 border-dashed border-[#0F172A]">
+            <Package size={80} className="text-[#FF6B00] mb-4" strokeWidth={2.5} />
+            <h3 className="text-3xl font-black text-[#0F172A] mb-2">상품이 없습니다</h3>
+            <p className="text-lg font-bold text-slate-600">타오바오에서 상품을 가져와보세요</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {products.map((product) => {
               const imageUrl = getValidImageUrl(product)
               const title = getProductTitle(product)
@@ -316,12 +327,12 @@ export default function ProductsPage() {
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-4"
+                  className="bg-white rounded-2xl border-4 border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all p-6"
                 >
                   {/* Top: Image + Info */}
-                  <div className="flex gap-4 mb-3">
-                    {/* Product image */}
-                    <div className="relative w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+                  <div className="flex gap-6 mb-4">
+                    {/* Product image with bold styling */}
+                    <div className="relative w-40 h-40 flex-shrink-0 rounded-xl overflow-hidden bg-[#FFFBF5] border-3 border-[#0F172A]">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
@@ -330,86 +341,94 @@ export default function ProductsPage() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package size={48} className="text-slate-300" />
+                          <Package size={56} className="text-slate-300" strokeWidth={2} />
                         </div>
                       )}
-                      <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500 text-white">
+                      <div className="absolute top-2 left-2 px-3 py-1 rounded-lg font-black text-xs bg-[#FF6B00] text-white border-2 border-[#0F172A]">
                         {platform}
                       </div>
                     </div>
 
-                    {/* Product info */}
+                    {/* Product info with bold typography */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-slate-900 mb-1.5 line-clamp-2">
+                      <h3 className="text-2xl font-black text-[#0F172A] mb-3 line-clamp-2">
                         {title}
                       </h3>
 
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="text-xl font-bold text-blue-600">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="text-3xl font-black text-[#FF6B00]">
                           ₩{krwPrice.toLocaleString()}
                         </div>
-                        <div className="text-xs text-slate-500">
-                          ¥{price.toLocaleString()} 원가
+                        <div className="px-3 py-1 bg-[#FFFBF5] border-2 border-[#0F172A] rounded-lg">
+                          <span className="text-sm font-bold text-slate-600">
+                            ¥{price.toLocaleString()} 원가
+                          </span>
                         </div>
                       </div>
 
-                      {/* Options */}
+                      {/* Options with bold chips */}
                       {product.data?.options && product.data.options.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
+                        <div className="flex flex-wrap gap-2 mb-3">
                           {product.data.options.map((option: any, idx: number) => (
-                            <div key={idx} className="px-2 py-0.5 bg-slate-100 rounded text-xs">
-                              <span className="font-semibold text-slate-700">{option.name}</span>
-                              <span className="text-slate-500 ml-1">({option.values?.length || 0}개)</span>
+                            <div key={idx} className="px-3 py-1.5 bg-[#FFFBF5] rounded-lg border-2 border-[#0F172A]">
+                              <span className="font-black text-sm text-[#0F172A]">{option.name}</span>
+                              <span className="font-bold text-sm text-[#FF6B00] ml-1.5">({option.values?.length || 0}개)</span>
                             </div>
                           ))}
                         </div>
                       )}
 
-                      {/* Stats */}
-                      <div className="flex gap-4 text-xs text-slate-600">
-                        <div className="flex items-center gap-1.5">
-                          <ImageIcon size={14} />
-                          <span>{product.data?.images?.length || 0}개 이미지</span>
+                      {/* Stats with icons */}
+                      <div className="flex gap-6 text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-[#FF6B00] rounded-lg flex items-center justify-center border-2 border-[#0F172A]">
+                            <ImageIcon size={16} className="text-white" strokeWidth={3} />
+                          </div>
+                          <span className="font-bold text-[#0F172A]">{product.data?.images?.length || 0}개 이미지</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <FileText size={14} />
-                          <span>{hasDescImages ? `${product.data.desc_imgs.length}개 상세이미지` : '상세이미지 없음'}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-[#0F172A] rounded-lg flex items-center justify-center border-2 border-[#0F172A]">
+                            <FileText size={16} className="text-white" strokeWidth={3} />
+                          </div>
+                          <span className="font-bold text-[#0F172A]">
+                            {hasDescImages ? `${product.data.desc_imgs.length}개 상세이미지` : '상세이미지 없음'}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Bottom: Buttons in horizontal layout */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                  {/* Bottom: Bold action buttons */}
+                  <div className="flex items-center gap-3 pt-4 border-t-3 border-[#0F172A]">
                     <button
                       onClick={() => openEditModal(product, 'main-image')}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-sm border-3 border-[#0F172A] text-[#0F172A] hover:bg-[#FF6B00] hover:text-white hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                     >
-                      <ImageIcon size={16} />
+                      <ImageIcon size={18} strokeWidth={3} />
                       <span>대표이미지</span>
                     </button>
 
                     <button
                       onClick={() => openEditModal(product, 'detail-images')}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-sm border-3 border-[#0F172A] text-[#0F172A] hover:bg-[#FF6B00] hover:text-white hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                     >
-                      <FileText size={16} />
+                      <FileText size={18} strokeWidth={3} />
                       <span>상세페이지</span>
                     </button>
 
                     <button
                       onClick={() => openEditModal(product, 'pricing')}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-sm border-3 border-[#0F172A] text-[#0F172A] hover:bg-[#FF6B00] hover:text-white hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                     >
-                      <DollarSign size={16} />
+                      <DollarSign size={18} strokeWidth={3} />
                       <span>배송비&마진</span>
                     </button>
 
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-all"
+                      className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-sm border-3 border-[#FF3D00] text-[#FF3D00] hover:bg-[#FF3D00] hover:text-white hover:shadow-[2px_2px_0px_0px_rgba(255,61,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={18} strokeWidth={3} />
                       <span>삭제</span>
                     </button>
 
@@ -418,10 +437,10 @@ export default function ProductsPage() {
                         href={product.source_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm border-2 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all"
+                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-sm border-3 border-[#0F172A] text-[#0F172A] hover:bg-[#0F172A] hover:text-white hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
-                        <ExternalLink size={16} />
-                        <span>원본 보기</span>
+                        <ExternalLink size={18} strokeWidth={3} />
+                        <span>원본</span>
                       </a>
                     )}
                   </div>
@@ -431,15 +450,15 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination with bold style */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
+          <div className="flex items-center justify-center gap-3 mt-8">
             <button
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
-              className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="p-3 rounded-xl bg-white border-3 border-[#0F172A] hover:bg-[#FF6B00] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={24} strokeWidth={3} />
             </button>
 
             <div className="flex gap-2">
@@ -447,10 +466,10 @@ export default function ProductsPage() {
                 <button
                   key={i}
                   onClick={() => setPage(i)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  className={`px-5 py-3 rounded-xl font-black text-lg border-3 border-[#0F172A] transition-all ${
                     page === i
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-[#FF6B00] text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+                      : 'bg-white text-[#0F172A] hover:bg-[#FFFBF5]'
                   }`}
                 >
                   {i + 1}
@@ -461,25 +480,25 @@ export default function ProductsPage() {
             <button
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
-              className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="p-3 rounded-xl bg-white border-3 border-[#0F172A] hover:bg-[#FF6B00] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={24} strokeWidth={3} />
             </button>
           </div>
         )}
       </main>
 
-      {/* Professional Edit Modal - Like the screenshot */}
+      {/* Professional Edit Modal - Bold redesign */}
       {editingProduct && editMode && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          {/* Top bar with tabs */}
-          <div className="bg-white border-b border-slate-200">
+        <div className="fixed inset-0 bg-[#FFFBF5] z-50 flex flex-col">
+          {/* Top bar with tabs - Bold style */}
+          <div className="bg-white border-b-4 border-[#0F172A]">
             <div className="flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                  너
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-[#FF6B00] rounded-xl flex items-center justify-center text-white font-black text-2xl border-3 border-[#0F172A]">
+                  B
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-2">
                   <button
                     onClick={() => {
                       if (editMode !== 'main-image') {
@@ -490,13 +509,13 @@ export default function ProductsPage() {
                         })
                       }
                     }}
-                    className={`px-6 py-2 font-semibold ${
+                    className={`px-6 py-3 font-black text-sm rounded-xl border-3 transition-all ${
                       editMode === 'main-image'
-                        ? 'text-red-500 border-b-2 border-red-500'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'text-white bg-[#FF6B00] border-[#0F172A] shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                        : 'text-[#0F172A] border-[#0F172A] hover:bg-[#FFFBF5]'
                     }`}
                   >
-                    대표 이미지 편집
+                    대표 이미지
                   </button>
                   <button
                     onClick={() => {
@@ -510,13 +529,13 @@ export default function ProductsPage() {
                         })
                       }
                     }}
-                    className={`px-6 py-2 font-semibold ${
+                    className={`px-6 py-3 font-black text-sm rounded-xl border-3 transition-all ${
                       editMode === 'pricing'
-                        ? 'text-red-500 border-b-2 border-red-500'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'text-white bg-[#FF6B00] border-[#0F172A] shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                        : 'text-[#0F172A] border-[#0F172A] hover:bg-[#FFFBF5]'
                     }`}
                   >
-                    옵션 편집
+                    가격 설정
                   </button>
                   <button
                     onClick={() => {
@@ -527,13 +546,13 @@ export default function ProductsPage() {
                         })
                       }
                     }}
-                    className={`px-6 py-2 font-semibold ${
+                    className={`px-6 py-3 font-black text-sm rounded-xl border-3 transition-all ${
                       editMode === 'detail-images'
-                        ? 'text-red-500 border-b-2 border-red-500'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'text-white bg-[#FF6B00] border-[#0F172A] shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                        : 'text-[#0F172A] border-[#0F172A] hover:bg-[#FFFBF5]'
                     }`}
                   >
-                    상세페이지 편집
+                    상세페이지
                   </button>
                 </div>
               </div>
@@ -541,30 +560,30 @@ export default function ProductsPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={closeEditModal}
-                  className="px-6 py-2 rounded-lg font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
+                  className="px-6 py-3 rounded-xl font-black text-sm bg-white text-[#0F172A] border-3 border-[#0F172A] hover:bg-[#FFFBF5] transition-all"
                 >
                   나가기
                 </button>
                 <button
                   onClick={saveEdit}
-                  className="px-6 py-2 rounded-lg font-semibold bg-black text-white hover:bg-slate-800 transition-all"
+                  className="px-6 py-3 rounded-xl font-black text-sm bg-[#FF6B00] text-white border-3 border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                 >
-                  저장 (Ctrl+S)
+                  저장
                 </button>
               </div>
             </div>
 
-            {/* Image thumbnails */}
+            {/* Image thumbnails with bold borders */}
             {(editMode === 'main-image' || editMode === 'detail-images') && (
               <div className="px-6 pb-4">
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {(editMode === 'main-image' ? editData.allImages : editData.descImages)?.map((img: string, idx: number) => (
                     <div
                       key={idx}
-                      className={`relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+                      className={`relative flex-shrink-0 w-28 h-28 rounded-xl overflow-hidden border-3 cursor-pointer transition-all ${
                         selectedImageIndex === idx
-                          ? 'border-red-500 ring-2 ring-red-200'
-                          : 'border-slate-200 hover:border-slate-400'
+                          ? 'border-[#FF6B00] ring-4 ring-[#FF6B00]/30 shadow-lg'
+                          : 'border-[#0F172A] hover:border-[#FF6B00]'
                       }`}
                       onClick={() => {
                         setSelectedImageIndex(idx)
@@ -583,15 +602,14 @@ export default function ProductsPage() {
                           e.stopPropagation()
                           removeImage(idx)
                         }}
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-all"
+                        className="absolute -top-2 -right-2 w-7 h-7 bg-[#FF3D00] text-white rounded-full flex items-center justify-center hover:bg-[#FF6B00] border-2 border-[#0F172A] transition-all"
                       >
-                        <X size={12} />
+                        <X size={14} strokeWidth={3} />
                       </button>
                     </div>
                   ))}
-                  <div className="flex-shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-all">
-                    <Plus size={32} className="text-slate-400" />
-                    <span className="sr-only">이미지 추가</span>
+                  <div className="flex-shrink-0 w-28 h-28 rounded-xl border-3 border-dashed border-[#0F172A] flex items-center justify-center cursor-pointer hover:border-[#FF6B00] hover:bg-[#FFFBF5] transition-all">
+                    <Plus size={36} className="text-[#FF6B00]" strokeWidth={3} />
                   </div>
                 </div>
               </div>
@@ -600,29 +618,35 @@ export default function ProductsPage() {
 
           {/* Main content area */}
           <div className="flex-1 flex overflow-hidden">
-            {/* Left sidebar tools */}
+            {/* Left sidebar tools with bold style */}
             {(editMode === 'main-image' || editMode === 'detail-images') && (
-              <div className="w-48 bg-slate-50 border-r border-slate-200 p-4">
+              <div className="w-56 bg-white border-r-4 border-[#0F172A] p-4">
                 <div className="space-y-2">
-                  <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-3">
-                    <Trash2 size={18} />
+                  <button className="w-full text-left px-4 py-4 rounded-xl border-3 border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] transition-all flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#FF3D00] rounded-lg flex items-center justify-center border-2 border-[#0F172A]">
+                      <Trash2 size={20} className="text-white" strokeWidth={3} />
+                    </div>
                     <div>
-                      <div className="font-semibold text-sm">영역 지우기</div>
-                      <div className="text-xs text-slate-500">(2)</div>
+                      <div className="font-black text-sm text-[#0F172A]">영역 지우기</div>
+                      <div className="text-xs font-bold text-slate-500">(2)</div>
                     </div>
                   </button>
-                  <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-3">
-                    <Settings size={18} />
+                  <button className="w-full text-left px-4 py-4 rounded-xl border-3 border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] transition-all flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#FF6B00] rounded-lg flex items-center justify-center border-2 border-[#0F172A]">
+                      <Settings size={20} className="text-white" strokeWidth={3} />
+                    </div>
                     <div>
-                      <div className="font-semibold text-sm">원클릭 번역</div>
-                      <div className="text-xs text-slate-500">(4)</div>
+                      <div className="font-black text-sm text-[#0F172A]">원클릭 번역</div>
+                      <div className="text-xs font-bold text-slate-500">(4)</div>
                     </div>
                   </button>
-                  <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-3">
-                    <ImageIcon size={18} />
+                  <button className="w-full text-left px-4 py-4 rounded-xl border-3 border-[#0F172A] hover:bg-[#FFFBF5] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] transition-all flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#0F172A] rounded-lg flex items-center justify-center border-2 border-[#0F172A]">
+                      <ImageIcon size={20} className="text-white" strokeWidth={3} />
+                    </div>
                     <div>
-                      <div className="font-semibold text-sm">대표 이미지로 설정</div>
-                      <div className="text-xs text-slate-500">(f)</div>
+                      <div className="font-black text-sm text-[#0F172A]">대표 이미지로</div>
+                      <div className="text-xs font-bold text-slate-500">(f)</div>
                     </div>
                   </button>
                 </div>
@@ -630,19 +654,19 @@ export default function ProductsPage() {
             )}
 
             {/* Center canvas */}
-            <div className="flex-1 flex flex-col bg-slate-100">
-              {/* Toolbar */}
+            <div className="flex-1 flex flex-col bg-[#FFFBF5]">
+              {/* Toolbar with bold buttons */}
               {(editMode === 'main-image' || editMode === 'detail-images') && (
-                <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-4">
-                  <button className="p-2 hover:bg-slate-100 rounded-lg transition-all" title="Delete">
-                    <Trash2 size={20} />
+                <div className="bg-white border-b-4 border-[#0F172A] px-6 py-3 flex items-center gap-4">
+                  <button className="p-3 hover:bg-[#FFFBF5] rounded-xl border-2 border-[#0F172A] transition-all" title="Delete">
+                    <Trash2 size={20} strokeWidth={3} />
                   </button>
-                  <div className="w-px h-6 bg-slate-300"></div>
-                  <button className="p-2 hover:bg-slate-100 rounded-lg transition-all" title="Undo">
-                    <span className="text-sm font-semibold">Ctrl+Z</span>
+                  <div className="w-px h-8 bg-[#0F172A]"></div>
+                  <button className="px-4 py-2 hover:bg-[#FFFBF5] rounded-xl border-2 border-[#0F172A] transition-all" title="Undo">
+                    <span className="text-sm font-black">Ctrl+Z</span>
                   </button>
-                  <button className="p-2 hover:bg-slate-100 rounded-lg transition-all" title="Redo">
-                    <span className="text-sm font-semibold">Ctrl+R</span>
+                  <button className="px-4 py-2 hover:bg-[#FFFBF5] rounded-xl border-2 border-[#0F172A] transition-all" title="Redo">
+                    <span className="text-sm font-black">Ctrl+R</span>
                   </button>
                 </div>
               )}
@@ -650,36 +674,39 @@ export default function ProductsPage() {
               {/* Canvas area */}
               <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
                 {editMode === 'main-image' && (
-                  <div className="bg-white rounded-xl shadow-2xl" style={{ maxWidth: `${zoom}%` }}>
+                  <div className="bg-white rounded-2xl shadow-2xl border-4 border-[#0F172A]" style={{ maxWidth: `${zoom}%` }}>
                     <img
                       src={editData.mainImage}
                       alt="Main"
-                      className="w-full h-auto"
+                      className="w-full h-auto rounded-xl"
                     />
                   </div>
                 )}
 
                 {editMode === 'detail-images' && (
-                  <div className="bg-white rounded-xl shadow-2xl" style={{ maxWidth: `${zoom}%` }}>
+                  <div className="bg-white rounded-2xl shadow-2xl border-4 border-[#0F172A]" style={{ maxWidth: `${zoom}%` }}>
                     {editData.descImages && editData.descImages[selectedImageIndex] ? (
                       <img
                         src={normalizeImageUrl(editData.descImages[selectedImageIndex])}
                         alt={`Detail ${selectedImageIndex + 1}`}
-                        className="w-full h-auto"
+                        className="w-full h-auto rounded-xl"
                       />
                     ) : (
                       <div className="w-96 h-96 flex items-center justify-center">
-                        <FileText size={64} className="text-slate-300" />
+                        <FileText size={80} className="text-slate-300" strokeWidth={2} />
                       </div>
                     )}
                   </div>
                 )}
 
                 {editMode === 'pricing' && (
-                  <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg p-8">
+                  <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border-4 border-[#0F172A] p-8">
                     <div className="space-y-6">
                       <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        <label className="block text-sm font-black text-[#0F172A] mb-3 flex items-center gap-2">
+                          <div className="w-8 h-8 bg-[#FF6B00] rounded-lg flex items-center justify-center border-2 border-[#0F172A]">
+                            <DollarSign size={16} className="text-white" strokeWidth={3} />
+                          </div>
                           원가 (CNY)
                         </label>
                         <input
@@ -694,15 +721,15 @@ export default function ProductsPage() {
                             const final = Math.round(cost * (1 + margin / 100))
                             setEditData({ ...editData, price, finalPrice: final })
                           }}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                          className="w-full px-6 py-4 rounded-xl border-4 border-[#0F172A] focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/20 outline-none text-xl font-bold"
                         />
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="text-sm font-bold text-slate-600 mt-2">
                           한화: ₩{Math.round(editData.price * 200).toLocaleString()}
                         </p>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        <label className="block text-sm font-black text-[#0F172A] mb-3">
                           배송비 (KRW)
                         </label>
                         <input
@@ -716,12 +743,12 @@ export default function ProductsPage() {
                             const final = Math.round(cost * (1 + margin / 100))
                             setEditData({ ...editData, shippingCost: shipping, finalPrice: final })
                           }}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                          className="w-full px-6 py-4 rounded-xl border-4 border-[#0F172A] focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/20 outline-none text-xl font-bold"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        <label className="block text-sm font-black text-[#0F172A] mb-3">
                           마진율 (%)
                         </label>
                         <input
@@ -735,16 +762,16 @@ export default function ProductsPage() {
                             const final = Math.round(cost * (1 + margin / 100))
                             setEditData({ ...editData, margin, finalPrice: final })
                           }}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                          className="w-full px-6 py-4 rounded-xl border-4 border-[#0F172A] focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/20 outline-none text-xl font-bold"
                         />
                       </div>
 
-                      <div className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
-                        <div className="text-sm text-slate-600 mb-2">최종 판매가</div>
-                        <div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      <div className="p-8 bg-[#FF6B00] rounded-2xl border-4 border-[#0F172A] shadow-[8px_8px_0px_0px_rgba(15,23,42,1)]">
+                        <div className="text-sm font-black text-white mb-3">최종 판매가</div>
+                        <div className="text-6xl font-black text-white">
                           ₩{editData.finalPrice?.toLocaleString() || '0'}
                         </div>
-                        <div className="text-sm text-slate-500 mt-3">
+                        <div className="text-sm font-bold text-white/80 mt-4">
                           원가 ₩{Math.round(editData.price * 200).toLocaleString()} +
                           배송비 ₩{editData.shippingCost?.toLocaleString() || '0'} +
                           마진 {editData.margin}%
@@ -755,24 +782,24 @@ export default function ProductsPage() {
                 )}
               </div>
 
-              {/* Bottom controls */}
+              {/* Bottom controls with bold style */}
               {(editMode === 'main-image' || editMode === 'detail-images') && (
-                <div className="bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-end gap-4">
+                <div className="bg-white border-t-4 border-[#0F172A] px-6 py-4 flex items-center justify-end gap-4">
                   <button
                     onClick={() => setZoom(Math.max(20, zoom - 10))}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-all"
+                    className="p-3 hover:bg-[#FFFBF5] rounded-xl border-3 border-[#0F172A] transition-all"
                   >
-                    <ZoomOut size={20} />
+                    <ZoomOut size={20} strokeWidth={3} />
                   </button>
-                  <span className="text-sm font-semibold w-12 text-center">{zoom}%</span>
+                  <span className="text-lg font-black w-16 text-center text-[#0F172A]">{zoom}%</span>
                   <button
                     onClick={() => setZoom(Math.min(200, zoom + 10))}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-all"
+                    className="p-3 hover:bg-[#FFFBF5] rounded-xl border-3 border-[#0F172A] transition-all"
                   >
-                    <ZoomIn size={20} />
+                    <ZoomIn size={20} strokeWidth={3} />
                   </button>
-                  <div className="w-px h-6 bg-slate-300 mx-2"></div>
-                  <button className="px-4 py-2 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all">
+                  <div className="w-px h-8 bg-[#0F172A] mx-2"></div>
+                  <button className="px-6 py-3 rounded-xl font-black text-sm bg-[#FF6B00] text-white border-3 border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
                     이미지 저장
                   </button>
                 </div>
@@ -782,13 +809,13 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Toast */}
+      {/* Toast with bold style */}
       {showToast && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className={`px-6 py-4 rounded-xl shadow-lg ${
+        <div className="fixed bottom-8 right-8 z-50">
+          <div className={`px-8 py-5 rounded-2xl shadow-lg border-4 border-[#0F172A] font-black text-lg ${
             showToast.type === 'success'
-              ? 'bg-green-500 text-white'
-              : 'bg-red-500 text-white'
+              ? 'bg-[#FF6B00] text-white'
+              : 'bg-[#FF3D00] text-white'
           }`}>
             {showToast.message}
           </div>
