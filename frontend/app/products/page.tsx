@@ -1,6 +1,5 @@
 /**
- * Products page - Product management interface
- * HeySeller inspired clean design
+ * Products page - Product management with horizontal list and inline editing
  */
 
 'use client'
@@ -8,7 +7,7 @@
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
 import Header from '@/components/Header'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Edit, Check, AlertCircle, ChevronLeft, ChevronRight, Package } from 'lucide-react'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package } from 'lucide-react'
 
 interface Product {
   id: string
@@ -26,6 +25,8 @@ interface Product {
   updated_at: string
 }
 
+type EditMode = 'main-image' | 'detail-images' | 'pricing' | null
+
 export default function ProductsPage() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -34,7 +35,12 @@ export default function ProductsPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
-  const limit = 12
+  const limit = 10
+
+  // Edit modal state
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [editMode, setEditMode] = useState<EditMode>(null)
+  const [editData, setEditData] = useState<any>({})
 
   useEffect(() => {
     loadProducts()
@@ -95,6 +101,72 @@ export default function ProductsPage() {
     }
   }
 
+  const openEditModal = (product: Product, mode: EditMode) => {
+    setEditingProduct(product)
+    setEditMode(mode)
+
+    // Initialize edit data based on mode
+    if (mode === 'main-image') {
+      setEditData({
+        mainImage: getValidImageUrl(product),
+        allImages: product.data?.images || []
+      })
+    } else if (mode === 'detail-images') {
+      setEditData({
+        descImages: product.data?.desc_imgs || []
+      })
+    } else if (mode === 'pricing') {
+      setEditData({
+        price: product.price || 0,
+        shippingCost: product.data?.shipping_cost || 0,
+        margin: product.data?.margin || 30,
+        finalPrice: 0
+      })
+    }
+  }
+
+  const closeEditModal = () => {
+    setEditingProduct(null)
+    setEditMode(null)
+    setEditData({})
+  }
+
+  const saveEdit = async () => {
+    if (!editingProduct) return
+
+    try {
+      const updateData: any = {}
+
+      if (editMode === 'main-image') {
+        updateData.image_url = editData.mainImage
+      } else if (editMode === 'detail-images') {
+        updateData.data = {
+          ...editingProduct.data,
+          desc_imgs: editData.descImages
+        }
+      } else if (editMode === 'pricing') {
+        updateData.price = editData.price
+        updateData.data = {
+          ...editingProduct.data,
+          shipping_cost: editData.shippingCost,
+          margin: editData.margin
+        }
+      }
+
+      const response = await updateProduct(editingProduct.id, updateData)
+
+      if (response.ok) {
+        toast('저장되었습니다!')
+        loadProducts()
+        closeEditModal()
+      } else {
+        toast('저장 실패', 'error')
+      }
+    } catch (err) {
+      toast('저장 중 오류가 발생했습니다', 'error')
+    }
+  }
+
   const normalizeImageUrl = (url: string): string => {
     if (!url || url.startsWith('blob:')) return url
     if (url.startsWith('//')) return `https:${url}`
@@ -105,7 +177,6 @@ export default function ProductsPage() {
   }
 
   const getValidImageUrl = (product: Product): string => {
-    // Try downloaded_images first (Railway-hosted)
     if (product.data?.downloaded_images && Array.isArray(product.data.downloaded_images) && product.data.downloaded_images.length > 0) {
       const firstDownloadedImage = product.data.downloaded_images[0]
       if (firstDownloadedImage && !firstDownloadedImage.startsWith('blob:')) {
@@ -113,17 +184,14 @@ export default function ProductsPage() {
       }
     }
 
-    // Try image_url
     if (product.image_url && !product.image_url.startsWith('blob:')) {
       return normalizeImageUrl(product.image_url)
     }
 
-    // Try pic_url from data
     if (product.data?.pic_url && !product.data.pic_url.startsWith('blob:')) {
       return normalizeImageUrl(product.data.pic_url)
     }
 
-    // Try images array
     if (product.data?.images && Array.isArray(product.data.images) && product.data.images.length > 0) {
       const firstImage = product.data.images[0]
       if (firstImage && !firstImage.startsWith('blob:')) {
@@ -135,12 +203,10 @@ export default function ProductsPage() {
   }
 
   const getProductTitle = (product: Product): string => {
-    // Priority: Korean title > Regular title > Chinese title
     return product.data?.title_kr || product.title || product.data?.title_cn || '제품명 없음'
   }
 
   const getProductPrice = (product: Product): number => {
-    // Try different price fields
     return product.price || product.data?.price || 0
   }
 
@@ -148,53 +214,39 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Navigation */}
       <Header />
 
-      {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">상품 관리</h1>
-          <p className="text-slate-600">{total}개의 등록된 상품</p>
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">상품 관리</h1>
+          <p className="text-slate-600 text-lg">{total}개의 등록된 상품</p>
         </div>
 
         {/* Import form */}
-        <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-3xl border-2 border-blue-100 shadow-lg shadow-blue-100/50 p-8 mb-8 hover:shadow-xl hover:shadow-blue-200/50 transition-all duration-300">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
-              <Plus size={20} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">타오바오 상품 가져오기</h2>
-              <p className="text-sm text-slate-500">상품 URL을 입력하면 자동으로 정보를 가져옵니다</p>
-            </div>
-          </div>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
           <form onSubmit={handleImport} className="flex gap-3">
-            <div className="relative flex-1 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition-opacity duration-300"></div>
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://item.taobao.com/item.htm?id=..."
-                className="relative w-full px-6 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200 text-slate-900 placeholder:text-slate-400 bg-white shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
-              />
-            </div>
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="타오바오 상품 URL을 입력하세요..."
+              className="flex-1 px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              disabled={loading}
+            />
             <button
               type="submit"
               disabled={loading || !url}
-              className="group flex items-center gap-3 px-8 py-4 rounded-2xl text-base font-bold bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/50 hover:shadow-xl hover:shadow-blue-600/50 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? (
                 <>
-                  <RefreshCw size={22} className="animate-spin" />
+                  <RefreshCw size={20} className="animate-spin" />
                   <span>가져오는 중...</span>
                 </>
               ) : (
                 <>
-                  <Plus size={22} className="group-hover:rotate-90 transition-transform duration-200" />
+                  <Plus size={20} />
                   <span>가져오기</span>
                 </>
               )}
@@ -203,242 +255,437 @@ export default function ProductsPage() {
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-lg p-8 mb-8 hover:shadow-xl transition-all duration-300">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
           <div className="flex gap-3">
-            <div className="relative flex-1 group">
-              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                <Search size={22} className="text-slate-400 group-hover:text-blue-500 transition-colors duration-200" />
-              </div>
+            <div className="relative flex-1">
+              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="상품명으로 검색..."
-                className="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-200 text-slate-900 placeholder:text-slate-400 bg-slate-50 hover:bg-white hover:shadow-md"
+                className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
               />
             </div>
             <button
               onClick={() => loadProducts()}
-              className="group flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-bold bg-white text-slate-700 border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 hover:shadow-lg transition-all duration-200"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
             >
-              <RefreshCw size={22} className="group-hover:rotate-180 transition-transform duration-500" />
+              <RefreshCw size={20} />
               <span>새로고침</span>
             </button>
           </div>
         </div>
 
-        {/* Products grid */}
+        {/* Products horizontal list */}
         {products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border-2 border-dashed border-slate-300">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-6">
-              <Package size={40} className="text-blue-600" />
-            </div>
+          <div className="flex flex-col items-center justify-center h-96 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300">
+            <Package size={64} className="text-slate-400 mb-4" />
             <h3 className="text-xl font-bold text-slate-900 mb-2">상품이 없습니다</h3>
-            <p className="text-slate-600 mb-6">타오바오에서 상품을 가져와보세요</p>
+            <p className="text-slate-600">타오바오에서 상품을 가져와보세요</p>
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-              {products.map((product) => {
-                const imageUrl = getValidImageUrl(product)
-                const title = getProductTitle(product)
-                const price = getProductPrice(product)
-                const krwPrice = Math.round(price * 200)
-                const platform = product.data?.platform || (product.source === 'taobao' ? '타오바오' : product.source)
+          <div className="space-y-4">
+            {products.map((product) => {
+              const imageUrl = getValidImageUrl(product)
+              const title = getProductTitle(product)
+              const price = getProductPrice(product)
+              const krwPrice = Math.round(price * 200)
+              const platform = product.data?.platform || (product.source === 'taobao' ? '타오바오' : product.source)
+              const hasDescImages = product.data?.desc_imgs && product.data.desc_imgs.length > 0
 
-                return (
-                  <div
-                    key={product.id}
-                    className="group bg-white rounded-3xl border-2 border-slate-200 overflow-hidden hover:shadow-2xl hover:border-blue-400 hover:-translate-y-2 transition-all duration-300"
-                  >
-                    {/* Image */}
-                    <div className="relative aspect-square bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+              return (
+                <div
+                  key={product.id}
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-6"
+                >
+                  <div className="flex gap-6">
+                    {/* Product image */}
+                    <div className="relative w-48 h-48 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
                           alt={title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                            target.parentElement!.innerHTML = `
-                              <div class="w-full h-full flex items-center justify-center">
-                                <svg class="text-slate-300" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                </svg>
-                              </div>
-                            `
-                          }}
+                          className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package size={64} className="text-slate-300 group-hover:scale-110 transition-transform duration-300" />
+                          <Package size={48} className="text-slate-300" />
                         </div>
                       )}
-
-                      {/* Overlay gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                      {/* Source badge */}
-                      <div className="absolute top-4 left-4 px-4 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg">
+                      <div className="absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
                         {platform}
                       </div>
                     </div>
 
-                    {/* Content */}
-                    <div className="p-6">
-                      <h3 className="text-lg font-bold text-slate-900 mb-4 line-clamp-2 min-h-[3.5rem] group-hover:text-blue-600 transition-colors">
+                    {/* Product info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xl font-bold text-slate-900 mb-2 line-clamp-2">
                         {title}
                       </h3>
 
-                      {/* Price */}
-                      <div className="mb-5 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            {price > 0 ? `₩${krwPrice.toLocaleString()}` : '가격 미정'}
-                          </span>
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="text-2xl font-bold text-blue-600">
+                          ₩{krwPrice.toLocaleString()}
                         </div>
-                        {price > 0 && (
-                          <div className="text-sm text-slate-600 mt-1 font-medium">
-                            ¥{price.toLocaleString()} <span className="text-slate-400">원가</span>
-                          </div>
-                        )}
+                        <div className="text-sm text-slate-500">
+                          ¥{price.toLocaleString()} 원가
+                        </div>
                       </div>
 
-                      {/* Options preview */}
+                      {/* Options */}
                       {product.data?.options && product.data.options.length > 0 && (
-                        <div className="mb-5 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">옵션 정보</div>
-                          </div>
-                          <div className="space-y-2">
-                            {product.data.options.slice(0, 2).map((option: any, idx: number) => (
-                              <div key={idx} className="flex items-center justify-between text-sm">
-                                <span className="font-semibold text-slate-700">{option.name}</span>
-                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
-                                  {option.values?.length || 0}개
-                                </span>
-                              </div>
-                            ))}
-                            {product.data.options.length > 2 && (
-                              <div className="text-xs text-blue-600 font-bold pt-2 border-t border-slate-200">
-                                +{product.data.options.length - 2}개 옵션 더보기
-                              </div>
-                            )}
-                          </div>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {product.data.options.map((option: any, idx: number) => (
+                            <div key={idx} className="px-3 py-1 bg-slate-100 rounded-lg text-sm">
+                              <span className="font-semibold text-slate-700">{option.name}</span>
+                              <span className="text-slate-500 ml-1">({option.values?.length || 0}개)</span>
+                            </div>
+                          ))}
                         </div>
                       )}
 
-                      {/* Actions */}
-                      <div className="flex gap-3">
+                      {/* Stats */}
+                      <div className="flex gap-6 text-sm text-slate-600 mb-6">
+                        <div className="flex items-center gap-2">
+                          <ImageIcon size={16} />
+                          <span>{product.data?.images?.length || 0}개 이미지</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <FileText size={16} />
+                          <span>{hasDescImages ? `${product.data.desc_imgs.length}개 상세이미지` : '상세이미지 없음'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Edit buttons */}
+                    <div className="flex flex-col gap-3 w-48 flex-shrink-0">
+                      <button
+                        onClick={() => openEditModal(product, 'main-image')}
+                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow-md"
+                      >
+                        <ImageIcon size={18} />
+                        <span>대표이미지</span>
+                      </button>
+
+                      <button
+                        onClick={() => openEditModal(product, 'detail-images')}
+                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 transition-all shadow-sm hover:shadow-md"
+                      >
+                        <FileText size={18} />
+                        <span>상세페이지</span>
+                      </button>
+
+                      <button
+                        onClick={() => openEditModal(product, 'pricing')}
+                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all shadow-sm hover:shadow-md"
+                      >
+                        <DollarSign size={18} />
+                        <span>배송비&마진</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-all mt-auto"
+                      >
+                        <Trash2 size={18} />
+                        <span>삭제</span>
+                      </button>
+
+                      {product.source_url && (
                         <a
                           href={product.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group/link flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 hover:text-white shadow-sm hover:shadow-lg transition-all duration-200"
+                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all text-sm"
                         >
-                          <ExternalLink size={18} className="group-hover/link:rotate-45 transition-transform duration-200" />
-                          원본 보기
+                          <ExternalLink size={16} />
+                          <span>원본 보기</span>
                         </a>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="group/delete px-5 py-3.5 rounded-2xl text-sm font-bold bg-red-50 text-red-600 hover:bg-red-600 hover:text-white shadow-sm hover:shadow-lg transition-all duration-200"
-                          title="삭제"
-                        >
-                          <Trash2 size={18} className="group-hover/delete:scale-110 transition-transform duration-200" />
-                        </button>
-                      </div>
+                      )}
                     </div>
                   </div>
-                )
-              })}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8">
+            <button
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0}
+              className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            <div className="flex gap-2">
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i)}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    page === i
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={() => setPage(Math.max(0, page - 1))}
-                  disabled={page === 0}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  <ChevronLeft size={18} />
-                  이전
-                </button>
-
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = Math.max(0, Math.min(page - 2 + i, totalPages - 1))
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setPage(pageNum)}
-                        className={`w-10 h-10 rounded-xl text-sm font-semibold transition-all ${
-                          page === pageNum
-                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
-                            : 'bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md'
-                        }`}
-                      >
-                        {pageNum + 1}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <button
-                  onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                  disabled={page >= totalPages - 1}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  다음
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            )}
-          </>
+            <button
+              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+              disabled={page >= totalPages - 1}
+              className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
         )}
       </main>
 
-      {/* Toast */}
-      {showToast && (
-        <div
-          className={`fixed bottom-8 right-8 px-6 py-4 rounded-xl shadow-2xl animate-slide-up ${
-            showToast.type === 'success'
-              ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
-              : 'bg-gradient-to-r from-red-500 to-red-600 text-white'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            {showToast.type === 'success' ? (
-              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                <Check size={16} />
-              </div>
-            ) : (
-              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                <AlertCircle size={16} />
-              </div>
-            )}
-            <span className="font-medium">{showToast.message}</span>
+      {/* Edit Modal */}
+      {editingProduct && editMode && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <h2 className="text-2xl font-bold text-slate-900">
+                {editMode === 'main-image' && '대표 이미지 편집'}
+                {editMode === 'detail-images' && '상세 페이지 편집'}
+                {editMode === 'pricing' && '배송비 & 마진 설정'}
+              </h2>
+              <button
+                onClick={closeEditModal}
+                className="p-2 rounded-lg hover:bg-slate-100 transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {editMode === 'main-image' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      현재 대표 이미지
+                    </label>
+                    <div className="w-full h-96 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center">
+                      {editData.mainImage ? (
+                        <img
+                          src={editData.mainImage}
+                          alt="Main"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <Package size={64} className="text-slate-300" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      이미지 URL 직접 입력
+                    </label>
+                    <input
+                      type="text"
+                      value={editData.mainImage}
+                      onChange={(e) => setEditData({ ...editData, mainImage: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                      placeholder="https://..."
+                    />
+                  </div>
+
+                  {editData.allImages && editData.allImages.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        다른 이미지 선택 ({editData.allImages.length}개)
+                      </label>
+                      <div className="grid grid-cols-4 gap-4">
+                        {editData.allImages.map((img: string, idx: number) => (
+                          <button
+                            key={idx}
+                            onClick={() => setEditData({ ...editData, mainImage: normalizeImageUrl(img) })}
+                            className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                              editData.mainImage === normalizeImageUrl(img)
+                                ? 'border-blue-500 ring-4 ring-blue-100'
+                                : 'border-slate-200 hover:border-blue-300'
+                            }`}
+                          >
+                            <img
+                              src={normalizeImageUrl(img)}
+                              alt={`Image ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {editMode === 'detail-images' && (
+                <div className="space-y-6">
+                  {editData.descImages && editData.descImages.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-semibold text-slate-700">
+                          상세 페이지 이미지 ({editData.descImages.length}개)
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {editData.descImages.map((img: string, idx: number) => (
+                          <div
+                            key={idx}
+                            className="relative group rounded-xl overflow-hidden border border-slate-200"
+                          >
+                            <img
+                              src={normalizeImageUrl(img)}
+                              alt={`Detail ${idx + 1}`}
+                              className="w-full h-auto"
+                            />
+                            <div className="absolute top-2 left-2 px-3 py-1 rounded-full bg-black/70 text-white text-sm font-semibold">
+                              {idx + 1}
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newImages = editData.descImages.filter((_: any, i: number) => i !== idx)
+                                setEditData({ ...editData, descImages: newImages })
+                              }}
+                              className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300">
+                      <FileText size={48} className="text-slate-400 mb-2" />
+                      <p className="text-slate-600">상세 페이지 이미지가 없습니다</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {editMode === 'pricing' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      원가 (CNY)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editData.price}
+                      onChange={(e) => {
+                        const price = parseFloat(e.target.value) || 0
+                        const shipping = editData.shippingCost || 0
+                        const margin = editData.margin || 30
+                        const cost = (price * 200) + shipping
+                        const final = Math.round(cost * (1 + margin / 100))
+                        setEditData({ ...editData, price, finalPrice: final })
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                    />
+                    <p className="text-sm text-slate-500 mt-1">
+                      한화: ₩{Math.round(editData.price * 200).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      배송비 (KRW)
+                    </label>
+                    <input
+                      type="number"
+                      value={editData.shippingCost}
+                      onChange={(e) => {
+                        const shipping = parseInt(e.target.value) || 0
+                        const price = editData.price || 0
+                        const margin = editData.margin || 30
+                        const cost = (price * 200) + shipping
+                        const final = Math.round(cost * (1 + margin / 100))
+                        setEditData({ ...editData, shippingCost: shipping, finalPrice: final })
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      마진율 (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={editData.margin}
+                      onChange={(e) => {
+                        const margin = parseInt(e.target.value) || 0
+                        const price = editData.price || 0
+                        const shipping = editData.shippingCost || 0
+                        const cost = (price * 200) + shipping
+                        const final = Math.round(cost * (1 + margin / 100))
+                        setEditData({ ...editData, margin, finalPrice: final })
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                    />
+                  </div>
+
+                  <div className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+                    <div className="text-sm text-slate-600 mb-2">최종 판매가</div>
+                    <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      ₩{editData.finalPrice?.toLocaleString() || '0'}
+                    </div>
+                    <div className="text-sm text-slate-500 mt-2">
+                      원가 ₩{Math.round(editData.price * 200).toLocaleString()} +
+                      배송비 ₩{editData.shippingCost?.toLocaleString() || '0'} +
+                      마진 {editData.margin}%
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200">
+              <button
+                onClick={closeEditModal}
+                className="px-6 py-3 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
+              >
+                취소
+              </button>
+              <button
+                onClick={saveEdit}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all"
+              >
+                <Save size={20} />
+                <span>저장</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <style jsx>{`
-        @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
+      {/* Toast */}
+      {showToast && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className={`px-6 py-4 rounded-xl shadow-lg ${
+            showToast.type === 'success'
+              ? 'bg-green-500 text-white'
+              : 'bg-red-500 text-white'
+          }`}>
+            {showToast.message}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
