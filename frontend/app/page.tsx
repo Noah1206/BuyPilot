@@ -1,5 +1,5 @@
 /**
- * Landing Page - Clean & Professional Design
+ * Landing Page - Blue & Orange Branding
  */
 
 'use client'
@@ -21,15 +21,15 @@ export default function LandingPage() {
             {/* Left: Content */}
             <div>
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full mb-6">
-                <Zap size={16} className="text-blue-600" />
-                <span className="text-sm font-medium text-blue-700">매달 500+ 셀러가 선택</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-200 rounded-full mb-6">
+                <Zap size={16} className="text-orange-600" />
+                <span className="text-sm font-medium text-orange-700">매달 500+ 셀러가 선택</span>
               </div>
 
               {/* Headline */}
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-semibold text-slate-900 mb-6 leading-tight">
                 타오바오 소싱<br />
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">3배 빠르게</span>
+                <span className="text-orange-500">3배 빠르게</span>
               </h1>
 
               <p className="text-xl text-slate-600 mb-10 leading-relaxed">
@@ -40,15 +40,15 @@ export default function LandingPage() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 mb-10">
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="text-3xl font-semibold text-blue-600">95%</div>
+                  <div className="text-3xl font-semibold text-orange-500">95%</div>
                   <div className="text-sm text-slate-600 mt-1">시간 절약</div>
                 </div>
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="text-3xl font-semibold text-blue-600">2.5억</div>
+                  <div className="text-3xl font-semibold text-orange-500">2.5억</div>
                   <div className="text-sm text-slate-600 mt-1">월 거래액</div>
                 </div>
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="text-3xl font-semibold text-blue-600">500+</div>
+                  <div className="text-3xl font-semibold text-orange-500">500+</div>
                   <div className="text-sm text-slate-600 mt-1">활성 셀러</div>
                 </div>
               </div>
@@ -57,7 +57,7 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <a
                   href="/competitor"
-                  className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                  className="group px-8 py-4 bg-orange-500 text-white rounded-xl font-medium shadow-lg hover:shadow-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
                 >
                   무료로 시작하기
                   <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -73,11 +73,11 @@ export default function LandingPage() {
               {/* Trust indicators */}
               <div className="flex items-center gap-6 text-sm text-slate-600">
                 <div className="flex items-center gap-2">
-                  <Check size={18} className="text-blue-600" />
+                  <Check size={18} className="text-orange-500" />
                   <span>카드 등록 불필요</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check size={18} className="text-blue-600" />
+                  <Check size={18} className="text-orange-500" />
                   <span>5분만에 시작</span>
                 </div>
               </div>
@@ -86,7 +86,7 @@ export default function LandingPage() {
             {/* Right: Visual */}
             <div className="relative">
               <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xl">
-                <div className="aspect-video bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <div className="aspect-video bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
                   <div className="text-center text-white">
                     <BarChart3 size={64} strokeWidth={2} />
                     <p className="mt-4 font-semibold text-2xl">실시간 대시보드</p>
@@ -94,7 +94,7 @@ export default function LandingPage() {
                 </div>
               </div>
               {/* Floating badge */}
-              <div className="absolute -top-4 -right-4 bg-red-500 text-white px-5 py-2 rounded-full shadow-lg">
+              <div className="absolute -top-4 -right-4 bg-orange-500 text-white px-5 py-2 rounded-full shadow-lg">
                 <p className="font-semibold text-sm">HOT</p>
               </div>
             </div>
@@ -106,7 +106,7 @@ export default function LandingPage() {
       <section className="py-24 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-medium text-sm mb-4">
+            <div className="inline-block px-4 py-2 bg-orange-100 text-orange-700 rounded-full font-medium text-sm mb-4">
               핵심 기능
             </div>
             <h2 className="text-4xl md:text-5xl font-semibold text-slate-900 mb-4">
@@ -119,23 +119,23 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
                 <BarChart3 size={24} className="text-white" strokeWidth={2} />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-3">경쟁사 분석</h3>
               <p className="text-slate-600 leading-relaxed mb-4">
                 스마트스토어 URL만 입력하면 타오바오 후보 상품 자동 검색
               </p>
-              <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
+              <div className="flex items-center gap-2 text-orange-600 font-medium text-sm">
                 <span>평균 30초 소요</span>
                 <ArrowRight size={16} />
               </div>
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
                 <Package size={24} className="text-white" strokeWidth={2} />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-3">자동 수입</h3>
@@ -149,23 +149,23 @@ export default function LandingPage() {
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
                 <Zap size={24} className="text-white" strokeWidth={2} />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-3">주문 자동화</h3>
               <p className="text-slate-600 leading-relaxed mb-4">
                 주문 접수부터 타오바오 구매까지 자동 처리
               </p>
-              <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
+              <div className="flex items-center gap-2 text-orange-600 font-medium text-sm">
                 <span>24/7 자동 운영</span>
                 <ArrowRight size={16} />
               </div>
             </div>
 
             {/* Feature 4 */}
-            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
                 <DollarSign size={24} className="text-white" strokeWidth={2} />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-3">실시간 가격</h3>
@@ -179,23 +179,23 @@ export default function LandingPage() {
             </div>
 
             {/* Feature 5 */}
-            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
                 <Globe size={24} className="text-white" strokeWidth={2} />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-3">AI 번역</h3>
               <p className="text-slate-600 leading-relaxed mb-4">
                 상품명, 옵션, 상세 설명 자동 번역 및 수정
               </p>
-              <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
+              <div className="flex items-center gap-2 text-orange-600 font-medium text-sm">
                 <span>99% 정확도</span>
                 <ArrowRight size={16} />
               </div>
             </div>
 
             {/* Feature 6 */}
-            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
                 <Shield size={24} className="text-white" strokeWidth={2} />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-3">안전 관리</h3>
@@ -225,7 +225,7 @@ export default function LandingPage() {
             <div className="bg-white text-slate-900 p-8 rounded-2xl border border-slate-200">
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={18} fill="#2563EB" stroke="#2563EB" />
+                  <Star key={i} size={18} fill="#F97316" stroke="#F97316" />
                 ))}
               </div>
               <p className="mb-4 leading-relaxed text-slate-700">
@@ -239,7 +239,7 @@ export default function LandingPage() {
             <div className="bg-white text-slate-900 p-8 rounded-2xl border border-slate-200">
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={18} fill="#2563EB" stroke="#2563EB" />
+                  <Star key={i} size={18} fill="#F97316" stroke="#F97316" />
                 ))}
               </div>
               <p className="mb-4 leading-relaxed text-slate-700">
@@ -253,7 +253,7 @@ export default function LandingPage() {
             <div className="bg-white text-slate-900 p-8 rounded-2xl border border-slate-200">
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={18} fill="#2563EB" stroke="#2563EB" />
+                  <Star key={i} size={18} fill="#F97316" stroke="#F97316" />
                 ))}
               </div>
               <p className="mb-4 leading-relaxed text-slate-700">
@@ -267,7 +267,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-4 bg-gradient-to-r from-blue-600 to-purple-600">
+      <section className="py-24 px-4 bg-orange-500">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-semibold text-white mb-6 leading-tight">
             지금 시작하면<br />
@@ -278,7 +278,7 @@ export default function LandingPage() {
           </p>
           <a
             href="/competitor"
-            className="inline-flex items-center gap-2 px-10 py-5 bg-white text-blue-600 rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200"
+            className="inline-flex items-center gap-2 px-10 py-5 bg-white text-orange-600 rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200"
           >
             무료로 시작하기
             <ArrowRight size={24} strokeWidth={2} />
