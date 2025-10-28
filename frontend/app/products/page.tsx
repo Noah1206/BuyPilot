@@ -1,5 +1,5 @@
 /**
- * Products page - Product management with horizontal list and inline editing
+ * Products page - Product management with professional image editor
  */
 
 'use client'
@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
 import Header from '@/components/Header'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package } from 'lucide-react'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings } from 'lucide-react'
 
 interface Product {
   id: string
@@ -41,6 +41,8 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [editMode, setEditMode] = useState<EditMode>(null)
   const [editData, setEditData] = useState<any>({})
+  const [zoom, setZoom] = useState(60)
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
   useEffect(() => {
     loadProducts()
@@ -104,8 +106,9 @@ export default function ProductsPage() {
   const openEditModal = (product: Product, mode: EditMode) => {
     setEditingProduct(product)
     setEditMode(mode)
+    setZoom(60)
+    setSelectedImageIndex(0)
 
-    // Initialize edit data based on mode
     if (mode === 'main-image') {
       setEditData({
         mainImage: getValidImageUrl(product),
@@ -120,7 +123,7 @@ export default function ProductsPage() {
         price: product.price || 0,
         shippingCost: product.data?.shipping_cost || 0,
         margin: product.data?.margin || 30,
-        finalPrice: 0
+        finalPrice: Math.round(((product.price || 0) * 200 + (product.data?.shipping_cost || 0)) * (1 + ((product.data?.margin || 30) / 100)))
       })
     }
   }
@@ -212,6 +215,22 @@ export default function ProductsPage() {
 
   const totalPages = Math.ceil(total / limit)
 
+  const removeImage = (index: number) => {
+    if (editMode === 'main-image') {
+      const newImages = editData.allImages.filter((_: any, i: number) => i !== index)
+      setEditData({ ...editData, allImages: newImages })
+      if (selectedImageIndex >= newImages.length) {
+        setSelectedImageIndex(Math.max(0, newImages.length - 1))
+      }
+    } else if (editMode === 'detail-images') {
+      const newImages = editData.descImages.filter((_: any, i: number) => i !== index)
+      setEditData({ ...editData, descImages: newImages })
+      if (selectedImageIndex >= newImages.length) {
+        setSelectedImageIndex(Math.max(0, newImages.length - 1))
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <Header />
@@ -277,7 +296,7 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Products horizontal list */}
+        {/* Products list */}
         {products.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-96 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300">
             <Package size={64} className="text-slate-400 mb-4" />
@@ -346,7 +365,7 @@ export default function ProductsPage() {
                       )}
 
                       {/* Stats */}
-                      <div className="flex gap-6 text-sm text-slate-600 mb-6">
+                      <div className="flex gap-6 text-sm text-slate-600">
                         <div className="flex items-center gap-2">
                           <ImageIcon size={16} />
                           <span>{product.data?.images?.length || 0}개 이미지</span>
@@ -423,7 +442,7 @@ export default function ProductsPage() {
             </button>
 
             <div className="flex gap-2">
-              {Array.from({ length: totalPages }, (_, i) => (
+              {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => (
                 <button
                   key={i}
                   onClick={() => setPage(i)}
@@ -449,226 +468,314 @@ export default function ProductsPage() {
         )}
       </main>
 
-      {/* Edit Modal */}
+      {/* Professional Edit Modal - Like the screenshot */}
       {editingProduct && editMode && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">
-                {editMode === 'main-image' && '대표 이미지 편집'}
-                {editMode === 'detail-images' && '상세 페이지 편집'}
-                {editMode === 'pricing' && '배송비 & 마진 설정'}
-              </h2>
-              <button
-                onClick={closeEditModal}
-                className="p-2 rounded-lg hover:bg-slate-100 transition-all"
-              >
-                <X size={24} />
-              </button>
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          {/* Top bar with tabs */}
+          <div className="bg-white border-b border-slate-200">
+            <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                  너
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => {
+                      if (editMode !== 'main-image') {
+                        setEditMode('main-image')
+                        setEditData({
+                          mainImage: getValidImageUrl(editingProduct),
+                          allImages: editingProduct.data?.images || []
+                        })
+                      }
+                    }}
+                    className={`px-6 py-2 font-semibold ${
+                      editMode === 'main-image'
+                        ? 'text-red-500 border-b-2 border-red-500'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    대표 이미지 편집
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (editMode !== 'pricing') {
+                        setEditMode('pricing')
+                        setEditData({
+                          price: editingProduct.price || 0,
+                          shippingCost: editingProduct.data?.shipping_cost || 0,
+                          margin: editingProduct.data?.margin || 30,
+                          finalPrice: Math.round(((editingProduct.price || 0) * 200 + (editingProduct.data?.shipping_cost || 0)) * (1 + ((editingProduct.data?.margin || 30) / 100)))
+                        })
+                      }
+                    }}
+                    className={`px-6 py-2 font-semibold ${
+                      editMode === 'pricing'
+                        ? 'text-red-500 border-b-2 border-red-500'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    옵션 편집
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (editMode !== 'detail-images') {
+                        setEditMode('detail-images')
+                        setEditData({
+                          descImages: editingProduct.data?.desc_imgs || []
+                        })
+                      }
+                    }}
+                    className={`px-6 py-2 font-semibold ${
+                      editMode === 'detail-images'
+                        ? 'text-red-500 border-b-2 border-red-500'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    상세페이지 편집
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={closeEditModal}
+                  className="px-6 py-2 rounded-lg font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
+                >
+                  나가기
+                </button>
+                <button
+                  onClick={saveEdit}
+                  className="px-6 py-2 rounded-lg font-semibold bg-black text-white hover:bg-slate-800 transition-all"
+                >
+                  저장 (Ctrl+S)
+                </button>
+              </div>
             </div>
 
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {editMode === 'main-image' && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      현재 대표 이미지
-                    </label>
-                    <div className="w-full h-96 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center">
-                      {editData.mainImage ? (
-                        <img
-                          src={editData.mainImage}
-                          alt="Main"
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <Package size={64} className="text-slate-300" />
-                      )}
+            {/* Image thumbnails */}
+            {(editMode === 'main-image' || editMode === 'detail-images') && (
+              <div className="px-6 pb-4">
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {(editMode === 'main-image' ? editData.allImages : editData.descImages)?.map((img: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className={`relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+                        selectedImageIndex === idx
+                          ? 'border-red-500 ring-2 ring-red-200'
+                          : 'border-slate-200 hover:border-slate-400'
+                      }`}
+                      onClick={() => {
+                        setSelectedImageIndex(idx)
+                        if (editMode === 'main-image') {
+                          setEditData({ ...editData, mainImage: normalizeImageUrl(img) })
+                        }
+                      }}
+                    >
+                      <img
+                        src={normalizeImageUrl(img)}
+                        alt={`Thumb ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeImage(idx)
+                        }}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-all"
+                      >
+                        <X size={12} />
+                      </button>
                     </div>
+                  ))}
+                  <div className="flex-shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-slate-400 transition-all">
+                    <Plus size={32} className="text-slate-400" />
+                    <span className="sr-only">이미지 추가</span>
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      이미지 URL 직접 입력
-                    </label>
-                    <input
-                      type="text"
-                      value={editData.mainImage}
-                      onChange={(e) => setEditData({ ...editData, mainImage: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                      placeholder="https://..."
-                    />
-                  </div>
-
-                  {editData.allImages && editData.allImages.length > 0 && (
+          {/* Main content area */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left sidebar tools */}
+            {(editMode === 'main-image' || editMode === 'detail-images') && (
+              <div className="w-48 bg-slate-50 border-r border-slate-200 p-4">
+                <div className="space-y-2">
+                  <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-3">
+                    <Trash2 size={18} />
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-3">
-                        다른 이미지 선택 ({editData.allImages.length}개)
-                      </label>
-                      <div className="grid grid-cols-4 gap-4">
-                        {editData.allImages.map((img: string, idx: number) => (
-                          <button
-                            key={idx}
-                            onClick={() => setEditData({ ...editData, mainImage: normalizeImageUrl(img) })}
-                            className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${
-                              editData.mainImage === normalizeImageUrl(img)
-                                ? 'border-blue-500 ring-4 ring-blue-100'
-                                : 'border-slate-200 hover:border-blue-300'
-                            }`}
-                          >
-                            <img
-                              src={normalizeImageUrl(img)}
-                              alt={`Image ${idx + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </button>
-                        ))}
-                      </div>
+                      <div className="font-semibold text-sm">영역 지우기</div>
+                      <div className="text-xs text-slate-500">(2)</div>
                     </div>
-                  )}
+                  </button>
+                  <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-3">
+                    <Settings size={18} />
+                    <div>
+                      <div className="font-semibold text-sm">원클릭 번역</div>
+                      <div className="text-xs text-slate-500">(4)</div>
+                    </div>
+                  </button>
+                  <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-3">
+                    <ImageIcon size={18} />
+                    <div>
+                      <div className="font-semibold text-sm">대표 이미지로 설정</div>
+                      <div className="text-xs text-slate-500">(f)</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Center canvas */}
+            <div className="flex-1 flex flex-col bg-slate-100">
+              {/* Toolbar */}
+              {(editMode === 'main-image' || editMode === 'detail-images') && (
+                <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-4">
+                  <button className="p-2 hover:bg-slate-100 rounded-lg transition-all" title="Delete">
+                    <Trash2 size={20} />
+                  </button>
+                  <div className="w-px h-6 bg-slate-300"></div>
+                  <button className="p-2 hover:bg-slate-100 rounded-lg transition-all" title="Undo">
+                    <span className="text-sm font-semibold">Ctrl+Z</span>
+                  </button>
+                  <button className="p-2 hover:bg-slate-100 rounded-lg transition-all" title="Redo">
+                    <span className="text-sm font-semibold">Ctrl+R</span>
+                  </button>
                 </div>
               )}
 
-              {editMode === 'detail-images' && (
-                <div className="space-y-6">
-                  {editData.descImages && editData.descImages.length > 0 ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-semibold text-slate-700">
-                          상세 페이지 이미지 ({editData.descImages.length}개)
+              {/* Canvas area */}
+              <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
+                {editMode === 'main-image' && (
+                  <div className="bg-white rounded-xl shadow-2xl" style={{ maxWidth: `${zoom}%` }}>
+                    <img
+                      src={editData.mainImage}
+                      alt="Main"
+                      className="w-full h-auto"
+                    />
+                  </div>
+                )}
+
+                {editMode === 'detail-images' && (
+                  <div className="bg-white rounded-xl shadow-2xl" style={{ maxWidth: `${zoom}%` }}>
+                    {editData.descImages && editData.descImages[selectedImageIndex] ? (
+                      <img
+                        src={normalizeImageUrl(editData.descImages[selectedImageIndex])}
+                        alt={`Detail ${selectedImageIndex + 1}`}
+                        className="w-full h-auto"
+                      />
+                    ) : (
+                      <div className="w-96 h-96 flex items-center justify-center">
+                        <FileText size={64} className="text-slate-300" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {editMode === 'pricing' && (
+                  <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg p-8">
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          원가 (CNY)
                         </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editData.price}
+                          onChange={(e) => {
+                            const price = parseFloat(e.target.value) || 0
+                            const shipping = editData.shippingCost || 0
+                            const margin = editData.margin || 30
+                            const cost = (price * 200) + shipping
+                            const final = Math.round(cost * (1 + margin / 100))
+                            setEditData({ ...editData, price, finalPrice: final })
+                          }}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                        />
+                        <p className="text-sm text-slate-500 mt-1">
+                          한화: ₩{Math.round(editData.price * 200).toLocaleString()}
+                        </p>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        {editData.descImages.map((img: string, idx: number) => (
-                          <div
-                            key={idx}
-                            className="relative group rounded-xl overflow-hidden border border-slate-200"
-                          >
-                            <img
-                              src={normalizeImageUrl(img)}
-                              alt={`Detail ${idx + 1}`}
-                              className="w-full h-auto"
-                            />
-                            <div className="absolute top-2 left-2 px-3 py-1 rounded-full bg-black/70 text-white text-sm font-semibold">
-                              {idx + 1}
-                            </div>
-                            <button
-                              onClick={() => {
-                                const newImages = editData.descImages.filter((_: any, i: number) => i !== idx)
-                                setEditData({ ...editData, descImages: newImages })
-                              }}
-                              className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        ))}
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          배송비 (KRW)
+                        </label>
+                        <input
+                          type="number"
+                          value={editData.shippingCost}
+                          onChange={(e) => {
+                            const shipping = parseInt(e.target.value) || 0
+                            const price = editData.price || 0
+                            const margin = editData.margin || 30
+                            const cost = (price * 200) + shipping
+                            const final = Math.round(cost * (1 + margin / 100))
+                            setEditData({ ...editData, shippingCost: shipping, finalPrice: final })
+                          }}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          마진율 (%)
+                        </label>
+                        <input
+                          type="number"
+                          value={editData.margin}
+                          onChange={(e) => {
+                            const margin = parseInt(e.target.value) || 0
+                            const price = editData.price || 0
+                            const shipping = editData.shippingCost || 0
+                            const cost = (price * 200) + shipping
+                            const final = Math.round(cost * (1 + margin / 100))
+                            setEditData({ ...editData, margin, finalPrice: final })
+                          }}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
+                        />
+                      </div>
+
+                      <div className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
+                        <div className="text-sm text-slate-600 mb-2">최종 판매가</div>
+                        <div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          ₩{editData.finalPrice?.toLocaleString() || '0'}
+                        </div>
+                        <div className="text-sm text-slate-500 mt-3">
+                          원가 ₩{Math.round(editData.price * 200).toLocaleString()} +
+                          배송비 ₩{editData.shippingCost?.toLocaleString() || '0'} +
+                          마진 {editData.margin}%
+                        </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-64 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300">
-                      <FileText size={48} className="text-slate-400 mb-2" />
-                      <p className="text-slate-600">상세 페이지 이미지가 없습니다</p>
-                    </div>
-                  )}
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom controls */}
+              {(editMode === 'main-image' || editMode === 'detail-images') && (
+                <div className="bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-end gap-4">
+                  <button
+                    onClick={() => setZoom(Math.max(20, zoom - 10))}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-all"
+                  >
+                    <ZoomOut size={20} />
+                  </button>
+                  <span className="text-sm font-semibold w-12 text-center">{zoom}%</span>
+                  <button
+                    onClick={() => setZoom(Math.min(200, zoom + 10))}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-all"
+                  >
+                    <ZoomIn size={20} />
+                  </button>
+                  <div className="w-px h-6 bg-slate-300 mx-2"></div>
+                  <button className="px-4 py-2 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all">
+                    이미지 저장
+                  </button>
                 </div>
               )}
-
-              {editMode === 'pricing' && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      원가 (CNY)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={editData.price}
-                      onChange={(e) => {
-                        const price = parseFloat(e.target.value) || 0
-                        const shipping = editData.shippingCost || 0
-                        const margin = editData.margin || 30
-                        const cost = (price * 200) + shipping
-                        const final = Math.round(cost * (1 + margin / 100))
-                        setEditData({ ...editData, price, finalPrice: final })
-                      }}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
-                    />
-                    <p className="text-sm text-slate-500 mt-1">
-                      한화: ₩{Math.round(editData.price * 200).toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      배송비 (KRW)
-                    </label>
-                    <input
-                      type="number"
-                      value={editData.shippingCost}
-                      onChange={(e) => {
-                        const shipping = parseInt(e.target.value) || 0
-                        const price = editData.price || 0
-                        const margin = editData.margin || 30
-                        const cost = (price * 200) + shipping
-                        const final = Math.round(cost * (1 + margin / 100))
-                        setEditData({ ...editData, shippingCost: shipping, finalPrice: final })
-                      }}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      마진율 (%)
-                    </label>
-                    <input
-                      type="number"
-                      value={editData.margin}
-                      onChange={(e) => {
-                        const margin = parseInt(e.target.value) || 0
-                        const price = editData.price || 0
-                        const shipping = editData.shippingCost || 0
-                        const cost = (price * 200) + shipping
-                        const final = Math.round(cost * (1 + margin / 100))
-                        setEditData({ ...editData, margin, finalPrice: final })
-                      }}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg"
-                    />
-                  </div>
-
-                  <div className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200">
-                    <div className="text-sm text-slate-600 mb-2">최종 판매가</div>
-                    <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      ₩{editData.finalPrice?.toLocaleString() || '0'}
-                    </div>
-                    <div className="text-sm text-slate-500 mt-2">
-                      원가 ₩{Math.round(editData.price * 200).toLocaleString()} +
-                      배송비 ₩{editData.shippingCost?.toLocaleString() || '0'} +
-                      마진 {editData.margin}%
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200">
-              <button
-                onClick={closeEditModal}
-                className="px-6 py-3 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
-              >
-                취소
-              </button>
-              <button
-                onClick={saveEdit}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all"
-              >
-                <Save size={20} />
-                <span>저장</span>
-              </button>
             </div>
           </div>
         </div>
