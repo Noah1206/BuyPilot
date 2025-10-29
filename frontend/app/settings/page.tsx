@@ -129,7 +129,7 @@ export default function Settings() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                  className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
                   placeholder="홍길동"
                 />
               </div>
@@ -145,7 +145,7 @@ export default function Settings() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                  className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
                   placeholder="user@example.com"
                 />
               </div>
@@ -161,7 +161,7 @@ export default function Settings() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                  className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
                   placeholder="010-1234-5678"
                 />
               </div>
@@ -186,7 +186,7 @@ export default function Settings() {
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                  className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
                   placeholder="서울시 강남구 테헤란로 123"
                 />
               </div>
@@ -202,7 +202,7 @@ export default function Settings() {
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                    className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
                     placeholder="서울"
                   />
                 </div>
@@ -216,7 +216,7 @@ export default function Settings() {
                     name="country"
                     value={formData.country}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                    className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
                   >
                     <option value="KR">대한민국</option>
                     <option value="US">미국</option>

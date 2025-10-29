@@ -121,13 +121,20 @@ export default function ProductsPage() {
         descImages: product.data?.desc_imgs || []
       })
     } else if (mode === 'pricing') {
-      // Calculate shipping cost based on weight if available
+      // 배송비 계산 우선순위:
+      // 1. 수동으로 설정한 배송비가 있으면 사용
+      // 2. 무게 정보가 있으면 무게별 배송비 계산
+      // 3. 둘 다 없으면 기본 배송비 사용
       const weight = product.data?.weight
+      const manualShippingCost = product.data?.shipping_cost
       let shippingCost = 0
-      if (weight && weight > 0) {
-        shippingCost = calculateShippingCost(weight)
+
+      if (manualShippingCost && manualShippingCost > 0) {
+        // 수동 입력한 배송비 우선
+        shippingCost = manualShippingCost
       } else {
-        shippingCost = product.data?.shipping_cost || 0
+        // 무게 기반 또는 기본 배송비 계산 (calculateShippingCost가 자동 처리)
+        shippingCost = calculateShippingCost(weight)
       }
 
       const price = product.price || 0
@@ -621,7 +628,12 @@ export default function ProductsPage() {
                           {priceInfo.shippingCost > 0 && (
                             <>
                               <span>•</span>
-                              <span className={product.data?.weight ? 'text-blue-600 font-semibold' : 'text-orange-600 font-semibold'}>
+                              <span className={
+                                product.data?.shipping_cost > 0 ? 'text-green-600 font-semibold' :
+                                product.data?.weight ? 'text-blue-600 font-semibold' :
+                                'text-orange-600 font-semibold'
+                              }>
+                                {product.data?.shipping_cost > 0 && '✏️ '}
                                 {!product.data?.weight && !product.data?.shipping_cost && '기본 '}
                                 배송비 ₩{priceInfo.shippingCost.toLocaleString()}
                               </span>
@@ -954,6 +966,15 @@ export default function ProductsPage() {
                 {editMode === 'detail-images' && (
                   <div className="w-full">
                     <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4 mx-auto" style={{ maxWidth: `${zoom}%` }}>
+                      {/* 배송 안내 이미지 (항상 맨 위에 표시) */}
+                      <div className="mb-4">
+                        <img
+                          src="/shipping-notice.png"
+                          alt="배송 안내"
+                          className="w-full h-auto rounded-lg"
+                        />
+                      </div>
+
                       {editData.descImages && editData.descImages.length > 0 ? (
                         <div className="space-y-4">
                           {editData.descImages.map((img: string, idx: number) => (
@@ -1019,7 +1040,11 @@ export default function ProductsPage() {
                       <div>
                         <label className="block text-sm font-semibold text-slate-900 mb-3">
                           배송비 (KRW)
-                          {editData.weight > 0 ? (
+                          {editingProduct?.data?.shipping_cost > 0 ? (
+                            <span className="ml-2 text-xs font-normal text-green-600">
+                              • 수동 설정됨
+                            </span>
+                          ) : editData.weight > 0 ? (
                             <span className="ml-2 text-xs font-normal text-blue-600">
                               • {editData.weight}kg 기준 자동 계산
                             </span>
@@ -1042,15 +1067,9 @@ export default function ProductsPage() {
                           }}
                           className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium text-slate-900"
                         />
-                        {editData.weight > 0 ? (
-                          <p className="text-sm text-blue-600 mt-2 font-medium">
-                            💡 무게 기반 배송비가 자동으로 적용되었습니다
-                          </p>
-                        ) : (
-                          <p className="text-sm text-orange-600 mt-2 font-medium">
-                            💡 기본 배송비가 자동으로 적용되었습니다 (무게 정보 없음)
-                          </p>
-                        )}
+                        <p className="text-sm text-slate-600 mt-2 font-medium">
+                          ✏️ 배송비를 직접 수정하면 수동 설정으로 저장됩니다
+                        </p>
                       </div>
 
                       <div>
