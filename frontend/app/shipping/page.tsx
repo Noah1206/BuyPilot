@@ -158,7 +158,7 @@ export default function ShippingPage() {
                     step="0.1"
                     value={rate.weight}
                     onChange={(e) => updateRate(index, 'weight', parseFloat(e.target.value) || 0)}
-                    className="w-20 px-3 py-2 bg-white rounded-lg border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-sm font-medium"
+                    className="w-20 px-3 py-2 bg-white rounded-lg border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-sm font-medium text-slate-900"
                   />
                 </div>
 
@@ -168,7 +168,7 @@ export default function ShippingPage() {
                     step="100"
                     value={rate.cost}
                     onChange={(e) => updateRate(index, 'cost', parseInt(e.target.value) || 0)}
-                    className="flex-1 px-3 py-2 bg-white rounded-lg border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-sm font-medium"
+                    className="flex-1 px-3 py-2 bg-white rounded-lg border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-sm font-medium text-slate-900"
                   />
                   <span className="ml-2 text-slate-600 font-medium">원</span>
                 </div>
