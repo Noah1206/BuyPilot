@@ -132,7 +132,7 @@ export default function ProductsPage() {
 
       const price = product.price || 0
       const costPrice = Math.round(price * 200)
-      const margin = product.data?.margin || 30
+      const margin = product.data?.margin || 25 // 기본 마진율 25%
 
       setEditData({
         price,
@@ -286,7 +286,7 @@ export default function ProductsPage() {
       shippingCost = product.data?.shipping_cost || 0
     }
 
-    const margin = product.data?.margin || 30 // 기본 마진율 30%
+    const margin = product.data?.margin || 25 // 기본 마진율 25%
 
     const totalCost = costPrice + shippingCost
     const finalPrice = Math.round(totalCost * (1 + margin / 100))
@@ -604,10 +604,18 @@ export default function ProductsPage() {
                           <span>원가 ¥{price.toLocaleString()}</span>
                           <span>•</span>
                           <span>₩{priceInfo.costPrice.toLocaleString()}</span>
+                          {product.data?.weight && (
+                            <>
+                              <span>•</span>
+                              <span className="font-semibold text-blue-600">{product.data.weight}kg</span>
+                            </>
+                          )}
                           {priceInfo.shippingCost > 0 && (
                             <>
                               <span>•</span>
-                              <span>배송비 ₩{priceInfo.shippingCost.toLocaleString()}</span>
+                              <span className={product.data?.weight ? 'text-blue-600 font-semibold' : ''}>
+                                배송비 ₩{priceInfo.shippingCost.toLocaleString()}
+                              </span>
                             </>
                           )}
                         </div>
@@ -1002,6 +1010,11 @@ export default function ProductsPage() {
                       <div>
                         <label className="block text-sm font-semibold text-slate-900 mb-3">
                           배송비 (KRW)
+                          {editData.weight > 0 && (
+                            <span className="ml-2 text-xs font-normal text-blue-600">
+                              • {editData.weight}kg 기준 자동 계산
+                            </span>
+                          )}
                         </label>
                         <input
                           type="number"
@@ -1009,18 +1022,26 @@ export default function ProductsPage() {
                           onChange={(e) => {
                             const shipping = parseInt(e.target.value) || 0
                             const price = editData.price || 0
-                            const margin = editData.margin || 30
+                            const margin = editData.margin || 25
                             const cost = (price * 200) + shipping
                             const final = Math.round(cost * (1 + margin / 100))
                             setEditData({ ...editData, shippingCost: shipping, finalPrice: final })
                           }}
                           className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium text-slate-900"
                         />
+                        {editData.weight > 0 && (
+                          <p className="text-sm text-blue-600 mt-2 font-medium">
+                            💡 무게 기반 배송비가 자동으로 적용되었습니다
+                          </p>
+                        )}
                       </div>
 
                       <div>
                         <label className="block text-sm font-semibold text-slate-900 mb-3">
                           마진율 (%)
+                          <span className="ml-2 text-xs font-normal text-slate-500">
+                            • 기본 25%
+                          </span>
                         </label>
                         <input
                           type="number"
@@ -1035,6 +1056,9 @@ export default function ProductsPage() {
                           }}
                           className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium text-slate-900"
                         />
+                        <p className="text-sm text-slate-600 mt-2">
+                          최종 판매가 = (원가 + 배송비) × (1 + 마진율)
+                        </p>
                       </div>
 
                       <div className="p-8 bg-orange-500 rounded-2xl shadow-lg">
