@@ -38,6 +38,7 @@ const DEFAULT_RATES: ShippingRate[] = [
 
 export default function ShippingPage() {
   const [rates, setRates] = useState<ShippingRate[]>(DEFAULT_RATES)
+  const [defaultShippingCost, setDefaultShippingCost] = useState<number>(8000) // 기본 배송비
   const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   useEffect(() => {
@@ -49,6 +50,11 @@ export default function ShippingPage() {
         console.error('Failed to load shipping rates:', e)
       }
     }
+
+    const savedDefault = localStorage.getItem('defaultShippingCost')
+    if (savedDefault) {
+      setDefaultShippingCost(parseInt(savedDefault))
+    }
   }, [])
 
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -59,7 +65,8 @@ export default function ShippingPage() {
   const saveRates = () => {
     try {
       localStorage.setItem('shippingRates', JSON.stringify(rates))
-      toast('배송비 테이블이 저장되었습니다!')
+      localStorage.setItem('defaultShippingCost', defaultShippingCost.toString())
+      toast('배송비 설정이 저장되었습니다!')
     } catch (e) {
       toast('저장 실패', 'error')
     }
@@ -68,7 +75,9 @@ export default function ShippingPage() {
   const resetToDefault = () => {
     if (confirm('기본 배송비 테이블로 초기화하시겠습니까?')) {
       setRates(DEFAULT_RATES)
+      setDefaultShippingCost(8000)
       localStorage.setItem('shippingRates', JSON.stringify(DEFAULT_RATES))
+      localStorage.setItem('defaultShippingCost', '8000')
       toast('기본 테이블로 초기화되었습니다!')
     }
   }
@@ -112,6 +121,32 @@ export default function ShippingPage() {
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
           <p className="text-sm text-blue-800">
             <strong>💡 사용 방법:</strong> 타오바오 상품을 가져올 때 자동으로 무게 정보를 추출하여 해당 구간의 배송비를 적용합니다.
+          </p>
+        </div>
+
+        {/* 기본 배송비 설정 */}
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl border border-orange-400 shadow-lg p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <Package size={20} className="text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">기본 배송비</h2>
+              <p className="text-sm text-white/80">무게 정보가 없는 상품에 자동 적용됩니다</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              step="100"
+              value={defaultShippingCost}
+              onChange={(e) => setDefaultShippingCost(parseInt(e.target.value) || 0)}
+              className="flex-1 px-4 py-3 bg-white rounded-xl border-2 border-white/50 focus:border-white focus:ring-2 focus:ring-white/30 outline-none text-lg font-semibold text-slate-900"
+            />
+            <span className="text-2xl font-bold text-white">원</span>
+          </div>
+          <p className="text-xs text-white/70 mt-3">
+            ⚠️ 무게 정보가 있는 상품은 아래 무게별 배송비 테이블을 우선 적용합니다
           </p>
         </div>
 

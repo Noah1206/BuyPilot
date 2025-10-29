@@ -254,7 +254,11 @@ export default function ProductsPage() {
   }
 
   const calculateShippingCost = (weight: number | undefined): number => {
-    if (!weight || weight <= 0) return 0
+    // 무게 정보가 없으면 기본 배송비 사용
+    if (!weight || weight <= 0) {
+      const defaultCost = localStorage.getItem('defaultShippingCost')
+      return defaultCost ? parseInt(defaultCost) : 8000 // 기본값 8000원
+    }
 
     const rates = getShippingRatesFromLocalStorage()
 
@@ -274,16 +278,20 @@ export default function ProductsPage() {
     const price = getProductPrice(product)
     const costPrice = Math.round(price * 200) // CNY to KRW
 
-    // Try to get weight from product data and calculate shipping cost
+    // 배송비 계산 우선순위:
+    // 1. 수동 입력한 배송비가 있으면 사용
+    // 2. 무게 정보가 있으면 무게별 배송비 계산
+    // 3. 둘 다 없으면 기본 배송비 사용
     const weight = product.data?.weight
+    const manualShippingCost = product.data?.shipping_cost
     let shippingCost = 0
 
-    if (weight && weight > 0) {
-      // If weight exists, calculate shipping cost from weight-based rates
-      shippingCost = calculateShippingCost(weight)
+    if (manualShippingCost && manualShippingCost > 0) {
+      // 수동 입력한 배송비 우선
+      shippingCost = manualShippingCost
     } else {
-      // Otherwise fall back to manually entered shipping cost
-      shippingCost = product.data?.shipping_cost || 0
+      // 무게 기반 또는 기본 배송비 계산 (calculateShippingCost가 자동 처리)
+      shippingCost = calculateShippingCost(weight)
     }
 
     const margin = product.data?.margin || 25 // 기본 마진율 25%
@@ -613,7 +621,8 @@ export default function ProductsPage() {
                           {priceInfo.shippingCost > 0 && (
                             <>
                               <span>•</span>
-                              <span className={product.data?.weight ? 'text-blue-600 font-semibold' : ''}>
+                              <span className={product.data?.weight ? 'text-blue-600 font-semibold' : 'text-orange-600 font-semibold'}>
+                                {!product.data?.weight && !product.data?.shipping_cost && '기본 '}
                                 배송비 ₩{priceInfo.shippingCost.toLocaleString()}
                               </span>
                             </>
@@ -1010,9 +1019,13 @@ export default function ProductsPage() {
                       <div>
                         <label className="block text-sm font-semibold text-slate-900 mb-3">
                           배송비 (KRW)
-                          {editData.weight > 0 && (
+                          {editData.weight > 0 ? (
                             <span className="ml-2 text-xs font-normal text-blue-600">
                               • {editData.weight}kg 기준 자동 계산
+                            </span>
+                          ) : (
+                            <span className="ml-2 text-xs font-normal text-orange-600">
+                              • 기본 배송비 자동 적용
                             </span>
                           )}
                         </label>
@@ -1029,9 +1042,13 @@ export default function ProductsPage() {
                           }}
                           className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium text-slate-900"
                         />
-                        {editData.weight > 0 && (
+                        {editData.weight > 0 ? (
                           <p className="text-sm text-blue-600 mt-2 font-medium">
                             💡 무게 기반 배송비가 자동으로 적용되었습니다
+                          </p>
+                        ) : (
+                          <p className="text-sm text-orange-600 mt-2 font-medium">
+                            💡 기본 배송비가 자동으로 적용되었습니다 (무게 정보 없음)
                           </p>
                         )}
                       </div>
