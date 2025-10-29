@@ -835,16 +835,34 @@ export default function ProductsPage() {
                 )}
 
                 {editMode === 'detail-images' && (
-                  <div className="bg-white rounded-2xl shadow-xl border border-slate-200" style={{ maxWidth: `${zoom}%` }}>
-                    {editData.descImages && editData.descImages[selectedImageIndex] ? (
-                      <img
-                        src={normalizeImageUrl(editData.descImages[selectedImageIndex])}
-                        alt={`Detail ${selectedImageIndex + 1}`}
-                        className="w-full h-auto rounded-xl"
-                      />
+                  <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4" style={{ maxWidth: `${zoom}%` }}>
+                    {editData.descImages && editData.descImages.length > 0 ? (
+                      <div className="space-y-4">
+                        {editData.descImages.map((img: string, idx: number) => (
+                          <div key={idx} className="relative group">
+                            <img
+                              src={normalizeImageUrl(img)}
+                              alt={`Detail ${idx + 1}`}
+                              className="w-full h-auto rounded-lg"
+                            />
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => removeImage(idx)}
+                                className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-lg transition-all"
+                              >
+                                <X size={16} strokeWidth={2} />
+                              </button>
+                            </div>
+                            <div className="absolute bottom-2 left-2 px-3 py-1 bg-black/70 text-white rounded-lg text-sm font-medium">
+                              {idx + 1} / {editData.descImages.length}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <div className="w-96 h-96 flex items-center justify-center">
-                        <FileText size={64} className="text-slate-300" strokeWidth={2} />
+                      <div className="w-96 h-96 flex flex-col items-center justify-center">
+                        <FileText size={64} className="text-slate-300 mb-4" strokeWidth={2} />
+                        <p className="text-slate-500 font-medium">상세페이지 이미지가 없습니다</p>
                       </div>
                     )}
                   </div>
