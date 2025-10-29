@@ -407,7 +407,7 @@ export default function ProductsPage() {
     }
 
     setLoading(true)
-    toast('스마트스토어에 상품을 등록하는 중...', 'info')
+    toast('스마트스토어에 상품을 등록하는 중...')
 
     try {
       // Load SmartStore settings from localStorage
@@ -425,7 +425,7 @@ export default function ProductsPage() {
         if (summary.failed === 0) {
           toast(`${summary.success}개 상품이 스마트스토어에 등록되었습니다!`)
         } else {
-          toast(`${summary.success}개 등록 성공, ${summary.failed}개 실패`, 'warning')
+          toast(`${summary.success}개 등록 성공, ${summary.failed}개 실패`, 'error')
         }
 
         // Show detailed results for failed products
