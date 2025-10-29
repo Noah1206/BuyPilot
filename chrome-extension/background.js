@@ -59,10 +59,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       message: '상품이 대기열에 추가되었습니다. 백그라운드에서 처리됩니다.'
     });
 
-    // Start processing queue
+    // Start processing queue (don't await - run in background)
     processImportQueue();
 
-    return true;
+    // Response already sent synchronously, no need for return true
+    return false;
   }
 });
 
