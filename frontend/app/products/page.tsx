@@ -215,6 +215,18 @@ export default function ProductsPage() {
     return product.price || product.data?.price || 0
   }
 
+  const getFinalPrice = (product: Product): { costPrice: number; finalPrice: number; margin: number; shippingCost: number } => {
+    const price = getProductPrice(product)
+    const costPrice = Math.round(price * 200) // CNY to KRW
+    const shippingCost = product.data?.shipping_cost || 0
+    const margin = product.data?.margin || 30 // 기본 마진율 30%
+
+    const totalCost = costPrice + shippingCost
+    const finalPrice = Math.round(totalCost * (1 + margin / 100))
+
+    return { costPrice, finalPrice, margin, shippingCost }
+  }
+
   const toggleSelectProduct = (productId: string) => {
     const newSelected = new Set(selectedProducts)
     if (newSelected.has(productId)) {
@@ -241,18 +253,24 @@ export default function ProductsPage() {
 
     const selectedProductsData = products.filter(p => selectedProducts.has(p.id))
 
-    const excelData = selectedProductsData.map(product => ({
-      '상품명 (한글)': getProductTitle(product),
-      '상품명 (중문)': product.data?.title_cn || product.title,
-      '원가 (CNY)': getProductPrice(product),
-      '판매가 (KRW)': Math.round(getProductPrice(product) * 200),
-      '플랫폼': product.data?.platform || product.source,
-      '이미지 개수': product.data?.images?.length || 0,
-      '상세이미지 개수': product.data?.desc_imgs?.length || 0,
-      '옵션': product.data?.options?.map((opt: any) => `${opt.name}(${opt.values?.length || 0}개)`).join(', ') || '없음',
-      '소스 URL': product.source_url,
-      '등록일': new Date(product.created_at).toLocaleDateString('ko-KR')
-    }))
+    const excelData = selectedProductsData.map(product => {
+      const priceInfo = getFinalPrice(product)
+      return {
+        '상품명 (한글)': getProductTitle(product),
+        '상품명 (중문)': product.data?.title_cn || product.title,
+        '원가 (CNY)': getProductPrice(product),
+        '원가 (KRW)': priceInfo.costPrice,
+        '배송비 (KRW)': priceInfo.shippingCost,
+        '마진율 (%)': priceInfo.margin,
+        '최종 판매가 (KRW)': priceInfo.finalPrice,
+        '플랫폼': product.data?.platform || product.source,
+        '이미지 개수': product.data?.images?.length || 0,
+        '상세이미지 개수': product.data?.desc_imgs?.length || 0,
+        '옵션': product.data?.options?.map((opt: any) => `${opt.name}(${opt.values?.length || 0}개)`).join(', ') || '없음',
+        '소스 URL': product.source_url,
+        '등록일': new Date(product.created_at).toLocaleDateString('ko-KR')
+      }
+    })
 
     const ws = XLSX.utils.json_to_sheet(excelData)
     const wb = XLSX.utils.book_new()
@@ -453,7 +471,7 @@ export default function ProductsPage() {
               const imageUrl = getValidImageUrl(product)
               const title = getProductTitle(product)
               const price = getProductPrice(product)
-              const krwPrice = Math.round(price * 200)
+              const priceInfo = getFinalPrice(product)
               const platform = product.data?.platform || (product.source === 'taobao' ? '타오바오' : product.source)
               const hasDescImages = product.data?.desc_imgs && product.data.desc_imgs.length > 0
 
@@ -504,14 +522,27 @@ export default function ProductsPage() {
                         {title}
                       </h3>
 
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="text-lg font-semibold text-orange-500">
-                          ₩{krwPrice.toLocaleString()}
+                      <div className="mb-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="text-lg font-bold text-orange-500">
+                            ₩{priceInfo.finalPrice.toLocaleString()}
+                          </div>
+                          <div className="px-2 py-0.5 bg-orange-100 border border-orange-200 rounded">
+                            <span className="text-xs font-semibold text-orange-600">
+                              +{priceInfo.margin}%
+                            </span>
+                          </div>
                         </div>
-                        <div className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded">
-                          <span className="text-xs font-medium text-slate-600">
-                            ¥{price.toLocaleString()}
-                          </span>
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <span>원가 ¥{price.toLocaleString()}</span>
+                          <span>•</span>
+                          <span>₩{priceInfo.costPrice.toLocaleString()}</span>
+                          {priceInfo.shippingCost > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>배송비 ₩{priceInfo.shippingCost.toLocaleString()}</span>
+                            </>
+                          )}
                         </div>
                       </div>
 
