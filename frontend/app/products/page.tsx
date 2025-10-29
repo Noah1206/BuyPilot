@@ -264,6 +264,38 @@ export default function ProductsPage() {
     toast(`${selectedProducts.size}개 상품을 엑셀로 내보냈습니다!`)
   }
 
+  const deleteSelected = async () => {
+    if (selectedProducts.size === 0) {
+      toast('선택된 상품이 없습니다', 'error')
+      return
+    }
+
+    if (!confirm(`선택된 ${selectedProducts.size}개 상품을 정말 삭제하시겠습니까?`)) {
+      return
+    }
+
+    let successCount = 0
+    let failCount = 0
+
+    for (const productId of Array.from(selectedProducts)) {
+      const response = await deleteProduct(productId)
+      if (response.ok) {
+        successCount++
+      } else {
+        failCount++
+      }
+    }
+
+    setSelectedProducts(new Set())
+    loadProducts()
+
+    if (failCount === 0) {
+      toast(`${successCount}개 상품이 삭제되었습니다!`)
+    } else {
+      toast(`${successCount}개 삭제 성공, ${failCount}개 실패`, 'error')
+    }
+  }
+
   const totalPages = Math.ceil(total / limit)
 
   const removeImage = (index: number) => {
@@ -386,14 +418,25 @@ export default function ProductsPage() {
               )}
             </div>
 
-            <button
-              onClick={exportToExcel}
-              disabled={selectedProducts.size === 0}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm bg-green-500 text-white shadow-md hover:shadow-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              <Download size={18} />
-              <span>엑셀 내보내기</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={deleteSelected}
+                disabled={selectedProducts.size === 0}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm bg-red-500 text-white shadow-md hover:shadow-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <Trash2 size={18} />
+                <span>선택 삭제</span>
+              </button>
+
+              <button
+                onClick={exportToExcel}
+                disabled={selectedProducts.size === 0}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm bg-green-500 text-white shadow-md hover:shadow-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <Download size={18} />
+                <span>엑셀 내보내기</span>
+              </button>
+            </div>
           </div>
         </div>
 
