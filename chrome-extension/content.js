@@ -164,7 +164,8 @@ function extractTaobaoProduct() {
       if (descImgElements.length > 0) {
         descImgElements.forEach((img) => {
           // Skip if this image is in the product gallery (이미 images 배열에 있으면 skip)
-          let src = img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src');
+          // ⚠️ data-src를 우선 읽기 (lazy loading 때문에 src는 placeholder일 수 있음)
+          let src = img.getAttribute('data-src') || img.getAttribute('data-lazy-src') || img.src;
 
           if (src) {
             // Normalize URL
@@ -178,9 +179,9 @@ function extractTaobaoProduct() {
               return;
             }
 
-            // Skip tiny images, icons, placeholders
-            if (src.includes('1x1') || src.includes('icon') || src.includes('placeholder')) {
-              console.log(`   ⏭️  Skipping (tiny/icon): ${src.substring(0, 50)}...`);
+            // Skip tiny images, icons, placeholders (lazy loading placeholders 포함)
+            if (src.includes('1x1') || src.includes('icon') || src.includes('placeholder') || src.includes('s.gif')) {
+              console.log(`   ⏭️  Skipping (tiny/icon/placeholder): ${src.substring(0, 50)}...`);
               return;
             }
 
