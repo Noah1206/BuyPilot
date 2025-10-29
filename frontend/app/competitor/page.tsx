@@ -197,7 +197,7 @@ export default function CompetitorAnalysisPage() {
                 onChange={(e) => setKeyword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
                 placeholder="검색 키워드 입력 (예: 캠핑용 화로, 공구)"
-                className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-slate-900"
               />
             </div>
             <div className="w-32 relative">
@@ -209,7 +209,7 @@ export default function CompetitorAnalysisPage() {
                 min="1"
                 max="9999"
                 placeholder="개수"
-                className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-slate-900"
               />
             </div>
             <button

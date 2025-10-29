@@ -429,7 +429,7 @@ export default function ProductsPage() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="타오바오 상품 URL을 입력하세요..."
-              className="flex-1 px-4 py-3 bg-white rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all font-medium placeholder:text-slate-400"
+              className="flex-1 px-4 py-3 bg-white rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all font-medium placeholder:text-slate-400 text-slate-900"
               disabled={loading}
             />
             <button
@@ -462,7 +462,7 @@ export default function ProductsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="상품명으로 검색..."
-                className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all font-medium placeholder:text-slate-400"
+                className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all font-medium placeholder:text-slate-400 text-slate-900"
               />
             </div>
             <button
@@ -992,7 +992,7 @@ export default function ProductsPage() {
                             const final = Math.round(cost * (1 + margin / 100))
                             setEditData({ ...editData, price, finalPrice: final })
                           }}
-                          className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium"
+                          className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium text-slate-900"
                         />
                         <p className="text-sm font-medium text-slate-600 mt-2">
                           한화: ₩{Math.round(editData.price * 200).toLocaleString()}
@@ -1014,7 +1014,7 @@ export default function ProductsPage() {
                             const final = Math.round(cost * (1 + margin / 100))
                             setEditData({ ...editData, shippingCost: shipping, finalPrice: final })
                           }}
-                          className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium"
+                          className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium text-slate-900"
                         />
                       </div>
 
@@ -1033,7 +1033,7 @@ export default function ProductsPage() {
                             const final = Math.round(cost * (1 + margin / 100))
                             setEditData({ ...editData, margin, finalPrice: final })
                           }}
-                          className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium"
+                          className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none text-lg font-medium text-slate-900"
                         />
                       </div>
 
