@@ -45,7 +45,8 @@ def init_scheduler():
         logger.info("✅ Background scheduler started successfully")
 
         # Add SmartStore order sync job (every 5 minutes)
-        add_recurring_smartstore_sync()
+        # TEMPORARILY DISABLED: Need to verify Naver Commerce API endpoint
+        # add_recurring_smartstore_sync()
 
         return True
     except Exception as e:

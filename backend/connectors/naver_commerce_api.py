@@ -121,6 +121,11 @@ class NaverCommerceAPI:
             Naver image ID or None if failed
         """
         try:
+            # Fix URL if scheme is missing
+            if not image_url.startswith(('http://', 'https://')):
+                image_url = f'https://{image_url}'
+                logger.info(f"🔧 Fixed image URL (added https://): {image_url}")
+
             # Download image
             img_response = requests.get(image_url, timeout=30)
             img_response.raise_for_status()
