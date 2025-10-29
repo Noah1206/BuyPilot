@@ -661,6 +661,7 @@ def import_from_extension():
                     'specifications': data.get('specifications', []),
                     'options': data.get('options', []),
                     'variants': data.get('variants', []),
+                    'weight': data.get('weight'),  # Product weight in kg (extracted from Taobao page)
                     'translated': data.get('translated', False),
                     'translation_provider': data.get('translation_provider', ''),
                     'imported_at': datetime.utcnow().isoformat(),

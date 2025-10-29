@@ -121,11 +121,25 @@ export default function ProductsPage() {
         descImages: product.data?.desc_imgs || []
       })
     } else if (mode === 'pricing') {
+      // Calculate shipping cost based on weight if available
+      const weight = product.data?.weight
+      let shippingCost = 0
+      if (weight && weight > 0) {
+        shippingCost = calculateShippingCost(weight)
+      } else {
+        shippingCost = product.data?.shipping_cost || 0
+      }
+
+      const price = product.price || 0
+      const costPrice = Math.round(price * 200)
+      const margin = product.data?.margin || 30
+
       setEditData({
-        price: product.price || 0,
-        shippingCost: product.data?.shipping_cost || 0,
-        margin: product.data?.margin || 30,
-        finalPrice: Math.round(((product.price || 0) * 200 + (product.data?.shipping_cost || 0)) * (1 + ((product.data?.margin || 30) / 100)))
+        price,
+        shippingCost,
+        margin,
+        weight: weight || 0,
+        finalPrice: Math.round((costPrice + shippingCost) * (1 + (margin / 100)))
       })
     }
   }
@@ -215,10 +229,63 @@ export default function ProductsPage() {
     return product.price || product.data?.price || 0
   }
 
+  const getShippingRatesFromLocalStorage = (): Array<{ weight: number; cost: number }> => {
+    try {
+      const saved = localStorage.getItem('shippingRates')
+      if (saved) {
+        return JSON.parse(saved)
+      }
+    } catch (e) {
+      console.error('Failed to load shipping rates:', e)
+    }
+    // Default rates if not found
+    return [
+      { weight: 0.5, cost: 5600 },
+      { weight: 1.0, cost: 6400 },
+      { weight: 1.5, cost: 7200 },
+      { weight: 2.0, cost: 8000 },
+      { weight: 2.5, cost: 8800 },
+      { weight: 3.0, cost: 9600 },
+      { weight: 3.5, cost: 10400 },
+      { weight: 4.0, cost: 11200 },
+      { weight: 4.5, cost: 12000 },
+      { weight: 5.0, cost: 12800 },
+    ]
+  }
+
+  const calculateShippingCost = (weight: number | undefined): number => {
+    if (!weight || weight <= 0) return 0
+
+    const rates = getShippingRatesFromLocalStorage()
+
+    // Find the appropriate rate for this weight
+    // Rates are sorted by weight, find the first rate where weight <= rate.weight
+    for (const rate of rates) {
+      if (weight <= rate.weight) {
+        return rate.cost
+      }
+    }
+
+    // If weight exceeds all rates, use the highest rate
+    return rates[rates.length - 1]?.cost || 0
+  }
+
   const getFinalPrice = (product: Product): { costPrice: number; finalPrice: number; margin: number; shippingCost: number } => {
     const price = getProductPrice(product)
     const costPrice = Math.round(price * 200) // CNY to KRW
-    const shippingCost = product.data?.shipping_cost || 0
+
+    // Try to get weight from product data and calculate shipping cost
+    const weight = product.data?.weight
+    let shippingCost = 0
+
+    if (weight && weight > 0) {
+      // If weight exists, calculate shipping cost from weight-based rates
+      shippingCost = calculateShippingCost(weight)
+    } else {
+      // Otherwise fall back to manually entered shipping cost
+      shippingCost = product.data?.shipping_cost || 0
+    }
+
     const margin = product.data?.margin || 30 // 기본 마진율 30%
 
     const totalCost = costPrice + shippingCost

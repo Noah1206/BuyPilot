@@ -272,6 +272,76 @@ function extractTaobaoProduct() {
       }
     });
 
+    // Extract weight information
+    let weight = null;
+
+    // Weight-related keywords in Chinese and Korean
+    const weightKeywords = ['重量', '重', '毛重', '净重', '무게', 'weight', 'kg', 'g'];
+
+    // First try to find weight in specifications
+    for (const spec of specifications) {
+      const label = spec.name.toLowerCase();
+      const value = spec.value.toLowerCase();
+
+      // Check if label contains weight keywords
+      const hasWeightKeyword = weightKeywords.some(keyword =>
+        label.includes(keyword.toLowerCase()) || value.includes(keyword)
+      );
+
+      if (hasWeightKeyword) {
+        // Extract weight value - support formats like "1.5kg", "1500g", "1.5 kg", etc.
+        const weightMatch = spec.value.match(/([\d.]+)\s*(kg|g|千克|克)/i);
+        if (weightMatch) {
+          let extractedWeight = parseFloat(weightMatch[1]);
+          const unit = weightMatch[2].toLowerCase();
+
+          // Convert to kg if in grams
+          if (unit === 'g' || unit === '克') {
+            extractedWeight = extractedWeight / 1000;
+          }
+
+          weight = extractedWeight;
+          console.log(`✅ Weight extracted from specifications: ${weight}kg`);
+          break;
+        }
+      }
+    }
+
+    // If not found in specifications, try searching the entire page
+    if (!weight) {
+      const pageText = document.body.innerText;
+      const weightPatterns = [
+        /重量[：:]\s*([\d.]+)\s*(kg|g|千克|克)/i,
+        /毛重[：:]\s*([\d.]+)\s*(kg|g|千克|克)/i,
+        /净重[：:]\s*([\d.]+)\s*(kg|g|千克|克)/i,
+        /무게[：:]\s*([\d.]+)\s*(kg|g)/i,
+        /weight[：:]\s*([\d.]+)\s*(kg|g)/i
+      ];
+
+      for (const pattern of weightPatterns) {
+        const match = pageText.match(pattern);
+        if (match) {
+          let extractedWeight = parseFloat(match[1]);
+          const unit = match[2].toLowerCase();
+
+          // Convert to kg if in grams
+          if (unit === 'g' || unit === '克') {
+            extractedWeight = extractedWeight / 1000;
+          }
+
+          weight = extractedWeight;
+          console.log(`✅ Weight extracted from page text: ${weight}kg`);
+          break;
+        }
+      }
+    }
+
+    if (weight) {
+      console.log(`📦 Product weight: ${weight}kg`);
+    } else {
+      console.warn('⚠️  No weight information found');
+    }
+
     const productData = {
       source: 'taobao',
       taobao_item_id: productId,
@@ -286,6 +356,7 @@ function extractTaobaoProduct() {
       desc_imgs: descImages,           // 상세 페이지 이미지
       specifications: specifications,
       options: options,
+      weight: weight,                   // 상품 무게 (kg)
       extracted_at: new Date().toISOString(),
       extraction_method: 'chrome_extension'
     };
