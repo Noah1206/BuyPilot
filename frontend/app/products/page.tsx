@@ -7,7 +7,8 @@
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
 import Header from '@/components/Header'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles } from 'lucide-react'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download } from 'lucide-react'
+import * as XLSX from 'xlsx'
 
 interface Product {
   id: string
@@ -35,6 +36,7 @@ export default function ProductsPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const limit = 10
 
   // Edit modal state
@@ -213,6 +215,55 @@ export default function ProductsPage() {
     return product.price || product.data?.price || 0
   }
 
+  const toggleSelectProduct = (productId: string) => {
+    const newSelected = new Set(selectedProducts)
+    if (newSelected.has(productId)) {
+      newSelected.delete(productId)
+    } else {
+      newSelected.add(productId)
+    }
+    setSelectedProducts(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.size === products.length) {
+      setSelectedProducts(new Set())
+    } else {
+      setSelectedProducts(new Set(products.map(p => p.id)))
+    }
+  }
+
+  const exportToExcel = () => {
+    if (selectedProducts.size === 0) {
+      toast('선택된 상품이 없습니다', 'error')
+      return
+    }
+
+    const selectedProductsData = products.filter(p => selectedProducts.has(p.id))
+
+    const excelData = selectedProductsData.map(product => ({
+      '상품명 (한글)': getProductTitle(product),
+      '상품명 (중문)': product.data?.title_cn || product.title,
+      '원가 (CNY)': getProductPrice(product),
+      '판매가 (KRW)': Math.round(getProductPrice(product) * 200),
+      '플랫폼': product.data?.platform || product.source,
+      '이미지 개수': product.data?.images?.length || 0,
+      '상세이미지 개수': product.data?.desc_imgs?.length || 0,
+      '옵션': product.data?.options?.map((opt: any) => `${opt.name}(${opt.values?.length || 0}개)`).join(', ') || '없음',
+      '소스 URL': product.source_url,
+      '등록일': new Date(product.created_at).toLocaleDateString('ko-KR')
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(excelData)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '상품목록')
+
+    const fileName = `상품목록_${new Date().toLocaleDateString('ko-KR').replace(/\./g, '-')}.xlsx`
+    XLSX.writeFile(wb, fileName)
+
+    toast(`${selectedProducts.size}개 상품을 엑셀로 내보냈습니다!`)
+  }
+
   const totalPages = Math.ceil(total / limit)
 
   const removeImage = (index: number) => {
@@ -284,9 +335,9 @@ export default function ProductsPage() {
           </form>
         </div>
 
-        {/* Search */}
+        {/* Search & Actions */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-md p-6 mb-8">
-          <div className="flex gap-3">
+          <div className="flex gap-3 mb-4">
             <div className="relative flex-1">
               <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -305,6 +356,45 @@ export default function ProductsPage() {
               <span>새로고침</span>
             </button>
           </div>
+
+          {/* Selection Actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-orange-500 transition-all"
+              >
+                {selectedProducts.size === products.length && products.length > 0 ? (
+                  <>
+                    <CheckSquare size={18} className="text-orange-500" />
+                    <span>전체 해제</span>
+                  </>
+                ) : (
+                  <>
+                    <Square size={18} />
+                    <span>전체 선택</span>
+                  </>
+                )}
+              </button>
+
+              {selectedProducts.size > 0 && (
+                <div className="px-3 py-1.5 bg-orange-100 border border-orange-200 rounded-lg">
+                  <span className="text-sm font-semibold text-orange-600">
+                    {selectedProducts.size}개 선택됨
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={exportToExcel}
+              disabled={selectedProducts.size === 0}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm bg-green-500 text-white shadow-md hover:shadow-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <Download size={18} />
+              <span>엑셀 내보내기</span>
+            </button>
+          </div>
         </div>
 
         {/* Products list */}
@@ -315,7 +405,7 @@ export default function ProductsPage() {
             <p className="text-slate-600">타오바오에서 상품을 가져와보세요</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {products.map((product) => {
               const imageUrl = getValidImageUrl(product)
               const title = getProductTitle(product)
@@ -324,15 +414,31 @@ export default function ProductsPage() {
               const platform = product.data?.platform || (product.source === 'taobao' ? '타오바오' : product.source)
               const hasDescImages = product.data?.desc_imgs && product.data.desc_imgs.length > 0
 
+              const isSelected = selectedProducts.has(product.id)
+
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-all p-6"
+                  className={`bg-white rounded-xl border-2 shadow-sm hover:shadow-md transition-all p-4 relative ${
+                    isSelected ? 'border-orange-500 ring-2 ring-orange-100' : 'border-slate-200'
+                  }`}
                 >
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => toggleSelectProduct(product.id)}
+                    className="absolute top-4 left-4 z-10 w-6 h-6 flex items-center justify-center rounded-md border-2 transition-all hover:scale-110"
+                    style={{
+                      borderColor: isSelected ? '#f97316' : '#cbd5e1',
+                      backgroundColor: isSelected ? '#f97316' : 'white'
+                    }}
+                  >
+                    {isSelected && <CheckSquare size={16} className="text-white" strokeWidth={3} />}
+                  </button>
+
                   {/* Top: Image + Info */}
-                  <div className="flex gap-6 mb-4">
+                  <div className="flex gap-4 mb-3">
                     {/* Product image */}
-                    <div className="relative w-32 h-32 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                    <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
@@ -341,57 +447,62 @@ export default function ProductsPage() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package size={48} className="text-slate-300" strokeWidth={2} />
+                          <Package size={32} className="text-slate-300" strokeWidth={2} />
                         </div>
                       )}
-                      <div className="absolute top-2 left-2 px-2 py-1 rounded-lg text-xs font-medium bg-orange-500 text-white">
+                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-xs font-medium bg-orange-500 text-white">
                         {platform}
                       </div>
                     </div>
 
                     {/* Product info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-semibold text-slate-900 mb-2 line-clamp-2">
+                    <div className="flex-1 min-w-0 pl-6">
+                      <h3 className="text-base font-semibold text-slate-900 mb-1.5 line-clamp-2">
                         {title}
                       </h3>
 
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="text-2xl font-semibold text-orange-500">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="text-lg font-semibold text-orange-500">
                           ₩{krwPrice.toLocaleString()}
                         </div>
-                        <div className="px-3 py-1 bg-slate-100 border border-slate-200 rounded-lg">
-                          <span className="text-sm font-medium text-slate-600">
-                            ¥{price.toLocaleString()} 원가
+                        <div className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded">
+                          <span className="text-xs font-medium text-slate-600">
+                            ¥{price.toLocaleString()}
                           </span>
                         </div>
                       </div>
 
                       {/* Options */}
                       {product.data?.options && product.data.options.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {product.data.options.map((option: any, idx: number) => (
-                            <div key={idx} className="px-3 py-1 bg-slate-50 rounded-lg border border-slate-200">
-                              <span className="font-medium text-sm text-slate-900">{option.name}</span>
-                              <span className="font-medium text-sm text-orange-500 ml-1">({option.values?.length || 0}개)</span>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {product.data.options.slice(0, 3).map((option: any, idx: number) => (
+                            <div key={idx} className="px-2 py-0.5 bg-slate-50 rounded border border-slate-200">
+                              <span className="font-medium text-xs text-slate-900">{option.name}</span>
+                              <span className="font-medium text-xs text-orange-500 ml-1">({option.values?.length || 0})</span>
                             </div>
                           ))}
+                          {product.data.options.length > 3 && (
+                            <div className="px-2 py-0.5 bg-slate-50 rounded border border-slate-200">
+                              <span className="text-xs text-slate-600">+{product.data.options.length - 3}개</span>
+                            </div>
+                          )}
                         </div>
                       )}
 
                       {/* Stats */}
-                      <div className="flex gap-6 text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                            <ImageIcon size={16} className="text-orange-500" />
+                      <div className="flex gap-4 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
+                            <ImageIcon size={12} className="text-orange-500" />
                           </div>
-                          <span className="font-medium text-slate-700">{product.data?.images?.length || 0}개 이미지</span>
+                          <span className="font-medium text-slate-700">{product.data?.images?.length || 0}개</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
-                            <FileText size={16} className="text-slate-600" />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 bg-slate-100 rounded flex items-center justify-center">
+                            <FileText size={12} className="text-slate-600" />
                           </div>
                           <span className="font-medium text-slate-700">
-                            {hasDescImages ? `${product.data.desc_imgs.length}개 상세이미지` : '상세이미지 없음'}
+                            {hasDescImages ? `${product.data.desc_imgs.length}개` : '상세 없음'}
                           </span>
                         </div>
                       </div>
@@ -399,36 +510,36 @@ export default function ProductsPage() {
                   </div>
 
                   {/* Bottom: Action buttons */}
-                  <div className="flex items-center gap-3 pt-4 border-t border-slate-200">
+                  <div className="flex items-center gap-1.5 pt-2.5 border-t border-slate-200">
                     <button
                       onClick={() => openEditModal(product, 'main-image')}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-orange-500 hover:text-orange-600 transition-all"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-orange-500 hover:text-orange-600 transition-all"
                     >
-                      <ImageIcon size={16} />
-                      <span>대표이미지</span>
+                      <ImageIcon size={14} />
+                      <span>대표</span>
                     </button>
 
                     <button
                       onClick={() => openEditModal(product, 'detail-images')}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-orange-500 hover:text-orange-600 transition-all"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-orange-500 hover:text-orange-600 transition-all"
                     >
-                      <FileText size={16} />
-                      <span>상세페이지</span>
+                      <FileText size={14} />
+                      <span>상세</span>
                     </button>
 
                     <button
                       onClick={() => openEditModal(product, 'pricing')}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-orange-500 hover:text-orange-600 transition-all"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-orange-500 hover:text-orange-600 transition-all"
                     >
-                      <DollarSign size={16} />
-                      <span>배송비&마진</span>
+                      <DollarSign size={14} />
+                      <span>가격</span>
                     </button>
 
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm border border-red-300 text-red-600 hover:bg-red-50 transition-all"
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs border border-red-300 text-red-600 hover:bg-red-50 transition-all"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                       <span>삭제</span>
                     </button>
 
@@ -437,9 +548,9 @@ export default function ProductsPage() {
                         href={product.source_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 transition-all"
+                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 transition-all"
                       >
-                        <ExternalLink size={16} />
+                        <ExternalLink size={14} />
                         <span>원본</span>
                       </a>
                     )}
