@@ -130,22 +130,29 @@ class NaverCommerceAPI:
             img_response = requests.get(image_url, timeout=30)
             img_response.raise_for_status()
 
-            # Upload to Naver
-            # Note: This is a simplified version. Actual implementation may vary
-            endpoint = '/v1/product-images'
+            # Upload to Naver - Use correct endpoint
+            endpoint = '/external/v1/product-images/upload'
 
-            files = {'image': ('image.jpg', img_response.content, 'image/jpeg')}
+            # Detect actual image type from URL or content
+            content_type = img_response.headers.get('Content-Type', 'image/jpeg')
+            filename = image_url.split('/')[-1].split('?')[0]  # Get filename from URL
+            if not any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']):
+                filename = 'image.jpg'
+
+            files = {'imageFiles': (filename, img_response.content, content_type)}
 
             url = f"{self.BASE_URL}{endpoint}"
             timestamp = str(int(time.time() * 1000))
+            signature = self._generate_signature(timestamp, 'POST', endpoint)
 
             headers = {
                 'X-Naver-Client-Id': self.client_id,
                 'X-Naver-Client-Secret': self.client_secret,
-                'X-Timestamp': timestamp
+                'X-Timestamp': timestamp,
+                'X-Signature': signature
             }
 
-            response = requests.post(url, headers=headers, files=files)
+            response = requests.post(url, headers=headers, files=files, timeout=30)
             response.raise_for_status()
 
             result = response.json()
