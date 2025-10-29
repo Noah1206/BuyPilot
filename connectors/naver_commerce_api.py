@@ -60,7 +60,7 @@ class NaverCommerceAPI:
             # Create bcrypt-based signature
             password = f"{self.client_id}_{timestamp}"
             import bcrypt
-            hashed = bcrypt.hashpw(password.encode('utf-8'), self.client_secret.encode('utf-8')[:22].ljust(22, b'$'))
+            hashed = bcrypt.hashpw(password.encode('utf-8'), self.client_secret.encode('utf-8'))
             signature = base64.b64encode(hashed).decode('utf-8')
 
             data = {
