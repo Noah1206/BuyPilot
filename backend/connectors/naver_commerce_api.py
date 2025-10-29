@@ -19,6 +19,7 @@ class NaverCommerceAPI:
     """Naver Commerce API Client for SmartStore integration"""
 
     BASE_URL = "https://api.commerce.naver.com"
+    TOKEN_URL = "https://api.commerce.naver.com/external/v1/oauth2/token"
 
     def __init__(self, client_id: str = None, client_secret: str = None):
         """
@@ -35,7 +36,55 @@ class NaverCommerceAPI:
             logger.error("Naver Commerce API credentials not configured")
             raise ValueError("NAVER_CLIENT_ID and NAVER_CLIENT_SECRET must be set")
 
+        # OAuth 2.0 access token (will be fetched on first API call)
+        self.access_token = None
+        self.token_expires_at = 0
+
         logger.info("✅ Naver Commerce API client initialized")
+
+    def _get_access_token(self) -> str:
+        """
+        Get OAuth 2.0 access token (fetch new one if expired)
+
+        Returns:
+            Valid access token
+        """
+        # Check if token is still valid
+        if self.access_token and time.time() < self.token_expires_at:
+            return self.access_token
+
+        # Fetch new token
+        try:
+            timestamp = str(int(time.time() * 1000))
+
+            # Create bcrypt-based signature
+            password = f"{self.client_id}_{timestamp}"
+            import bcrypt
+            hashed = bcrypt.hashpw(password.encode('utf-8'), self.client_secret.encode('utf-8')[:22].ljust(22, b'$'))
+            signature = base64.b64encode(hashed).decode('utf-8')
+
+            data = {
+                'client_id': self.client_id,
+                'timestamp': timestamp,
+                'grant_type': 'client_credentials',
+                'client_secret_sign': signature,
+                'type': 'SELF'
+            }
+
+            response = requests.post(self.TOKEN_URL, data=data, timeout=30)
+            response.raise_for_status()
+
+            result = response.json()
+            self.access_token = result['access_token']
+            # Token expires in 2 hours, refresh 5 minutes before
+            self.token_expires_at = time.time() + (2 * 3600) - 300
+
+            logger.info("✅ OAuth 2.0 access token obtained")
+            return self.access_token
+
+        except Exception as e:
+            logger.error(f"❌ Failed to get access token: {str(e)}")
+            raise
 
     def _generate_signature(self, timestamp: str, method: str, uri: str) -> str:
         """
@@ -78,15 +127,13 @@ class NaverCommerceAPI:
             API response as dictionary
         """
         url = f"{self.BASE_URL}{endpoint}"
-        timestamp = str(int(time.time() * 1000))
-        signature = self._generate_signature(timestamp, method, endpoint)
+
+        # Get valid OAuth 2.0 access token
+        access_token = self._get_access_token()
 
         headers = {
             'Content-Type': 'application/json',
-            'X-Naver-Client-Id': self.client_id,
-            'X-Naver-Client-Secret': self.client_secret,
-            'X-Timestamp': timestamp,
-            'X-Signature': signature
+            'Authorization': f'Bearer {access_token}'
         }
 
         try:
@@ -142,14 +189,12 @@ class NaverCommerceAPI:
             files = {'imageFiles': (filename, img_response.content, content_type)}
 
             url = f"{self.BASE_URL}{endpoint}"
-            timestamp = str(int(time.time() * 1000))
-            signature = self._generate_signature(timestamp, 'POST', endpoint)
+
+            # Get valid OAuth 2.0 access token
+            access_token = self._get_access_token()
 
             headers = {
-                'X-Naver-Client-Id': self.client_id,
-                'X-Naver-Client-Secret': self.client_secret,
-                'X-Timestamp': timestamp,
-                'X-Signature': signature
+                'Authorization': f'Bearer {access_token}'
             }
 
             response = requests.post(url, headers=headers, files=files, timeout=30)
