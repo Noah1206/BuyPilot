@@ -5,9 +5,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { importProduct, getProducts, deleteProduct, updateProduct } from '@/lib/api'
+import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore } from '@/lib/api'
 import Header from '@/components/Header'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download } from 'lucide-react'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
 interface Product {
@@ -396,6 +396,54 @@ export default function ProductsPage() {
     }
   }
 
+  const registerSmartStore = async () => {
+    if (selectedProducts.size === 0) {
+      toast('선택된 상품이 없습니다', 'error')
+      return
+    }
+
+    if (!confirm(`선택된 ${selectedProducts.size}개 상품을 스마트스토어에 등록하시겠습니까?`)) {
+      return
+    }
+
+    setLoading(true)
+    toast('스마트스토어에 상품을 등록하는 중...', 'info')
+
+    try {
+      // Load SmartStore settings from localStorage
+      const settingsJson = localStorage.getItem('smartstore_settings')
+      const settings = settingsJson ? JSON.parse(settingsJson) : undefined
+
+      const response = await registerToSmartStore(Array.from(selectedProducts), settings)
+
+      if (response.ok && response.data) {
+        const { summary, results } = response.data
+
+        setSelectedProducts(new Set())
+        loadProducts()
+
+        if (summary.failed === 0) {
+          toast(`${summary.success}개 상품이 스마트스토어에 등록되었습니다!`)
+        } else {
+          toast(`${summary.success}개 등록 성공, ${summary.failed}개 실패`, 'warning')
+        }
+
+        // Show detailed results for failed products
+        if (summary.failed > 0) {
+          const failedProducts = results.filter(r => !r.success)
+          console.log('Failed products:', failedProducts)
+        }
+      } else {
+        toast(response.error?.message || '스마트스토어 등록 중 오류가 발생했습니다', 'error')
+      }
+    } catch (error) {
+      console.error('SmartStore registration error:', error)
+      toast('스마트스토어 등록 중 오류가 발생했습니다', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const totalPages = Math.ceil(total / limit)
 
   const removeImage = (index: number) => {
@@ -519,6 +567,15 @@ export default function ProductsPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={registerSmartStore}
+                disabled={selectedProducts.size === 0 || loading}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm bg-blue-500 text-white shadow-md hover:shadow-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <Upload size={18} />
+                <span>스마트스토어 등록</span>
+              </button>
+
               <button
                 onClick={deleteSelected}
                 disabled={selectedProducts.size === 0}

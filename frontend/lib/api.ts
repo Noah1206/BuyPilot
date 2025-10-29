@@ -295,3 +295,63 @@ export async function uploadProductImage(
     }
   }
 }
+
+/**
+ * Register products to Naver SmartStore
+ */
+export async function registerToSmartStore(
+  productIds: string[],
+  settings?: {
+    category_id?: string
+    stock_quantity?: number
+    origin_area?: string
+    brand?: string
+    manufacturer?: string
+  }
+): Promise<ApiResponse<{
+  results: Array<{
+    product_id: string
+    product_name: string
+    success: boolean
+    smartstore_product_id?: string
+    smartstore_url?: string
+    error?: string
+  }>
+  summary: {
+    total: number
+    success: number
+    failed: number
+  }
+}>> {
+  return apiFetch('/api/v1/smartstore/register-products', {
+    method: 'POST',
+    body: JSON.stringify({
+      product_ids: productIds,
+      settings: settings || {},
+    }),
+  })
+}
+
+/**
+ * Get SmartStore orders
+ */
+export async function getSmartStoreOrders(params?: {
+  status?: string
+  talktalk_status?: string
+  limit?: number
+  offset?: number
+}): Promise<ApiResponse<{
+  orders: any[]
+  total: number
+  limit: number
+  offset: number
+}>> {
+  const searchParams = new URLSearchParams()
+  if (params?.status) searchParams.set('status', params.status)
+  if (params?.talktalk_status) searchParams.set('talktalk_status', params.talktalk_status)
+  if (params?.limit) searchParams.set('limit', params.limit.toString())
+  if (params?.offset) searchParams.set('offset', params.offset.toString())
+
+  const query = searchParams.toString()
+  return apiFetch(`/api/v1/smartstore/orders${query ? `?${query}` : ''}`)
+}

@@ -21,6 +21,7 @@ from routes.discovery import bp as discovery_bp
 from routes.image_edit import bp as image_edit_bp
 from routes.competitor import bp as competitor_bp
 from routes.auth import bp as auth_bp
+from routes.smartstore import bp as smartstore_bp
 
 # Import scheduler
 from workers.scheduler import init_scheduler, shutdown_scheduler
@@ -58,6 +59,7 @@ app.register_blueprint(discovery_bp, url_prefix='/api/v1')
 app.register_blueprint(image_edit_bp)
 app.register_blueprint(competitor_bp, url_prefix='/api/v1')
 app.register_blueprint(auth_bp, url_prefix='/api/v1')
+app.register_blueprint(smartstore_bp, url_prefix='/api/v1')
 
 # Health check endpoint
 @app.route('/health', methods=['GET'])

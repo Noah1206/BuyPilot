@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
-import { User, Mail, Phone, MapPin, Save, AlertCircle, Check } from 'lucide-react'
+import { User, Mail, Phone, MapPin, Save, AlertCircle, Check, Store } from 'lucide-react'
 
 export default function Settings() {
   const router = useRouter()
@@ -24,6 +24,12 @@ export default function Settings() {
     address: '',
     city: '',
     country: 'KR',
+    // SmartStore settings
+    smartstore_category_id: '50000006', // Default: 선반
+    smartstore_stock_quantity: '999',
+    smartstore_origin_area: '0801', // Default: China
+    smartstore_brand: '',
+    smartstore_manufacturer: '',
   })
 
   useEffect(() => {
@@ -39,6 +45,10 @@ export default function Settings() {
     const parsedUser = JSON.parse(userData)
     setUser(parsedUser)
 
+    // Load SmartStore settings from localStorage
+    const smartstoreSettings = localStorage.getItem('smartstore_settings')
+    const parsedSettings = smartstoreSettings ? JSON.parse(smartstoreSettings) : {}
+
     // Load user data into form
     setFormData({
       name: parsedUser.name || '',
@@ -47,6 +57,12 @@ export default function Settings() {
       address: parsedUser.address || '',
       city: parsedUser.city || '',
       country: parsedUser.country || 'KR',
+      // SmartStore settings
+      smartstore_category_id: parsedSettings.category_id || '50000006',
+      smartstore_stock_quantity: parsedSettings.stock_quantity || '999',
+      smartstore_origin_area: parsedSettings.origin_area || '0801',
+      smartstore_brand: parsedSettings.brand || '',
+      smartstore_manufacturer: parsedSettings.manufacturer || '',
     })
 
     setIsLoading(false)
@@ -69,11 +85,21 @@ export default function Settings() {
     setIsSaving(true)
 
     try {
-      // TODO: Implement API call to save user settings
-      // For now, just update localStorage
-      const updatedUser = { ...user, ...formData }
+      // Save user settings
+      const { smartstore_category_id, smartstore_stock_quantity, smartstore_origin_area, smartstore_brand, smartstore_manufacturer, ...userFields } = formData
+      const updatedUser = { ...user, ...userFields }
       localStorage.setItem('user', JSON.stringify(updatedUser))
       setUser(updatedUser)
+
+      // Save SmartStore settings separately
+      const smartstoreSettings = {
+        category_id: smartstore_category_id,
+        stock_quantity: parseInt(smartstore_stock_quantity),
+        origin_area: smartstore_origin_area,
+        brand: smartstore_brand,
+        manufacturer: smartstore_manufacturer,
+      }
+      localStorage.setItem('smartstore_settings', JSON.stringify(smartstoreSettings))
 
       toast('설정이 저장되었습니다!')
     } catch (error) {
@@ -224,6 +250,101 @@ export default function Settings() {
                     <option value="CN">중국</option>
                   </select>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SmartStore Settings */}
+          <div className="bg-white rounded-3xl border-2 border-slate-200 p-8 shadow-lg">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <Store size={24} className="text-blue-600" />
+              스마트스토어 기본 설정
+            </h2>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="smartstore_category_id" className="block text-sm font-medium text-slate-700 mb-2">
+                    기본 카테고리 ID
+                  </label>
+                  <input
+                    type="text"
+                    id="smartstore_category_id"
+                    name="smartstore_category_id"
+                    value={formData.smartstore_category_id}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                    placeholder="50000006"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">기본값: 50000006 (선반)</p>
+                </div>
+
+                <div>
+                  <label htmlFor="smartstore_stock_quantity" className="block text-sm font-medium text-slate-700 mb-2">
+                    기본 재고 수량
+                  </label>
+                  <input
+                    type="number"
+                    id="smartstore_stock_quantity"
+                    name="smartstore_stock_quantity"
+                    value={formData.smartstore_stock_quantity}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                    placeholder="999"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">기본값: 999</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="smartstore_origin_area" className="block text-sm font-medium text-slate-700 mb-2">
+                    원산지 코드
+                  </label>
+                  <select
+                    id="smartstore_origin_area"
+                    name="smartstore_origin_area"
+                    value={formData.smartstore_origin_area}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                  >
+                    <option value="0801">중국</option>
+                    <option value="1101">대한민국</option>
+                    <option value="0802">일본</option>
+                    <option value="0803">미국</option>
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">기본값: 중국</p>
+                </div>
+
+                <div>
+                  <label htmlFor="smartstore_brand" className="block text-sm font-medium text-slate-700 mb-2">
+                    브랜드명 (선택)
+                  </label>
+                  <input
+                    type="text"
+                    id="smartstore_brand"
+                    name="smartstore_brand"
+                    value={formData.smartstore_brand}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                    placeholder="브랜드명을 입력하세요"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="smartstore_manufacturer" className="block text-sm font-medium text-slate-700 mb-2">
+                  제조사 (선택)
+                </label>
+                <input
+                  type="text"
+                  id="smartstore_manufacturer"
+                  name="smartstore_manufacturer"
+                  value={formData.smartstore_manufacturer}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none text-slate-900"
+                  placeholder="제조사를 입력하세요"
+                />
               </div>
             </div>
           </div>

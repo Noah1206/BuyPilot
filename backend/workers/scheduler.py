@@ -43,9 +43,44 @@ def init_scheduler():
     try:
         scheduler.start()
         logger.info("✅ Background scheduler started successfully")
+
+        # Add SmartStore order sync job (every 5 minutes)
+        add_recurring_smartstore_sync()
+
         return True
     except Exception as e:
         logger.error(f"❌ Failed to start scheduler: {str(e)}")
+        return False
+
+
+def add_recurring_smartstore_sync():
+    """Add recurring SmartStore order sync job (every 5 minutes)"""
+    try:
+        from workers.smartstore_sync import sync_smartstore_orders
+
+        scheduler.add_job(
+            func=sync_smartstore_orders,
+            trigger='interval',
+            minutes=5,
+            id='smartstore_order_sync',
+            replace_existing=True,
+            max_instances=1  # Only one instance at a time
+        )
+
+        logger.info("✅ SmartStore order sync job scheduled (every 5 minutes)")
+
+        # Run immediately on startup
+        scheduler.add_job(
+            func=sync_smartstore_orders,
+            trigger='date',
+            id='smartstore_order_sync_immediate',
+            replace_existing=True
+        )
+        logger.info("✅ Initial SmartStore order sync scheduled")
+
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to add SmartStore sync job: {str(e)}")
         return False
 
 
