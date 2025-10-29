@@ -15,64 +15,75 @@
       width: 400px;
       min-height: 500px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #333;
+      background: linear-gradient(to bottom, #f8fafc, #ffffff);
+      color: #0f172a;
+    }
+
+    .header {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 20px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #0f172a;
+    }
+
+    .header h1 .highlight {
+      color: #f97316;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: #64748b;
     }
 
     .container {
       padding: 20px;
     }
 
-    .header {
-      text-align: center;
-      color: white;
-      margin-bottom: 20px;
-    }
-
-    .header h1 {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 5px;
-    }
-
-    .header p {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-
     .card {
       background: white;
       border-radius: 12px;
+      border: 1px solid #e2e8f0;
       padding: 20px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     .status {
       text-align: center;
-      padding: 15px;
+      padding: 12px 16px;
       border-radius: 8px;
-      margin-bottom: 15px;
+      margin-bottom: 16px;
       font-size: 14px;
+      font-weight: 500;
     }
 
     .status.loading {
       background: #fef3c7;
       color: #92400e;
+      border: 1px solid #fde68a;
     }
 
     .status.success {
-      background: #d1fae5;
-      color: #065f46;
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
     }
 
     .status.error {
       background: #fee2e2;
       color: #991b1b;
+      border: 1px solid #fecaca;
     }
 
     .status.idle {
-      background: #e0e7ff;
-      color: #3730a3;
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #e2e8f0;
     }
 
     .product-preview {
@@ -85,13 +96,14 @@
       object-fit: cover;
       border-radius: 8px;
       margin-bottom: 12px;
+      border: 1px solid #e2e8f0;
     }
 
     .product-title {
       font-size: 16px;
       font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 8px;
+      color: #0f172a;
+      margin-bottom: 12px;
       line-height: 1.4;
     }
 
@@ -100,99 +112,118 @@
       justify-content: space-between;
       align-items: center;
       padding: 12px;
-      background: #f9fafb;
+      background: #f8fafc;
       border-radius: 8px;
       margin-bottom: 12px;
+      border: 1px solid #e2e8f0;
     }
 
     .product-price {
       font-size: 20px;
-      font-weight: 700;
-      color: #dc2626;
+      font-weight: 600;
+      color: #f97316;
     }
 
     .product-id {
       font-size: 12px;
-      color: #6b7280;
+      color: #64748b;
+      font-weight: 500;
     }
 
     .button {
       width: 100%;
-      padding: 14px;
+      padding: 12px 16px;
       border: none;
       border-radius: 8px;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .button-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #f97316;
       color: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
-    .button-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    .button-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: #ea580c;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+    }
+
+    .button-primary:active:not(:disabled) {
+      transform: translateY(0);
     }
 
     .button-primary:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-      transform: none;
     }
 
     .button-secondary {
-      background: #f3f4f6;
-      color: #4b5563;
+      background: white;
+      color: #475569;
+      border: 2px solid #e2e8f0;
     }
 
     .button-secondary:hover {
-      background: #e5e7eb;
+      background: #f8fafc;
+      border-color: #cbd5e1;
     }
 
     .settings {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #e5e7eb;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e2e8f0;
     }
 
     .settings-item {
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .settings-label {
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 4px;
+      font-size: 13px;
+      color: #334155;
+      margin-bottom: 6px;
       display: block;
+      font-weight: 600;
     }
 
     .settings-input {
       width: 100%;
-      padding: 8px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 14px;
+      padding: 10px 12px;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .settings-input:focus {
+      outline: none;
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
     }
 
     .footer {
       text-align: center;
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #e5e7eb;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e2e8f0;
     }
 
     .footer-link {
-      color: #6b7280;
+      color: #f97316;
       text-decoration: none;
-      font-size: 12px;
+      font-size: 13px;
+      font-weight: 500;
     }
 
     .footer-link:hover {
-      color: #667eea;
+      text-decoration: underline;
     }
 
     .loading-spinner {
@@ -216,16 +247,16 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>📦 BuyPilot</h1>
-      <p>Taobao 상품 임포터</p>
-    </div>
+  <div class="header">
+    <h1>Buy<span class="highlight">Pilot</span></h1>
+    <p>타오바오 소싱 자동화</p>
+  </div>
 
+  <div class="container">
     <div class="card">
       <!-- Status Message -->
       <div id="status" class="status idle">
-        Taobao 상품 페이지에서 실행해주세요
+        타오바오 상품 페이지에서 실행해주세요
       </div>
 
       <!-- Product Preview -->

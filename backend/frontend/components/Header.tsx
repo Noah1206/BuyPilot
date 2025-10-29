@@ -29,16 +29,13 @@ export default function Header() {
   const isDashboard = pathname === '/dashboard'
 
   return (
-    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 backdrop-blur-sm bg-white/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">B</span>
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              BuyPilot
+          <a href="/" className="flex items-center gap-2 group">
+            <span className="text-xl font-semibold text-slate-900">
+              Buy<span className="text-orange-500">Pilot</span>
             </span>
           </a>
 
@@ -50,8 +47,8 @@ export default function Header() {
                   href="/"
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive('/')
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'text-orange-600 bg-orange-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <Home size={18} />
@@ -61,8 +58,8 @@ export default function Header() {
                   href="/dashboard"
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive('/dashboard')
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'text-orange-600 bg-orange-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <Package size={18} />
@@ -72,8 +69,8 @@ export default function Header() {
                   href="/products"
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive('/products')
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'text-orange-600 bg-orange-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <Package size={18} />
@@ -83,8 +80,8 @@ export default function Header() {
                   href="/competitor"
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive('/competitor')
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'text-orange-600 bg-orange-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <TrendingUp size={18} />
@@ -102,8 +99,8 @@ export default function Header() {
                       href="/settings"
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                         isActive('/settings')
-                          ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                          ? 'text-orange-600 bg-orange-50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
                       <Settings size={18} />
@@ -112,7 +109,9 @@ export default function Header() {
                   )}
                   {!isDashboard && (
                     <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700">
-                      <User size={16} />
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <User size={16} className="text-orange-600" />
+                      </div>
                       <span className="font-medium">{user.name}</span>
                     </div>
                   )}
@@ -128,14 +127,14 @@ export default function Header() {
                 <>
                   <a
                     href="/login"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all"
                   >
                     <LogIn size={18} />
                     로그인
                   </a>
                   <a
                     href="/register"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-lg transition-all"
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 hover:shadow-lg transition-all"
                   >
                     <UserPlus size={18} />
                     회원가입

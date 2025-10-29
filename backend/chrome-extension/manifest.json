@@ -5,12 +5,13 @@
   "description": "Import Taobao products directly to your BuyPilot dashboard",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "notifications"
   ],
   "host_permissions": [
     "https://item.taobao.com/*",
     "https://detail.tmall.com/*",
-    "https://buypilot.railway.app/*",
+    "https://buypilot-production.up.railway.app/*",
     "http://localhost:8080/*"
   ],
   "action": {

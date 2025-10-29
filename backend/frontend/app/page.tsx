@@ -1,303 +1,329 @@
 /**
- * Landing Page - HeySeller Style
- * Clean, modern, professional design for BuyPilot
+ * Landing Page - Blue & Orange Branding
  */
 
 'use client'
 
 import { useState } from 'react'
 import Header from '@/components/Header'
-import { ArrowRight, TrendingUp, Zap, Shield, DollarSign, Package, BarChart3, Globe } from 'lucide-react'
+import { ArrowRight, TrendingUp, Zap, Shield, DollarSign, Package, BarChart3, Globe, Check, Star } from 'lucide-react'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Header */}
       <Header />
 
       {/* Hero Section */}
       <section className="relative px-4 pt-20 pb-32 overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
-        </div>
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left: Content */}
+            <div>
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-200 rounded-full mb-6">
+                <Zap size={16} className="text-orange-600" />
+                <span className="text-sm font-medium text-orange-700">매달 500+ 셀러가 선택</span>
+              </div>
 
-        <div className="relative max-w-7xl mx-auto text-center">
-          {/* Logo */}
-          <div className="mb-8">
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              BuyPilot
-            </h1>
-            <p className="mt-2 text-lg text-slate-600">타오바오 소싱 자동화 플랫폼</p>
-          </div>
+              {/* Headline */}
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-semibold text-slate-900 mb-6 leading-tight">
+                타오바오 소싱<br />
+                <span className="text-orange-500">3배 빠르게</span>
+              </h1>
 
-          {/* Headline */}
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-            타오바오 소싱,
-            <br />
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              이제 자동으로
-            </span>
-          </h2>
+              <p className="text-xl text-slate-600 mb-10 leading-relaxed">
+                경쟁사 분석부터 주문 자동화까지<br />
+                한 번의 클릭으로 모든 과정 완료
+              </p>
 
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-10 leading-relaxed">
-            경쟁사 분석부터 상품 수입, 주문 처리까지<br />
-            모든 과정을 자동화하는 스마트한 소싱 플랫폼
-          </p>
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4 mb-10">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-3xl font-semibold text-orange-500">95%</div>
+                  <div className="text-sm text-slate-600 mt-1">시간 절약</div>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-3xl font-semibold text-orange-500">2.5억</div>
+                  <div className="text-sm text-slate-600 mt-1">월 거래액</div>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-3xl font-semibold text-orange-500">500+</div>
+                  <div className="text-sm text-slate-600 mt-1">활성 셀러</div>
+                </div>
+              </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <a
-              href="/competitor"
-              className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
-            >
-              무료로 시작하기
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </a>
-            <a
-              href="/products"
-              className="px-8 py-4 bg-white text-slate-700 rounded-xl font-semibold text-lg border-2 border-slate-200 hover:border-blue-300 hover:shadow-md transform hover:-translate-y-0.5 transition-all duration-200"
-            >
-              상품 관리하기
-            </a>
-          </div>
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <a
+                  href="/competitor"
+                  className="group px-8 py-4 bg-orange-500 text-white rounded-xl font-medium shadow-lg hover:shadow-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+                >
+                  무료로 시작하기
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </a>
+                <a
+                  href="/products"
+                  className="px-8 py-4 bg-white text-slate-900 rounded-xl font-medium border border-slate-300 hover:bg-slate-50 hover:shadow-md transition-all"
+                >
+                  데모 보기
+                </a>
+              </div>
 
-          {/* Trust indicators */}
-          <div className="flex flex-wrap justify-center items-center gap-8 text-sm text-slate-500">
-            <div className="flex items-center gap-2">
-              <Shield size={16} className="text-green-600" />
-              <span>안전한 거래</span>
+              {/* Trust indicators */}
+              <div className="flex items-center gap-6 text-sm text-slate-600">
+                <div className="flex items-center gap-2">
+                  <Check size={18} className="text-orange-500" />
+                  <span>카드 등록 불필요</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check size={18} className="text-orange-500" />
+                  <span>5분만에 시작</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Zap size={16} className="text-yellow-600" />
-              <span>빠른 처리</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendingUp size={16} className="text-blue-600" />
-              <span>실시간 분석</span>
+
+            {/* Right: Visual */}
+            <div className="relative">
+              <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xl">
+                <div className="aspect-video bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <BarChart3 size={64} strokeWidth={2} />
+                    <p className="mt-4 font-semibold text-2xl">실시간 대시보드</p>
+                  </div>
+                </div>
+              </div>
+              {/* Floating badge */}
+              <div className="absolute -top-4 -right-4 bg-orange-500 text-white px-5 py-2 rounded-full shadow-lg">
+                <p className="font-semibold text-sm">HOT</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-white">
+      <section className="py-24 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              왜 BuyPilot인가?
+            <div className="inline-block px-4 py-2 bg-orange-100 text-orange-700 rounded-full font-medium text-sm mb-4">
+              핵심 기능
+            </div>
+            <h2 className="text-4xl md:text-5xl font-semibold text-slate-900 mb-4">
+              왜 BuyPilot을 써야 할까요?
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              타오바오 소싱의 모든 과정을 자동화하여 시간과 비용을 절약하세요
+            <p className="text-xl text-slate-600">
+              복잡했던 소싱 과정을 단순하게
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="group p-8 bg-gradient-to-br from-blue-50 to-white rounded-2xl border border-blue-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <BarChart3 size={24} className="text-white" />
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
+                <BarChart3 size={24} className="text-white" strokeWidth={2} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">경쟁사 분석</h3>
-              <p className="text-slate-600 leading-relaxed">
-                스마트스토어 상품 URL만 입력하면 자동으로 타오바오 후보 상품을 찾고 비교 분석해드립니다
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">경쟁사 분석</h3>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                스마트스토어 URL만 입력하면 타오바오 후보 상품 자동 검색
               </p>
+              <div className="flex items-center gap-2 text-orange-600 font-medium text-sm">
+                <span>평균 30초 소요</span>
+                <ArrowRight size={16} />
+              </div>
             </div>
 
             {/* Feature 2 */}
-            <div className="group p-8 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Package size={24} className="text-white" />
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
+                <Package size={24} className="text-white" strokeWidth={2} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">상품 자동 수입</h3>
-              <p className="text-slate-600 leading-relaxed">
-                타오바오 상품 정보, 이미지, 옵션을 자동으로 수집하고 번역하여 바로 판매 가능한 상태로 만들어드립니다
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">자동 수입</h3>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                이미지, 옵션, 설명 자동 수집 및 번역
               </p>
+              <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
+                <span>클릭 한 번으로</span>
+                <ArrowRight size={16} />
+              </div>
             </div>
 
             {/* Feature 3 */}
-            <div className="group p-8 bg-gradient-to-br from-green-50 to-white rounded-2xl border border-green-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Zap size={24} className="text-white" />
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
+                <Zap size={24} className="text-white" strokeWidth={2} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">주문 자동화</h3>
-              <p className="text-slate-600 leading-relaxed">
-                스마트스토어 주문이 들어오면 자동으로 타오바오에서 구매하고 배대지로 발송 요청합니다
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">주문 자동화</h3>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                주문 접수부터 타오바오 구매까지 자동 처리
               </p>
+              <div className="flex items-center gap-2 text-orange-600 font-medium text-sm">
+                <span>24/7 자동 운영</span>
+                <ArrowRight size={16} />
+              </div>
             </div>
 
             {/* Feature 4 */}
-            <div className="group p-8 bg-gradient-to-br from-orange-50 to-white rounded-2xl border border-orange-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <DollarSign size={24} className="text-white" />
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
+                <DollarSign size={24} className="text-white" strokeWidth={2} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">가격 분석</h3>
-              <p className="text-slate-600 leading-relaxed">
-                타오바오 가격, 배송비, 수수료를 실시간으로 계산하여 최적의 마진을 확보할 수 있도록 도와드립니다
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">실시간 가격</h3>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                환율, 배송비, 수수료 자동 계산으로 최적 마진 확보
               </p>
+              <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
+                <span>실시간 업데이트</span>
+                <ArrowRight size={16} />
+              </div>
             </div>
 
             {/* Feature 5 */}
-            <div className="group p-8 bg-gradient-to-br from-pink-50 to-white rounded-2xl border border-pink-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Globe size={24} className="text-white" />
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
+                <Globe size={24} className="text-white" strokeWidth={2} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">번역 자동화</h3>
-              <p className="text-slate-600 leading-relaxed">
-                중국어 상품명, 옵션, 설명을 자동으로 한국어로 번역하고 수정 가능한 에디터를 제공합니다
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">AI 번역</h3>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                상품명, 옵션, 상세 설명 자동 번역 및 수정
               </p>
+              <div className="flex items-center gap-2 text-orange-600 font-medium text-sm">
+                <span>99% 정확도</span>
+                <ArrowRight size={16} />
+              </div>
             </div>
 
             {/* Feature 6 */}
-            <div className="group p-8 bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Shield size={24} className="text-white" />
+            <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-orange-300 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
+                <Shield size={24} className="text-white" strokeWidth={2} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">안전한 관리</h3>
-              <p className="text-slate-600 leading-relaxed">
-                모든 주문 내역과 상품 정보를 안전하게 보관하고 언제든지 확인하고 관리할 수 있습니다
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">안전 관리</h3>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                모든 주문과 상품 정보 안전 보관 및 관리
               </p>
+              <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
+                <span>클라우드 저장</span>
+                <ArrowRight size={16} />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-20 px-4 bg-gradient-to-b from-white to-slate-50">
+      {/* Social Proof */}
+      <section className="py-24 px-4 bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              어떻게 작동하나요?
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+              이미 많은 셀러가 사용 중입니다
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              3단계로 간단하게 타오바오 소싱을 시작하세요
-            </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 relative">
-            {/* Step 1 */}
-            <div className="relative">
-              <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 h-full">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  1
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3 mt-4">상품 찾기</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  경쟁사 스마트스토어 URL을 입력하거나 타오바오 상품 URL을 직접 입력하세요
-                </p>
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Testimonial 1 */}
+            <div className="bg-white text-slate-900 p-8 rounded-2xl border border-slate-200">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={18} fill="#F97316" stroke="#F97316" />
+                ))}
               </div>
+              <p className="mb-4 leading-relaxed text-slate-700">
+                "하루에 5시간 걸리던 상품 등록이 30분으로 줄었어요. 이제 마케팅에 집중할 수 있게 됐습니다."
+              </p>
+              <div className="font-semibold text-slate-900">김OO 셀러</div>
+              <div className="text-sm text-slate-600">의류 카테고리 · 월 5000만원</div>
             </div>
 
-            {/* Arrow */}
-            <div className="hidden md:flex items-center justify-center">
-              <ArrowRight size={32} className="text-slate-300" />
-            </div>
-
-            {/* Step 2 */}
-            <div className="relative md:col-start-3">
-              <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 h-full">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  2
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3 mt-4">자동 분석</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  AI가 자동으로 상품 정보를 수집하고 번역하며 가격을 분석합니다
-                </p>
+            {/* Testimonial 2 */}
+            <div className="bg-white text-slate-900 p-8 rounded-2xl border border-slate-200">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={18} fill="#F97316" stroke="#F97316" />
+                ))}
               </div>
+              <p className="mb-4 leading-relaxed text-slate-700">
+                "경쟁사 분석 기능이 정말 유용해요. 어떤 상품을 팔아야 할지 감이 잡혀요."
+              </p>
+              <div className="font-semibold text-slate-900">이OO 셀러</div>
+              <div className="text-sm text-slate-600">생활용품 · 월 3000만원</div>
             </div>
 
-            {/* Arrow back */}
-            <div className="hidden md:flex items-center justify-center md:col-start-2 md:row-start-2">
-              <ArrowRight size={32} className="text-slate-300 transform rotate-180" />
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative md:col-start-1 md:row-start-2">
-              <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 h-full">
-                <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                  3
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3 mt-4">판매 시작</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  준비된 상품으로 바로 판매를 시작하고 주문은 자동으로 처리됩니다
-                </p>
+            {/* Testimonial 3 */}
+            <div className="bg-white text-slate-900 p-8 rounded-2xl border border-slate-200">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={18} fill="#F97316" stroke="#F97316" />
+                ))}
               </div>
+              <p className="mb-4 leading-relaxed text-slate-700">
+                "주문 자동화로 밤에 자면서도 주문이 처리돼요. 진짜 자동화가 가능하네요!"
+              </p>
+              <div className="font-semibold text-slate-900">박OO 셀러</div>
+              <div className="text-sm text-slate-600">잡화 · 월 2000만원</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-purple-600">
+      <section className="py-24 px-4 bg-orange-500">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            지금 바로 시작하세요
+          <h2 className="text-4xl md:text-5xl font-semibold text-white mb-6 leading-tight">
+            지금 시작하면<br />
+            첫 달 무료!
           </h2>
-          <p className="text-xl text-blue-100 mb-10 leading-relaxed">
-            복잡한 타오바오 소싱, BuyPilot과 함께라면 쉽고 빠르게
+          <p className="text-xl text-white/90 mb-10">
+            신용카드 등록 없이 바로 시작하세요
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/competitor"
-              className="group px-8 py-4 bg-white text-blue-600 rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              경쟁사 분석 시작
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </a>
-            <a
-              href="/products"
-              className="px-8 py-4 bg-transparent text-white rounded-xl font-semibold text-lg border-2 border-white hover:bg-white/10 transform hover:-translate-y-0.5 transition-all duration-200"
-            >
-              상품 둘러보기
-            </a>
-          </div>
+          <a
+            href="/competitor"
+            className="inline-flex items-center gap-2 px-10 py-5 bg-white text-orange-600 rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200"
+          >
+            무료로 시작하기
+            <ArrowRight size={24} strokeWidth={2} />
+          </a>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 bg-slate-900 text-slate-400">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="mb-6">
-            <h3 className="text-2xl font-bold text-white mb-2">BuyPilot</h3>
-            <p className="text-sm">타오바오 소싱 자동화 플랫폼</p>
+      <footer className="py-16 px-4 bg-slate-900 text-white border-t border-slate-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-12 mb-12">
+            <div>
+              <h3 className="text-2xl font-semibold mb-4">BuyPilot</h3>
+              <p className="text-slate-400">타오바오 소싱 자동화</p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">제품</h4>
+              <div className="space-y-3">
+                <a href="/competitor" className="block text-slate-400 hover:text-white transition-colors">경쟁사 분석</a>
+                <a href="/products" className="block text-slate-400 hover:text-white transition-colors">상품 관리</a>
+                <a href="/dashboard" className="block text-slate-400 hover:text-white transition-colors">주문 관리</a>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">지원</h4>
+              <div className="space-y-3">
+                <a href="#" className="block text-slate-400 hover:text-white transition-colors">고객센터</a>
+                <a href="#" className="block text-slate-400 hover:text-white transition-colors">사용 가이드</a>
+                <a href="#" className="block text-slate-400 hover:text-white transition-colors">FAQ</a>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">회사</h4>
+              <div className="space-y-3">
+                <a href="#" className="block text-slate-400 hover:text-white transition-colors">소개</a>
+                <a href="#" className="block text-slate-400 hover:text-white transition-colors">이용약관</a>
+                <a href="#" className="block text-slate-400 hover:text-white transition-colors">개인정보처리방침</a>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap justify-center gap-6 mb-6 text-sm">
-            <a href="/competitor" className="hover:text-white transition-colors">경쟁사 분석</a>
-            <a href="/products" className="hover:text-white transition-colors">상품 관리</a>
-            <a href="/dashboard" className="hover:text-white transition-colors">주문 관리</a>
+          <div className="pt-8 border-t border-slate-800 text-center text-slate-400">
+            <p>© 2024 BuyPilot. All rights reserved.</p>
           </div>
-          <p className="text-xs">© 2024 BuyPilot. All rights reserved.</p>
         </div>
       </footer>
-
-      {/* Animations */}
-      <style jsx>{`
-        @keyframes blob {
-          0% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   )
 }

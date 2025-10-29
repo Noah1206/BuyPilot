@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BuyPilot Shopping Analyzer</title>
+  <title>BuyPilot</title>
   <style>
     * {
       margin: 0;
@@ -12,37 +12,44 @@
     }
 
     body {
-      width: 360px;
-      padding: 20px;
+      width: 380px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      background: #f8f9fa;
+      background: linear-gradient(to bottom, #f8fafc, #ffffff);
     }
 
     .header {
-      text-align: center;
-      margin-bottom: 20px;
+      background: white;
+      padding: 20px;
+      border-bottom: 1px solid #e2e8f0;
     }
 
     .header h1 {
-      font-size: 18px;
-      color: #1a1a1a;
+      font-size: 24px;
+      font-weight: 600;
       margin-bottom: 4px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: #0f172a;
+    }
+
+    .header h1 .highlight {
+      color: #f97316;
     }
 
     .header p {
-      font-size: 12px;
-      color: #666;
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .content {
+      padding: 20px;
     }
 
     .settings {
       background: white;
-      border-radius: 8px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
       padding: 16px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     .setting-group {
@@ -57,42 +64,52 @@
       display: block;
       font-size: 13px;
       font-weight: 600;
-      color: #333;
-      margin-bottom: 6px;
+      color: #334155;
+      margin-bottom: 8px;
     }
 
     input[type="text"] {
       width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #e5e8eb;
-      border-radius: 6px;
+      padding: 10px 12px;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
       font-size: 13px;
       font-family: monospace;
+      transition: all 0.2s;
     }
 
     input[type="text"]:focus {
       outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
     }
 
     .checkbox-group {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .checkbox-group:hover {
+      background: #f8fafc;
     }
 
     input[type="checkbox"] {
       width: 18px;
       height: 18px;
       cursor: pointer;
+      accent-color: #f97316;
     }
 
     .checkbox-group label {
       margin: 0;
       cursor: pointer;
       font-weight: 500;
+      color: #475569;
     }
 
     .buttons {
@@ -102,103 +119,127 @@
 
     button {
       flex: 1;
-      padding: 10px 16px;
+      padding: 12px 16px;
       border: none;
-      border-radius: 6px;
-      font-size: 13px;
+      border-radius: 8px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
     }
 
     .primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #f97316;
       color: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .primary:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      background: #ea580c;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+    }
+
+    .primary:active {
+      transform: translateY(0);
     }
 
     .secondary {
-      background: #e5e8eb;
-      color: #333;
+      background: white;
+      color: #475569;
+      border: 2px solid #e2e8f0;
     }
 
     .secondary:hover {
-      background: #d1d5db;
+      border-color: #cbd5e1;
+      background: #f8fafc;
     }
 
     .status {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 6px;
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 8px;
       font-size: 13px;
       text-align: center;
       display: none;
+      font-weight: 500;
     }
 
     .status.success {
-      background: #d1fae5;
-      color: #065f46;
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
     }
 
     .status.error {
       background: #fee2e2;
       color: #991b1b;
+      border: 1px solid #fecaca;
     }
 
     .footer {
       text-align: center;
-      margin-top: 16px;
-      font-size: 11px;
-      color: #999;
+      padding: 16px 20px;
+      font-size: 12px;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+      background: white;
     }
 
     .footer a {
-      color: #667eea;
+      color: #f97316;
       text-decoration: none;
+      font-weight: 500;
     }
 
     .footer a:hover {
       text-decoration: underline;
     }
+
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 16px 0;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>🔍 BuyPilot Analyzer</h1>
-    <p>네이버 쇼핑 상품 분석 도구</p>
+    <h1>Buy<span class="highlight">Pilot</span></h1>
+    <p>타오바오 소싱 자동화</p>
   </div>
 
-  <div class="settings">
-    <div class="setting-group">
-      <label for="apiUrl">API 서버 주소</label>
-      <input type="text" id="apiUrl" placeholder="http://localhost:5001">
-    </div>
+  <div class="content">
+    <div class="settings">
+      <div class="setting-group">
+        <label for="apiUrl">API 서버 주소</label>
+        <input type="text" id="apiUrl" placeholder="https://buypilot.railway.app">
+      </div>
 
-    <div class="setting-group">
-      <div class="checkbox-group">
-        <input type="checkbox" id="enabled" checked>
-        <label for="enabled">분석 패널 표시</label>
+      <div class="divider"></div>
+
+      <div class="setting-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="enabled" checked>
+          <label for="enabled">자동 상품 분석</label>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="autoRefresh">
+          <label for="autoRefresh">자동 새로고침 (5분마다)</label>
+        </div>
       </div>
     </div>
 
-    <div class="setting-group">
-      <div class="checkbox-group">
-        <input type="checkbox" id="autoRefresh">
-        <label for="autoRefresh">자동 새로고침 (5분마다)</label>
-      </div>
+    <div class="buttons">
+      <button class="secondary" id="testBtn">연결 테스트</button>
+      <button class="primary" id="saveBtn">저장</button>
     </div>
-  </div>
 
-  <div class="buttons">
-    <button class="secondary" id="testBtn">연결 테스트</button>
-    <button class="primary" id="saveBtn">저장</button>
+    <div class="status" id="status"></div>
   </div>
-
-  <div class="status" id="status"></div>
 
   <div class="footer">
     <p>Made by <a href="https://github.com/Noah1206/BuyPilot" target="_blank">BuyPilot</a></p>

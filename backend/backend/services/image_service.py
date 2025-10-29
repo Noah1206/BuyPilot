@@ -233,6 +233,15 @@ class ImageService:
         if railway_url:
             return f"{railway_url.rstrip('/')}/static/images/{filename}"
 
+        # Auto-detect Railway environment
+        railway_public_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN')
+        if railway_public_domain:
+            return f"https://{railway_public_domain}/static/images/{filename}"
+
+        # Railway environment (fallback)
+        if os.getenv('RAILWAY_ENVIRONMENT'):
+            return f"https://buypilot-production.up.railway.app/static/images/{filename}"
+
         # Local development fallback
         return f"http://localhost:5000/static/images/{filename}"
 

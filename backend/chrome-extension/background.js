@@ -5,6 +5,10 @@
 
 console.log('🚀 BuyPilot Extension: Background service worker started');
 
+// Import queue
+const importQueue = [];
+let isProcessingQueue = false;
+
 // Listen for extension icon click
 chrome.action.onClicked.addListener((tab) => {
   console.log('📌 Extension icon clicked on tab:', tab.url);
@@ -17,13 +21,21 @@ chrome.runtime.onInstalled.addListener((details) => {
 
     // Set default backend URL
     chrome.storage.sync.set({
-      backendUrl: 'https://buypilot.railway.app'
+      backendUrl: 'https://buypilot-production.up.railway.app'
     });
 
-    // Open welcome page
-    chrome.tabs.create({
-      url: 'https://buypilot.railway.app'
-    });
+    // Open welcome page (with error handling)
+    setTimeout(() => {
+      try {
+        chrome.tabs.create({
+          url: 'https://buypilot-production.up.railway.app'
+        }).catch(err => {
+          console.log('ℹ️ Could not open welcome page:', err.message);
+        });
+      } catch (err) {
+        console.log('ℹ️ Could not open welcome page:', err.message);
+      }
+    }, 1000); // Wait 1 second to avoid timing issues
   } else if (details.reason === 'update') {
     console.log('🔄 BuyPilot Extension updated');
   }
@@ -34,14 +46,82 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('📨 Background received message:', request);
 
   if (request.action === 'importProduct') {
-    // Handle product import in background
-    handleProductImport(request.data)
-      .then(result => sendResponse({ success: true, data: result }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+    // Add to queue and process in background
+    importQueue.push({
+      productData: request.data,
+      addedAt: Date.now()
+    });
 
-    return true; // Keep message channel open for async response
+    // Send immediate response
+    sendResponse({
+      success: true,
+      queued: true,
+      message: '상품이 대기열에 추가되었습니다. 백그라운드에서 처리됩니다.'
+    });
+
+    // Start processing queue
+    processImportQueue();
+
+    return true;
   }
 });
+
+/**
+ * Process import queue
+ */
+async function processImportQueue() {
+  if (isProcessingQueue || importQueue.length === 0) {
+    return;
+  }
+
+  isProcessingQueue = true;
+
+  while (importQueue.length > 0) {
+    const item = importQueue.shift();
+
+    try {
+      console.log('📦 Processing product import:', item.productData.title);
+
+      const result = await handleProductImport(item.productData);
+
+      // Show success notification
+      try {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon128.png',
+          title: '✅ 상품 가져오기 성공',
+          message: `"${item.productData.title.substring(0, 50)}..." 상품이 추가되었습니다.`,
+          priority: 2
+        });
+      } catch (notifError) {
+        console.log('ℹ️ Could not show notification:', notifError.message);
+      }
+
+      console.log('✅ Import successful');
+
+    } catch (error) {
+      console.error('❌ Import failed:', error);
+
+      // Show error notification
+      try {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon128.png',
+          title: '❌ 상품 가져오기 실패',
+          message: `"${item.productData.title.substring(0, 50)}..." 가져오기 실패: ${error.message}`,
+          priority: 2
+        });
+      } catch (notifError) {
+        console.log('ℹ️ Could not show notification:', notifError.message);
+      }
+    }
+
+    // Small delay between imports
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  isProcessingQueue = false;
+}
 
 /**
  * Handle product import
@@ -49,7 +129,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleProductImport(productData) {
   try {
     const { backendUrl } = await chrome.storage.sync.get(['backendUrl']);
-    const apiUrl = `${backendUrl || 'https://buypilot.railway.app'}/api/products/import-from-extension`;
+    const apiUrl = `${backendUrl || 'https://buypilot-production.up.railway.app'}/api/v1/products/import-from-extension`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -60,7 +140,8 @@ async function handleProductImport(productData) {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
     }
 
     const result = await response.json();
