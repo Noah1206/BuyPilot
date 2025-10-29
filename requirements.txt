@@ -1,0 +1,31 @@
+Flask==3.0.0
+Flask-CORS==4.0.0
+python-dotenv==1.0.0
+PyJWT==2.8.0
+APScheduler==3.10.4
+requests==2.31.0
+psycopg2-binary==2.9.10
+SQLAlchemy==2.0.36
+gunicorn==21.2.0
+cryptography==41.0.7
+bcrypt==4.1.2
+
+# HTTP requests (for Taobao RapidAPI)
+urllib3==2.0.7
+
+# Image processing
+Pillow==10.4.0
+cloudinary==1.41.0
+
+# AI/ML
+google-generativeai==0.8.5
+
+# Web scraping (HeySeller-style product parsing)
+selenium==4.16.0
+beautifulsoup4==4.12.2
+webdriver-manager==4.0.1
+lxml==5.1.0
+
+# Excel generation (Phase 4 competitor analysis)
+pandas==2.2.0
+openpyxl==3.1.2
