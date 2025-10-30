@@ -174,6 +174,7 @@ class NaverCommerceAPI:
     def upload_image(self, image_url: str) -> Optional[str]:
         """
         Upload image to Naver and get image ID
+        Converts WebP to JPEG since Naver only supports JPEG/JPG/GIF/PNG/BMP
 
         Args:
             image_url: URL of image to upload
@@ -182,6 +183,9 @@ class NaverCommerceAPI:
             Naver image ID or None if failed
         """
         try:
+            from PIL import Image
+            from io import BytesIO
+
             # Fix URL if scheme is missing
             if not image_url.startswith(('http://', 'https://')):
                 image_url = f'https://{image_url}'
@@ -194,13 +198,39 @@ class NaverCommerceAPI:
             # Upload to Naver - Use correct endpoint
             endpoint = '/external/v1/product-images/upload'
 
-            # Detect actual image type from URL or content
-            content_type = img_response.headers.get('Content-Type', 'image/jpeg')
-            filename = image_url.split('/')[-1].split('?')[0]  # Get filename from URL
-            if not any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']):
-                filename = 'image.jpg'
+            # Check if image is WebP (Naver doesn't support WebP)
+            filename = image_url.split('/')[-1].split('?')[0]
+            is_webp = filename.endswith('.webp') or img_response.headers.get('Content-Type') == 'image/webp'
 
-            files = {'imageFiles': (filename, img_response.content, content_type)}
+            if is_webp:
+                logger.info(f"🔄 Converting WebP to JPEG for Naver compatibility...")
+
+                # Convert WebP to JPEG
+                image = Image.open(BytesIO(img_response.content))
+
+                # Convert RGBA to RGB if needed
+                if image.mode in ('RGBA', 'LA', 'P'):
+                    background = Image.new('RGB', image.size, (255, 255, 255))
+                    if image.mode == 'P':
+                        image = image.convert('RGBA')
+                    background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
+                    image = background
+
+                # Save as JPEG
+                output = BytesIO()
+                image.save(output, format='JPEG', quality=95)
+                image_content = output.getvalue()
+                content_type = 'image/jpeg'
+                filename = filename.replace('.webp', '.jpg')
+
+                logger.info(f"✅ Converted to JPEG: {filename}")
+            else:
+                image_content = img_response.content
+                content_type = img_response.headers.get('Content-Type', 'image/jpeg')
+                if not any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
+                    filename = 'image.jpg'
+
+            files = {'imageFiles': (filename, image_content, content_type)}
 
             url = f"{self.BASE_URL}{endpoint}"
 
