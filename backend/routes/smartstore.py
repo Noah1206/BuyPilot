@@ -21,6 +21,49 @@ logger = logging.getLogger(__name__)
 AWS_EC2_ENDPOINT = os.getenv('AWS_EC2_ENDPOINT', 'http://98.94.199.189:8080')
 
 
+@bp.route('/smartstore/categories', methods=['GET'])
+def get_categories():
+    """
+    Get Naver SmartStore category list
+
+    Returns: {ok: bool, data: {categories: [...]}}
+    """
+    try:
+        # Initialize Naver Commerce API
+        naver_api = get_naver_commerce_api()
+
+        # Get categories
+        result = naver_api.get_categories()
+
+        if result.get('success'):
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'categories': result.get('categories', [])
+                }
+            }), 200
+        else:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'API_ERROR',
+                    'message': 'Failed to fetch categories',
+                    'details': {'error': result.get('error')}
+                }
+            }), 500
+
+    except Exception as e:
+        logger.error(f"❌ Error fetching categories: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'INTERNAL_ERROR',
+                'message': 'Internal server error',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
 @bp.route('/smartstore/register-products', methods=['POST'])
 def register_products():
     """
