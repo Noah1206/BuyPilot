@@ -212,6 +212,11 @@ class NaverCommerceAPI:
             }
 
             response = requests.post(url, headers=headers, files=files, timeout=30)
+
+            # Log response for debugging
+            logger.info(f"🔍 Upload response status: {response.status_code}")
+            logger.info(f"🔍 Upload response body: {response.text[:500]}")
+
             response.raise_for_status()
 
             result = response.json()
@@ -220,6 +225,9 @@ class NaverCommerceAPI:
             logger.info(f"✅ Image uploaded successfully: {image_id}")
             return image_id
 
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"❌ Failed to upload image (HTTP {e.response.status_code}): {e.response.text[:500]}")
+            return None
         except Exception as e:
             logger.error(f"❌ Failed to upload image: {str(e)}")
             return None
