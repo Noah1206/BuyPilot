@@ -70,16 +70,16 @@ class NaverCommerceAPI:
 
             # Only add signature if client_secret is provided
             if self.client_secret:
-                # Create HMAC-SHA256 signature
+                # Create bcrypt-based signature (Naver Commerce API requirement)
+                import bcrypt
                 message = f"{self.client_id}_{timestamp}"
-                signature_bytes = hmac.new(
-                    self.client_secret.encode('utf-8'),
-                    message.encode('utf-8'),
-                    hashlib.sha256
-                ).digest()
-                signature = base64.b64encode(signature_bytes).decode('utf-8')
+
+                # Use client_secret as bcrypt salt (it's already in bcrypt format: $2a$04$...)
+                hashed = bcrypt.hashpw(message.encode('utf-8'), self.client_secret.encode('utf-8'))
+                signature = base64.b64encode(hashed).decode('utf-8')
+
                 data['client_secret_sign'] = signature
-                logger.info("🔐 HMAC-SHA256 signature generated for OAuth")
+                logger.info("🔐 bcrypt signature generated for OAuth")
             else:
                 logger.info("🔐 Requesting OAuth token without client_secret (using client_id only)")
 
