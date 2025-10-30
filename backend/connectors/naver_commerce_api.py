@@ -380,7 +380,17 @@ class NaverCommerceAPI:
                         "manufacturerName": manufacturer or "해외 제조사",
                         "brandName": brand or "해외 브랜드",
                         "modelName": ""
-                    }
+                    },
+                    "originAreaInfo": {
+                        "originAreaCode": origin_area,  # 0801 = China
+                        "importer": "",
+                        "content": "중국" if origin_area == "0801" else ""
+                    },
+                    "afterServiceInfo": {
+                        "afterServiceTelephoneNumber": "1588-0000",
+                        "afterServiceGuideContent": "상품 수령 후 7일 이내 문의 가능"
+                    },
+                    "minorPurchasable": True  # 미성년자 구매 가능 여부
                 },
                 "productInfoProvidedNotice": {
                     "productInfoProvidedNoticeType": "GENERAL_GOODS",
@@ -391,11 +401,6 @@ class NaverCommerceAPI:
                         "compensationProcedure": "고객센터 문의",
                         "troubleShootingContents": "고객센터로 문의 주세요"
                     }
-                },
-                "originAreaInfo": {
-                    "originAreaCode": origin_area,  # 0801 = China
-                    "importer": "",
-                    "content": "중국" if origin_area == "0801" else ""
                 }
             },
             "smartstoreChannelProduct": {
