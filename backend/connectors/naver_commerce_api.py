@@ -345,20 +345,26 @@ class NaverCommerceAPI:
         Returns:
             Formatted product data for API
         """
+        # Build images in correct format - representativeImage + optionalImages
+        images_data = {
+            "representativeImage": {"url": image_ids[0]} if len(image_ids) > 0 else None,
+            "optionalImages": [{"url": img_url} for img_url in image_ids[1:10]]  # Max 9 optional
+        }
+
         product_data = {
             "originProduct": {
                 "statusType": "SALE",  # SALE, SUSPENSION, SOLD_OUT
                 "saleType": "NEW",  # NEW, USED, REFURBISHED
                 "leafCategoryId": category_id,
                 "name": name,
-                "images": [{"id": img_id} for img_id in image_ids[:10]],  # Max 10 images
+                "images": images_data,
                 "salePrice": price,
                 "stockQuantity": stock,
                 "deliveryInfo": {
                     "deliveryType": "DELIVERY",
                     "deliveryAttributeType": "NORMAL",
                     "deliveryFee": {
-                        "deliveryFeeType": "FREE",  # FREE or CHARGE
+                        "deliveryFeeType": "FREE",
                         "baseFee": 0,
                         "freeConditionalAmount": 0
                     },
@@ -369,6 +375,13 @@ class NaverCommerceAPI:
                     }
                 },
                 "detailContent": detail_html,
+                "detailAttribute": {
+                    "naverShoppingSearchInfo": {
+                        "manufacturerName": manufacturer or "해외 제조사",
+                        "brandName": brand or "해외 브랜드",
+                        "modelName": ""
+                    }
+                },
                 "productInfoProvidedNotice": {
                     "productInfoProvidedNoticeType": "GENERAL_GOODS",
                     "generalGoods": {
@@ -384,6 +397,10 @@ class NaverCommerceAPI:
                     "importer": "",
                     "content": "중국" if origin_area == "0801" else ""
                 }
+            },
+            "smartstoreChannelProduct": {
+                "naverShoppingRegistration": True,
+                "channelProductDisplayStatusType": "ON"
             }
         }
 
