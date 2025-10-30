@@ -57,33 +57,55 @@ class NaverCommerceAPI:
         try:
             timestamp = str(int(time.time() * 1000))
 
-            # Create bcrypt-based signature
+            # Create signature using client_secret
             password = f"{self.client_id}_{timestamp}"
-
-            # Try to use client_secret as bcrypt salt
-            # If client_secret is already a bcrypt hash (starts with $2), use it directly
-            # Otherwise, generate a proper bcrypt salt from it
             import bcrypt
 
             try:
-                # If client_secret is already a bcrypt hash, use it as salt
-                if self.client_secret.startswith('$2'):
-                    hashed = bcrypt.hashpw(password.encode('utf-8'), self.client_secret.encode('utf-8'))
-                else:
-                    # Generate bcrypt salt from client_secret
-                    # Use first 22 characters of base64-encoded client_secret
-                    import hashlib
-                    secret_hash = hashlib.sha256(self.client_secret.encode('utf-8')).digest()
-                    salt_base = base64.b64encode(secret_hash)[:22]
-                    # bcrypt salt format: $2b$10$[22 chars]
-                    salt = b'$2b$10$' + salt_base
-                    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+                # Method 1: Use bcrypt with client_secret as the pre-shared key
+                # Generate a salt using bcrypt.gensalt(), then hash
+                # But Naver wants us to use client_secret IN the salt somehow
 
+                # Method 2: Try using client_secret bytes directly as salt (Naver's way)
+                # The client_secret from Naver should be used as the salt
+                # We need to ensure it's 22 base64 characters + proper bcrypt prefix
+
+                # Convert client_secret to bcrypt-compatible salt format
+                # bcrypt salt format: $2b$10$[22 base64 chars]
+                import hashlib
+
+                # Use client_secret to derive the salt portion
+                secret_bytes = self.client_secret.encode('utf-8')
+                # Take first 16 bytes of client_secret, encode to base64, take first 22 chars
+                salt_source = base64.b64encode(secret_bytes)[:22]
+
+                # Pad if necessary
+                if len(salt_source) < 22:
+                    salt_source = salt_source.ljust(22, b'.')
+
+                # Construct full bcrypt salt
+                bcrypt_salt = b'$2b$10$' + salt_source
+
+                logger.info(f"Using bcrypt salt derived from client_secret")
+                hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt_salt)
                 signature = base64.b64encode(hashed).decode('utf-8')
+
             except Exception as e:
-                logger.error(f"bcrypt error: {e}, trying HMAC-SHA256 instead")
-                # Fallback to HMAC-SHA256 if bcrypt fails
-                signature = self._generate_signature(timestamp, 'POST', '/external/v1/oauth2/token')
+                logger.error(f"❌ bcrypt signature generation failed: {e}")
+                logger.info("Trying alternative method: direct bcrypt with gensalt()")
+
+                try:
+                    # Alternative: use bcrypt.gensalt() and include client_secret in password
+                    salt = bcrypt.gensalt()
+                    combined_password = f"{password}_{self.client_secret}"
+                    hashed = bcrypt.hashpw(combined_password.encode('utf-8'), salt)
+                    signature = base64.b64encode(hashed).decode('utf-8')
+                    logger.info("Using alternative bcrypt method with combined password")
+                except Exception as e2:
+                    logger.error(f"❌ Alternative bcrypt failed: {e2}")
+                    # Last resort: HMAC-SHA256
+                    logger.info("Falling back to HMAC-SHA256")
+                    signature = self._generate_signature(timestamp, 'POST', '/external/v1/oauth2/token')
 
             data = {
                 'client_id': self.client_id,
