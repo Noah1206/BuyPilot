@@ -271,6 +271,32 @@ class NaverCommerceAPI:
             logger.error(f"❌ Failed to upload image: {str(e)}")
             return None
 
+    def get_categories(self) -> Dict:
+        """
+        Get SmartStore category list
+
+        Returns:
+            Category tree with IDs and names
+        """
+        try:
+            logger.info("📋 Fetching SmartStore category list...")
+
+            endpoint = '/external/v2/categories'
+            response = self._make_request('GET', endpoint)
+
+            logger.info(f"✅ Retrieved {len(response.get('categories', []))} categories")
+            return {
+                'success': True,
+                'categories': response.get('categories', [])
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Failed to fetch categories: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
     def register_product(self, product_data: Dict) -> Dict:
         """
         Register product on SmartStore
@@ -319,7 +345,7 @@ class NaverCommerceAPI:
         stock: int,
         image_ids: List[str],
         detail_html: str,
-        category_id: str = "50000006",  # Default: 선반
+        category_id: str = "50000000",  # Default: 생활/건강 (가장 일반적)
         origin_area: str = "0801",  # China
         brand: str = "",
         manufacturer: str = "",
