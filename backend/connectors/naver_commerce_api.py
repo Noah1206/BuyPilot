@@ -57,11 +57,16 @@ class NaverCommerceAPI:
         try:
             timestamp = str(int(time.time() * 1000))
 
-            # Create bcrypt-based signature
-            password = f"{self.client_id}_{timestamp}"
-            import bcrypt
-            hashed = bcrypt.hashpw(password.encode('utf-8'), self.client_secret.encode('utf-8')[:22].ljust(22, b'$'))
-            signature = base64.b64encode(hashed).decode('utf-8')
+            # Create HMAC-SHA256 signature (NOT bcrypt!)
+            message = f"{self.client_id}_{timestamp}"
+            signature_bytes = hmac.new(
+                self.client_secret.encode('utf-8'),
+                message.encode('utf-8'),
+                hashlib.sha256
+            ).digest()
+            signature = base64.b64encode(signature_bytes).decode('utf-8')
+
+            logger.info("🔐 HMAC-SHA256 signature generated for OAuth")
 
             data = {
                 'client_id': self.client_id,
@@ -84,6 +89,8 @@ class NaverCommerceAPI:
 
         except Exception as e:
             logger.error(f"❌ Failed to get access token: {str(e)}")
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Response: {e.response.status_code} - {e.response.text}")
             raise
 
     def _generate_signature(self, timestamp: str, method: str, uri: str) -> str:
