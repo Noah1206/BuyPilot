@@ -293,7 +293,7 @@ class NaverCommerceAPI:
         try:
             logger.info(f"📦 Registering product: {product_data.get('name', 'Unknown')}")
 
-            endpoint = '/v2/products'
+            endpoint = '/external/v2/products'
             response = self._make_request('POST', endpoint, data=product_data)
 
             product_id = response.get('productId') or response.get('id')
