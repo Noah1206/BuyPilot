@@ -250,10 +250,19 @@ class NaverCommerceAPI:
             response.raise_for_status()
 
             result = response.json()
-            image_id = result.get('imageId') or result.get('id')
 
-            logger.info(f"✅ Image uploaded successfully: {image_id}")
-            return image_id
+            # Extract image URL from Naver response
+            # Format: {"images":[{"url":"https://shop-phinf.pstatic.net/..."}]}
+            image_url = None
+            if 'images' in result and len(result['images']) > 0:
+                image_url = result['images'][0].get('url')
+
+            # Fallback to other possible fields
+            if not image_url:
+                image_url = result.get('imageId') or result.get('id') or result.get('url')
+
+            logger.info(f"✅ Image uploaded successfully: {image_url}")
+            return image_url
 
         except requests.exceptions.HTTPError as e:
             logger.error(f"❌ Failed to upload image (HTTP {e.response.status_code}): {e.response.text[:500]}")
