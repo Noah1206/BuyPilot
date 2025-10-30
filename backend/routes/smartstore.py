@@ -4,6 +4,8 @@ Handles product registration to Naver SmartStore
 """
 from flask import Blueprint, request, jsonify
 import logging
+import os
+import requests
 from typing import List, Dict
 from datetime import datetime
 
@@ -14,11 +16,16 @@ from connectors.naver_talktalk_api import NaverTalkTalkAPI
 bp = Blueprint('smartstore', __name__)
 logger = logging.getLogger(__name__)
 
+# AWS EC2 proxy endpoint (for Naver API IP whitelist)
+AWS_EC2_ENDPOINT = os.getenv('AWS_EC2_ENDPOINT', 'http://98.94.199.189:8080')
+
 
 @bp.route('/smartstore/register-products', methods=['POST'])
 def register_products():
     """
     Register selected products to Naver SmartStore
+
+    Railway (main) forwards Naver API requests to AWS EC2 (Elastic IP for whitelist)
 
     Body: {
         product_ids: string[],  # List of product IDs to register
@@ -34,6 +41,45 @@ def register_products():
     Returns: {ok: bool, data: {results: [...], summary: {...}}}
     """
     try:
+        # Check if we should proxy to AWS EC2 (for Naver IP whitelist)
+        use_aws_proxy = os.getenv('USE_AWS_PROXY', 'false').lower() == 'true'
+
+        if use_aws_proxy:
+            logger.info("🔄 Proxying Naver API request to AWS EC2...")
+            try:
+                # Forward entire request to AWS EC2
+                aws_response = requests.post(
+                    f"{AWS_EC2_ENDPOINT}/api/v1/smartstore/register-products",
+                    json=request.get_json(force=True),
+                    headers={'Content-Type': 'application/json'},
+                    timeout=180  # 3 minutes for product registration
+                )
+
+                # Return AWS EC2 response
+                return jsonify(aws_response.json()), aws_response.status_code
+
+            except requests.exceptions.Timeout:
+                logger.error("❌ AWS EC2 request timeout")
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PROXY_TIMEOUT',
+                        'message': 'AWS EC2 request timed out',
+                        'details': {}
+                    }
+                }), 504
+            except Exception as e:
+                logger.error(f"❌ AWS EC2 proxy error: {str(e)}")
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PROXY_ERROR',
+                        'message': 'Failed to proxy to AWS EC2',
+                        'details': {'error': str(e)}
+                    }
+                }), 502
+
+        # Direct processing (AWS EC2 or local development)
         data = request.get_json(force=True)
 
         # Validate request
