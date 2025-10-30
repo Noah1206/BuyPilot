@@ -96,10 +96,6 @@ def register_products():
 
                     for img_url in main_images[:5]:  # Max 5 main images
                         try:
-                            # Ensure URL has proper scheme
-                            if not img_url.startswith(('http://', 'https://')):
-                                img_url = f'https://{img_url}'
-
                             image_id = naver_api.upload_image(img_url)
                             if image_id:
                                 image_ids.append(image_id)
