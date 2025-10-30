@@ -59,9 +59,31 @@ class NaverCommerceAPI:
 
             # Create bcrypt-based signature
             password = f"{self.client_id}_{timestamp}"
+
+            # Try to use client_secret as bcrypt salt
+            # If client_secret is already a bcrypt hash (starts with $2), use it directly
+            # Otherwise, generate a proper bcrypt salt from it
             import bcrypt
-            hashed = bcrypt.hashpw(password.encode('utf-8'), self.client_secret.encode('utf-8'))
-            signature = base64.b64encode(hashed).decode('utf-8')
+
+            try:
+                # If client_secret is already a bcrypt hash, use it as salt
+                if self.client_secret.startswith('$2'):
+                    hashed = bcrypt.hashpw(password.encode('utf-8'), self.client_secret.encode('utf-8'))
+                else:
+                    # Generate bcrypt salt from client_secret
+                    # Use first 22 characters of base64-encoded client_secret
+                    import hashlib
+                    secret_hash = hashlib.sha256(self.client_secret.encode('utf-8')).digest()
+                    salt_base = base64.b64encode(secret_hash)[:22]
+                    # bcrypt salt format: $2b$10$[22 chars]
+                    salt = b'$2b$10$' + salt_base
+                    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+
+                signature = base64.b64encode(hashed).decode('utf-8')
+            except Exception as e:
+                logger.error(f"bcrypt error: {e}, trying HMAC-SHA256 instead")
+                # Fallback to HMAC-SHA256 if bcrypt fails
+                signature = self._generate_signature(timestamp, 'POST', '/external/v1/oauth2/token')
 
             data = {
                 'client_id': self.client_id,
