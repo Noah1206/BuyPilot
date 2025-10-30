@@ -26,11 +26,12 @@ class NaverCommerceAPI:
         Initialize Naver Commerce API client
 
         Args:
-            client_id: Naver application client ID
-            client_secret: Naver application client secret
+            client_id: Naver Commerce API client ID (ncp_xxxxx format)
+            client_secret: Naver Commerce API client secret
         """
-        self.client_id = client_id or os.getenv('NAVER_CLIENT_ID')
-        self.client_secret = client_secret or os.getenv('NAVER_CLIENT_SECRET')
+        # Use NAVER_COMMERCE_* for SmartStore API, fallback to NAVER_* for backwards compatibility
+        self.client_id = client_id or os.getenv('NAVER_COMMERCE_CLIENT_ID') or os.getenv('NAVER_CLIENT_ID')
+        self.client_secret = client_secret or os.getenv('NAVER_COMMERCE_CLIENT_SECRET') or os.getenv('NAVER_CLIENT_SECRET')
 
         if not self.client_id or not self.client_secret:
             logger.error("Naver Commerce API credentials not configured")
