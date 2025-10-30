@@ -363,6 +363,7 @@ class NaverCommerceAPI:
                 "deliveryInfo": {
                     "deliveryType": "DELIVERY",
                     "deliveryAttributeType": "NORMAL",
+                    "deliveryCompany": "CJGLS",  # CJ대한통운
                     "deliveryFee": {
                         "deliveryFeeType": "FREE",
                         "baseFee": 0,
@@ -382,9 +383,8 @@ class NaverCommerceAPI:
                         "modelName": ""
                     },
                     "originAreaInfo": {
-                        "originAreaCode": origin_area,  # 0801 = China
-                        "importer": "",
-                        "content": "중국" if origin_area == "0801" else ""
+                        "originAreaCode": "03",  # 03 = 중국 (China)
+                        "content": "중국"
                     },
                     "afterServiceInfo": {
                         "afterServiceTelephoneNumber": "1588-0000",
