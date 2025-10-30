@@ -171,6 +171,52 @@ class ImageService:
             logger.error(f"❌ Error processing image: {str(e)}")
             return None
 
+    def delete_image(self, filepath: str) -> bool:
+        """
+        Delete image file from storage (for cleanup after Naver upload)
+
+        Args:
+            filepath: Path to image file (absolute or relative to storage_dir)
+
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        try:
+            # Handle both absolute and relative paths
+            if not os.path.isabs(filepath):
+                filepath = os.path.join(self.storage_dir, filepath)
+
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                logger.info(f"🗑️ Deleted image: {os.path.basename(filepath)}")
+                return True
+            else:
+                logger.warning(f"⚠️ Image not found for deletion: {filepath}")
+                return False
+
+        except Exception as e:
+            logger.error(f"❌ Failed to delete image {filepath}: {str(e)}")
+            return False
+
+    def delete_images(self, filepaths: List[str]) -> int:
+        """
+        Delete multiple image files
+
+        Args:
+            filepaths: List of image file paths
+
+        Returns:
+            Number of successfully deleted images
+        """
+        deleted_count = 0
+        for filepath in filepaths:
+            if self.delete_image(filepath):
+                deleted_count += 1
+
+        if deleted_count > 0:
+            logger.info(f"🗑️ Deleted {deleted_count}/{len(filepaths)} images")
+        return deleted_count
+
     def download_images(
         self,
         urls: List[str],

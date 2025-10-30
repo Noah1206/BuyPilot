@@ -12,6 +12,7 @@ from datetime import datetime
 from models import get_db, Product, SmartStoreOrder, SmartStoreOrderStatus, TalkTalkStatus
 from connectors.naver_commerce_api import get_naver_commerce_api
 from connectors.naver_talktalk_api import NaverTalkTalkAPI
+from services.image_service import get_image_service
 
 bp = Blueprint('smartstore', __name__)
 logger = logging.getLogger(__name__)
@@ -134,6 +135,7 @@ def register_products():
                     # Step 1: Upload images to Naver
                     logger.info("📷 Step 1/3: Uploading images to Naver...")
                     image_ids = []
+                    uploaded_local_images = []  # Track uploaded local images for cleanup
 
                     # Upload main images
                     main_images = product.data.get('downloaded_images', [])
@@ -145,6 +147,9 @@ def register_products():
                             image_id = naver_api.upload_image(img_url)
                             if image_id:
                                 image_ids.append(image_id)
+                                # Track local file path for cleanup (if it's a local file)
+                                if img_url.startswith('/') or 'storage/images/' in img_url:
+                                    uploaded_local_images.append(img_url)
                         except Exception as e:
                             logger.warning(f"⚠️ Failed to upload image {img_url}: {str(e)}")
 
@@ -197,6 +202,15 @@ def register_products():
                         db.commit()
 
                         logger.info(f"✅ Product registered: {result.get('product_id')}")
+
+                        # 🗑️ Cleanup: Delete uploaded local images (free tier disk space management)
+                        if uploaded_local_images:
+                            try:
+                                image_service = get_image_service()
+                                deleted_count = image_service.delete_images(uploaded_local_images)
+                                logger.info(f"🗑️ Cleaned up {deleted_count} local images after successful upload")
+                            except Exception as cleanup_error:
+                                logger.warning(f"⚠️ Image cleanup failed (non-critical): {str(cleanup_error)}")
 
                         results.append({
                             'product_id': str(product.id),
