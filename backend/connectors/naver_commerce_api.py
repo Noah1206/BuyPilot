@@ -33,9 +33,12 @@ class NaverCommerceAPI:
         self.client_id = client_id or os.getenv('NAVER_COMMERCE_CLIENT_ID') or os.getenv('NAVER_CLIENT_ID')
         self.client_secret = client_secret or os.getenv('NAVER_COMMERCE_CLIENT_SECRET') or os.getenv('NAVER_CLIENT_SECRET')
 
-        if not self.client_id or not self.client_secret:
-            logger.error("Naver Commerce API credentials not configured")
-            raise ValueError("NAVER_CLIENT_ID and NAVER_CLIENT_SECRET must be set")
+        if not self.client_id:
+            logger.error("Naver Commerce API client_id not configured")
+            raise ValueError("NAVER_COMMERCE_CLIENT_ID must be set")
+
+        if not self.client_secret:
+            logger.warning("⚠️ NAVER_COMMERCE_CLIENT_SECRET not set - will try authentication without signature")
 
         # OAuth 2.0 access token (will be fetched on first API call)
         self.access_token = None
@@ -58,24 +61,27 @@ class NaverCommerceAPI:
         try:
             timestamp = str(int(time.time() * 1000))
 
-            # Create HMAC-SHA256 signature (NOT bcrypt!)
-            message = f"{self.client_id}_{timestamp}"
-            signature_bytes = hmac.new(
-                self.client_secret.encode('utf-8'),
-                message.encode('utf-8'),
-                hashlib.sha256
-            ).digest()
-            signature = base64.b64encode(signature_bytes).decode('utf-8')
-
-            logger.info("🔐 HMAC-SHA256 signature generated for OAuth")
-
             data = {
                 'client_id': self.client_id,
                 'timestamp': timestamp,
                 'grant_type': 'client_credentials',
-                'client_secret_sign': signature,
                 'type': 'SELF'
             }
+
+            # Only add signature if client_secret is provided
+            if self.client_secret:
+                # Create HMAC-SHA256 signature
+                message = f"{self.client_id}_{timestamp}"
+                signature_bytes = hmac.new(
+                    self.client_secret.encode('utf-8'),
+                    message.encode('utf-8'),
+                    hashlib.sha256
+                ).digest()
+                signature = base64.b64encode(signature_bytes).decode('utf-8')
+                data['client_secret_sign'] = signature
+                logger.info("🔐 HMAC-SHA256 signature generated for OAuth")
+            else:
+                logger.info("🔐 Requesting OAuth token without client_secret (using client_id only)")
 
             response = requests.post(self.TOKEN_URL, data=data, timeout=30)
             response.raise_for_status()
