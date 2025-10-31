@@ -175,7 +175,8 @@ export default function ProductsPage() {
         updateData.data = {
           ...editingProduct.data,
           shipping_cost: editData.shippingCost,
-          margin: editData.margin
+          margin: editData.margin,
+          final_price: editData.finalPrice  // Save frontend calculated final price
         }
       }
 

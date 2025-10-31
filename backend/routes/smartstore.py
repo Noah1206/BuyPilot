@@ -362,6 +362,7 @@ def _build_detail_html_from_uploaded_images(uploaded_image_urls: List[str]) -> s
 def _calculate_final_price(product: Product) -> int:
     """
     Calculate final selling price for product
+    Uses frontend calculated price if available (stored in product.data.final_price)
 
     Args:
         product: Product model instance
@@ -369,31 +370,24 @@ def _calculate_final_price(product: Product) -> int:
     Returns:
         Final price in KRW
     """
-    # Get cost price (CNY to KRW, rate: 200)
+    # Priority 1: Use frontend calculated final price (주황색 가격)
+    if 'final_price' in product.data and product.data['final_price']:
+        final_price = int(product.data['final_price'])
+        logger.info(f"Using frontend calculated price: {final_price:,}원")
+        return final_price
+
+    # Priority 2: Calculate from stored pricing data
     cost_price = int(product.price * 200) if product.price else 0
-
-    # Get shipping cost
-    shipping_cost = product.data.get('shipping_cost', 0)
-    if not shipping_cost:
-        # Calculate from weight or use default
-        weight = product.data.get('weight', 0)
-        if weight and weight > 0:
-            # Get shipping rates from localStorage (would need to pass from frontend)
-            # For now, use default
-            shipping_cost = 8000
-        else:
-            shipping_cost = 8000  # Default shipping cost
-
-    # Get margin (default 25%)
+    shipping_cost = product.data.get('shipping_cost', 8000)
     margin = product.data.get('margin', 25)
 
-    # Calculate final price
     total_cost = cost_price + shipping_cost
     final_price = int(total_cost * (1 + margin / 100))
 
     # Round to nearest 10 (Naver requires 10-won units)
     final_price = round(final_price / 10) * 10
 
+    logger.info(f"Calculated price: {final_price:,}원 (cost:{cost_price:,} + ship:{shipping_cost:,} + margin:{margin}%)")
     return final_price
 
 
