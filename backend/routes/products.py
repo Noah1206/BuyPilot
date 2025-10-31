@@ -425,21 +425,10 @@ def update_product(product_id):
             if 'stock' in data:
                 product.stock = data['stock']
 
-            # Handle image_url (convert base64 to Cloudinary URL)
+            # Handle image_url (accept base64 directly)
             if 'image_url' in data:
-                image_url = data['image_url']
-                if image_url and image_url.startswith('data:image'):
-                    # Base64 image - upload to Cloudinary
-                    logger.info(f"🔄 Uploading base64 main image to Cloudinary...")
-                    image_service = get_image_service()
-                    uploaded_url = image_service.upload_base64_image(image_url, f"product_{product_id}_main")
-                    if uploaded_url:
-                        product.image_url = uploaded_url
-                        logger.info(f"✅ Main image uploaded: {uploaded_url}")
-                    else:
-                        logger.warning("⚠️ Failed to upload main image, keeping original")
-                else:
-                    product.image_url = image_url
+                product.image_url = data['image_url']
+                logger.info(f"✅ Main image updated")
 
             if 'data' in data:
                 # Merge with existing data
@@ -448,55 +437,13 @@ def update_product(product_id):
 
                 update_data = data['data']
 
-                # Handle images array (convert base64 to Cloudinary URLs)
+                # Handle images array (accept base64 directly)
                 if 'images' in update_data and isinstance(update_data['images'], list):
-                    logger.info(f"🔄 Processing {len(update_data['images'])} images...")
-                    image_service = get_image_service()
-                    converted_images = []
+                    logger.info(f"✅ Updated {len(update_data['images'])} images")
 
-                    for idx, img_url in enumerate(update_data['images']):
-                        if img_url and img_url.startswith('data:image'):
-                            # Base64 image - upload to Cloudinary
-                            logger.info(f"🔄 Uploading image {idx+1}/{len(update_data['images'])} to Cloudinary...")
-                            uploaded_url = image_service.upload_base64_image(img_url, f"product_{product_id}_img{idx}")
-                            if uploaded_url:
-                                converted_images.append(uploaded_url)
-                                logger.info(f"✅ Image {idx+1} uploaded: {uploaded_url}")
-                            else:
-                                # Keep original if upload fails
-                                converted_images.append(img_url)
-                                logger.warning(f"⚠️ Failed to upload image {idx+1}, keeping original")
-                        else:
-                            # Already a URL, keep as is
-                            converted_images.append(img_url)
-
-                    update_data['images'] = converted_images
-                    logger.info(f"✅ All images processed")
-
-                # Handle desc_imgs array (convert base64 to Cloudinary URLs)
+                # Handle desc_imgs array (accept base64 directly)
                 if 'desc_imgs' in update_data and isinstance(update_data['desc_imgs'], list):
-                    logger.info(f"🔄 Processing {len(update_data['desc_imgs'])} detail images...")
-                    image_service = get_image_service()
-                    converted_desc_imgs = []
-
-                    for idx, img_url in enumerate(update_data['desc_imgs']):
-                        if img_url and img_url.startswith('data:image'):
-                            # Base64 image - upload to Cloudinary
-                            logger.info(f"🔄 Uploading detail image {idx+1}/{len(update_data['desc_imgs'])} to Cloudinary...")
-                            uploaded_url = image_service.upload_base64_image(img_url, f"product_{product_id}_desc{idx}")
-                            if uploaded_url:
-                                converted_desc_imgs.append(uploaded_url)
-                                logger.info(f"✅ Detail image {idx+1} uploaded: {uploaded_url}")
-                            else:
-                                # Keep original if upload fails
-                                converted_desc_imgs.append(img_url)
-                                logger.warning(f"⚠️ Failed to upload detail image {idx+1}, keeping original")
-                        else:
-                            # Already a URL, keep as is
-                            converted_desc_imgs.append(img_url)
-
-                    update_data['desc_imgs'] = converted_desc_imgs
-                    logger.info(f"✅ All detail images processed")
+                    logger.info(f"✅ Updated {len(update_data['desc_imgs'])} detail images")
 
                 # Handle thumbnail and detail images separately
                 if 'thumbnail_image_url' in update_data:
