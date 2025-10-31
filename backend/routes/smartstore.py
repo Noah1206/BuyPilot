@@ -383,6 +383,9 @@ def _calculate_final_price(product: Product) -> int:
     total_cost = cost_price + shipping_cost
     final_price = int(total_cost * (1 + margin / 100))
 
+    # Round to nearest 10 (Naver requires 10-won units)
+    final_price = round(final_price / 10) * 10
+
     return final_price
 
 

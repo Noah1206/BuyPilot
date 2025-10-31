@@ -101,6 +101,30 @@ def test_extension_endpoint():
         'endpoint': '/api/v1/products/import-from-extension'
     }), 200
 
+# IP address check endpoint
+@app.route('/debug/ip', methods=['GET'])
+def debug_ip():
+    """Check Railway server's outbound IP address"""
+    import requests
+    try:
+        # Get outbound IP from external service
+        response = requests.get('https://api.ipify.org?format=json', timeout=5)
+        outbound_ip = response.json().get('ip', 'unknown')
+
+        return jsonify({
+            'ok': True,
+            'outbound_ip': outbound_ip,
+            'client_ip': request.remote_addr,
+            'x_forwarded_for': request.headers.get('X-Forwarded-For', 'not set'),
+            'message': f'Add this IP to Naver Commerce API whitelist: {outbound_ip}'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'ok': False,
+            'error': str(e),
+            'client_ip': request.remote_addr
+        }), 500
+
 # Proxy to Next.js frontend
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')

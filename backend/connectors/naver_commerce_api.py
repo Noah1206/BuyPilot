@@ -425,7 +425,12 @@ class NaverCommerceAPI:
                         "noRefundReason": "상품 하자 시 100% 환불 가능",
                         "qualityAssuranceStandard": "관련법 및 소비자분쟁해결기준에 따름",
                         "compensationProcedure": "고객센터 문의",
-                        "troubleShootingContents": "고객센터로 문의 주세요"
+                        "troubleShootingContents": "고객센터로 문의 주세요",
+                        "itemName": name,  # 품명
+                        "modelName": "",  # 모델명
+                        "certificateDetails": "",  # 인증번호
+                        "manufacturer": manufacturer or "해외 제조사",
+                        "sellerContact": "1588-0000"  # 판매자 연락처
                     }
                 }
             },

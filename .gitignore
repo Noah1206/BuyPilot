@@ -70,6 +70,10 @@ htmlcov/
 # Railway
 .railway/
 
+# AWS Keys (NEVER commit these!)
+*.pem
+*.key
+
 # Misc
 *.pid
 *.seed
