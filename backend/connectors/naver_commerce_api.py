@@ -322,7 +322,10 @@ class NaverCommerceAPI:
             endpoint = '/external/v2/products'
             response = self._make_request('POST', endpoint, data=product_data)
 
-            product_id = response.get('productId') or response.get('id')
+            # Log full response to debug product ID extraction
+            logger.info(f"🔍 Full API response: {response}")
+
+            product_id = response.get('productId') or response.get('id') or response.get('originProductNo')
             logger.info(f"✅ Product registered successfully: {product_id}")
 
             return {
