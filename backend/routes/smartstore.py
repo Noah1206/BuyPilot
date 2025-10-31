@@ -140,11 +140,24 @@ def register_products():
 
         # Get settings
         settings = data.get('settings', {})
-        category_id = settings.get('category_id', '50000006')  # Default: 선반
+        category_id = settings.get('category_id')  # Required: leaf category ID from seller center
         stock_quantity = settings.get('stock_quantity', 999)
         origin_area = settings.get('origin_area', '0801')  # China
         brand = settings.get('brand', '')
         manufacturer = settings.get('manufacturer', '')
+
+        # Validate category_id (required)
+        if not category_id:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'category_id is required in settings',
+                    'details': {
+                        'hint': 'Get valid category ID from Naver Seller Center Network tab: attribute-group?leafCategoryId=XXXXX'
+                    }
+                }
+            }), 400
 
         logger.info(f"📦 Starting SmartStore registration for {len(product_ids)} products")
 
