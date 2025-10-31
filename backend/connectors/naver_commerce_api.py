@@ -433,7 +433,8 @@ class NaverCommerceAPI:
                             "compensationProcedure": "상품상세참조",
                             "itemName": "상품상세참조",
                             "modelName": "상품상세참조",
-                            "manufacturer": manufacturer or "상품상세참조"
+                            "manufacturer": manufacturer or "상품상세참조",
+                            "afterServiceDirector": "1588-0000"
                         }
                     }
                 }
