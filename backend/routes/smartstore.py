@@ -71,6 +71,8 @@ def suggest_category():
     """
     Suggest appropriate Naver SmartStore category for a product using AI
 
+    Railway (main) forwards Naver API requests to AWS EC2 (Elastic IP for whitelist)
+
     Body: {
         product_id: string (optional),
         product_data: {
@@ -95,6 +97,47 @@ def suggest_category():
     }
     """
     try:
+        # Check if we should proxy to AWS EC2 (for Naver IP whitelist)
+        use_aws_proxy = os.getenv('USE_AWS_PROXY', 'false').lower() == 'true'
+
+        if use_aws_proxy:
+            proxy_url = f"{AWS_EC2_ENDPOINT}/api/v1/smartstore/suggest-category"
+            logger.info(f"🔄 Proxying category suggestion to AWS EC2: {proxy_url}")
+            try:
+                # Forward entire request to AWS EC2
+                aws_response = requests.post(
+                    proxy_url,
+                    json=request.get_json(force=True),
+                    headers={'Content-Type': 'application/json'},
+                    timeout=60  # AI analysis may take longer
+                )
+
+                logger.info(f"✅ AWS EC2 response: status={aws_response.status_code}")
+                # Return AWS EC2 response
+                return jsonify(aws_response.json()), aws_response.status_code
+
+            except requests.exceptions.Timeout:
+                logger.error("❌ AWS EC2 request timeout")
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PROXY_TIMEOUT',
+                        'message': 'AWS EC2 request timed out',
+                        'details': {}
+                    }
+                }), 504
+            except Exception as e:
+                logger.error(f"❌ AWS EC2 proxy error: {str(e)}")
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PROXY_ERROR',
+                        'message': 'Failed to proxy to AWS EC2',
+                        'details': {'error': str(e)}
+                    }
+                }), 502
+
+        # Direct processing (AWS EC2 or local development)
         data = request.get_json(force=True)
 
         # Get product data
