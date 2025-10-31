@@ -425,18 +425,13 @@ class NaverCommerceAPI:
                     },
                     "minorPurchasable": True,  # 미성년자 구매 가능 여부
                     "productInfoProvidedNotice": {
-                        "productInfoProvidedNoticeType": "GENERAL_GOODS",
-                        "generalGoods": {
+                        "productInfoProvidedNoticeType": "ETC",
+                        "etc": {
                             "returnCostReason": "상품상세참조",
                             "noRefundReason": "상품상세참조",
                             "qualityAssuranceStandard": "상품상세참조",
                             "compensationProcedure": "상품상세참조",
-                            "troubleShootingContents": "상품상세참조",
-                            "itemName": "상품상세참조",
-                            "modelName": "상품상세참조",
-                            "certificateDetails": "상품상세참조",
-                            "manufacturer": "상품상세참조",
-                            "sellerContact": "상품상세참조"
+                            "itemName": "상품상세참조"
                         }
                     }
                 }
