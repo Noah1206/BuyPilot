@@ -45,6 +45,7 @@ export default function ProductsPage() {
   const [editData, setEditData] = useState<any>({})
   const [zoom, setZoom] = useState(60)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [translating, setTranslating] = useState(false)
 
   useEffect(() => {
     loadProducts()
@@ -102,6 +103,46 @@ export default function ProductsPage() {
       loadProducts()
     } else {
       toast(response.error?.message || '상품 삭제 실패', 'error')
+    }
+  }
+
+  const translateImage = async () => {
+    if (!editingProduct || selectedImageIndex === undefined) return
+
+    setTranslating(true)
+
+    try {
+      // Get current image URL based on edit mode
+      const currentImages = editMode === 'main-image' ? editData.allImages : editData.descImages
+      const imageUrl = normalizeImageUrl(currentImages[selectedImageIndex])
+
+      const response = await fetch('/api/image/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: imageUrl }),
+      })
+
+      const result = await response.json()
+
+      if (result.ok && result.data?.result_image) {
+        // Replace current image with translated version
+        const newImages = [...currentImages]
+        newImages[selectedImageIndex] = result.data.result_image
+
+        if (editMode === 'main-image') {
+          setEditData({ ...editData, allImages: newImages, mainImage: result.data.result_image })
+        } else {
+          setEditData({ ...editData, descImages: newImages })
+        }
+
+        toast('이미지 번역이 완료되었습니다!')
+      } else {
+        toast(result.error?.message || '번역 실패', 'error')
+      }
+    } catch (err) {
+      toast('번역 중 오류가 발생했습니다.', 'error')
+    } finally {
+      setTranslating(false)
     }
   }
 
@@ -967,12 +1008,18 @@ export default function ProductsPage() {
                       <div className="text-xs text-slate-500">(2)</div>
                     </div>
                   </button>
-                  <button className="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-orange-500 transition-all flex items-center gap-3">
+                  <button
+                    onClick={translateImage}
+                    className="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-orange-500 transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={translating}
+                  >
                     <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <Settings size={18} className="text-orange-500" />
+                      <Settings size={18} className={`text-orange-500 ${translating ? 'animate-spin' : ''}`} />
                     </div>
                     <div>
-                      <div className="font-medium text-sm text-slate-900">원클릭 번역</div>
+                      <div className="font-medium text-sm text-slate-900">
+                        {translating ? '번역 중...' : '원클릭 번역'}
+                      </div>
                       <div className="text-xs text-slate-500">(4)</div>
                     </div>
                   </button>

@@ -1,9 +1,14 @@
 """
 Image Editing API Routes
 AI 이미지 인페인팅 (배경 제거, 객체 제거)
+이미지 텍스트 OCR 및 번역
 """
 from flask import Blueprint, request, jsonify
 import logging
+import base64
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
+import requests
 
 bp = Blueprint('image_edit', __name__)
 logger = logging.getLogger(__name__)
@@ -117,5 +122,144 @@ def inpaint_status():
             'error': {
                 'code': 'SERVER_ERROR',
                 'message': str(e)
+            }
+        }), 500
+
+
+@bp.route('/api/image/translate', methods=['POST'])
+def translate_image_text():
+    """
+    이미지 내 텍스트 OCR + 번역
+
+    Body: {
+        image_url: string  // 이미지 URL
+    }
+
+    Returns: {
+        ok: boolean,
+        data: {
+            original_text: string,  // 추출된 원본 텍스트
+            translated_text: string,  // 번역된 텍스트
+            result_image: string (base64)  // 번역된 텍스트가 오버레이된 이미지
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        image_url = data.get('image_url')
+
+        if not image_url:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'MISSING_DATA',
+                    'message': 'image_url is required'
+                }
+            }), 400
+
+        logger.info(f"🔤 Translating image text: {image_url}")
+
+        # Download image
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+        image = Image.open(BytesIO(response.content))
+
+        # Extract text using EasyOCR
+        try:
+            import easyocr
+            reader = easyocr.Reader(['ch_sim', 'en'], gpu=False)
+
+            # Convert PIL Image to numpy array
+            import numpy as np
+            img_array = np.array(image)
+
+            results = reader.readtext(img_array)
+
+            if not results:
+                logger.warning("⚠️ No text detected in image")
+                return jsonify({
+                    'ok': True,
+                    'data': {
+                        'original_text': '',
+                        'translated_text': '',
+                        'result_image': None,
+                        'message': 'No text detected in image'
+                    }
+                }), 200
+
+            # Extract text
+            original_texts = [result[1] for result in results]
+            original_text = '\n'.join(original_texts)
+
+            logger.info(f"📝 Extracted text: {original_text[:100]}...")
+
+            # Translate using existing translation service
+            from services.translator import get_translator
+            translator = get_translator()
+
+            translated_texts = []
+            for text in original_texts:
+                translated = translator.translate(text, source='zh', target='ko')
+                translated_texts.append(translated)
+
+            translated_text = '\n'.join(translated_texts)
+
+            logger.info(f"✅ Translated text: {translated_text[:100]}...")
+
+            # Create overlay image with translated text
+            draw = ImageDraw.Draw(image)
+
+            # Try to load Korean font
+            try:
+                font = ImageFont.truetype("/System/Library/Fonts/AppleSDGothicNeo.ttc", 30)
+            except:
+                font = ImageFont.load_default()
+
+            # Draw translated text at detected positions
+            for i, (bbox, text, prob) in enumerate(results):
+                if i < len(translated_texts):
+                    # Get bounding box coordinates
+                    (top_left, top_right, bottom_right, bottom_left) = bbox
+                    x, y = int(top_left[0]), int(top_left[1])
+
+                    # Draw white background rectangle
+                    text_bbox = draw.textbbox((x, y), translated_texts[i], font=font)
+                    draw.rectangle(text_bbox, fill='white')
+
+                    # Draw translated text
+                    draw.text((x, y), translated_texts[i], fill='black', font=font)
+
+            # Convert result image to base64
+            buffered = BytesIO()
+            image.save(buffered, format="PNG")
+            result_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'original_text': original_text,
+                    'translated_text': translated_text,
+                    'result_image': f'data:image/png;base64,{result_base64}'
+                }
+            }), 200
+
+        except ImportError:
+            logger.error("❌ EasyOCR not installed. Install with: pip install easyocr")
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'DEPENDENCY_ERROR',
+                    'message': 'EasyOCR not installed. Install with: pip install easyocr'
+                }
+            }), 500
+
+    except Exception as e:
+        logger.error(f"❌ Translation error: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'SERVER_ERROR',
+                'message': 'Internal server error',
+                'details': {'error': str(e)}
             }
         }), 500
