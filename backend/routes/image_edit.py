@@ -205,7 +205,7 @@ def translate_image_text():
         logger.info(f"📝 Extracted text: {original_text[:100]}...")
 
         # Translate using existing translation service
-        from services.translator import get_translator
+        from ai.translator import get_translator
         translator = get_translator()
 
         translated_texts = []
