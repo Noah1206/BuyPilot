@@ -173,10 +173,17 @@ def remove_image_text():
                 }
             }), 500
 
-        # Download original image
-        response = requests.get(image_url, timeout=30)
-        response.raise_for_status()
-        image = Image.open(BytesIO(response.content))
+        # Download original image or decode base64
+        if image_url.startswith('data:'):
+            # Handle base64 data URL
+            header, encoded = image_url.split(',', 1)
+            image_bytes = base64.b64decode(encoded)
+            image = Image.open(BytesIO(image_bytes))
+        else:
+            # Download from URL
+            response = requests.get(image_url, timeout=30)
+            response.raise_for_status()
+            image = Image.open(BytesIO(response.content))
 
         # Convert PIL to numpy array (RGB)
         img_array = np.array(image)
@@ -263,12 +270,19 @@ def translate_image_text():
                 }
             }), 400
 
-        logger.info(f"🔤 Translating image text: {image_url}")
+        logger.info(f"🔤 Translating image text: {image_url[:100]}...")
 
-        # Download image
-        response = requests.get(image_url, timeout=30)
-        response.raise_for_status()
-        image = Image.open(BytesIO(response.content))
+        # Download image or decode base64
+        if image_url.startswith('data:'):
+            # Handle base64 data URL
+            header, encoded = image_url.split(',', 1)
+            image_bytes = base64.b64decode(encoded)
+            image = Image.open(BytesIO(image_bytes))
+        else:
+            # Download from URL
+            response = requests.get(image_url, timeout=30)
+            response.raise_for_status()
+            image = Image.open(BytesIO(response.content))
 
         # Import dependencies first
         try:
