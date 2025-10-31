@@ -220,13 +220,14 @@ class NaverCommerceAPI:
                     background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
                     image = background
 
-                # Resize to consistent width (1000px) while maintaining aspect ratio
+                # Resize ALL images to consistent width (1000px) while maintaining aspect ratio
                 target_width = 1000
-                if image.width > target_width:
+                if image.width != target_width:
                     ratio = target_width / image.width
                     new_height = int(image.height * ratio)
                     image = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
-                    logger.info(f"📐 Resized image to {target_width}x{new_height}px")
+                    action = "Resized" if image.width > target_width else "Upscaled"
+                    logger.info(f"📐 {action} image to {target_width}x{new_height}px")
 
                 # Save as JPEG (always)
                 output = BytesIO()
