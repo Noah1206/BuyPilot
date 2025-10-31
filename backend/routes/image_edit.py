@@ -126,6 +126,133 @@ def inpaint_status():
         }), 500
 
 
+@bp.route('/api/image/remove-text', methods=['POST'])
+def remove_image_text():
+    """
+    이미지에서 텍스트 영역만 제거하고 배경으로 자연스럽게 채움 (Inpainting)
+
+    Body: {
+        image_url: string  // 이미지 URL
+    }
+
+    Returns: {
+        ok: boolean,
+        data: {
+            removed_text: string,  // 제거된 텍스트
+            result_image: string (base64)
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        image_url = data.get('image_url')
+
+        if not image_url:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'MISSING_DATA',
+                    'message': 'image_url is required'
+                }
+            }), 400
+
+        logger.info(f"🧹 Removing text from image: {image_url}")
+
+        # Download image
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+        image = Image.open(BytesIO(response.content))
+
+        # Import dependencies
+        try:
+            import easyocr
+            import numpy as np
+            import cv2
+        except ImportError as e:
+            logger.error(f"❌ Missing dependency: {str(e)}")
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'DEPENDENCY_ERROR',
+                    'message': f'Missing required library: {str(e)}'
+                }
+            }), 500
+
+        # Initialize EasyOCR reader
+        reader = easyocr.Reader(['ch_sim', 'en'], gpu=False)
+
+        # Convert PIL to numpy array
+        img_array = np.array(image)
+
+        # Detect text regions
+        results = reader.readtext(img_array)
+
+        if not results:
+            logger.info("ℹ️ No text detected in image")
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'removed_text': '',
+                    'result_image': f'data:image/png;base64,{image_url}'  # Return original
+                }
+            }), 200
+
+        # Extract detected text for logging
+        removed_texts = [text for (bbox, text, prob) in results]
+        removed_text = '\n'.join(removed_texts)
+        logger.info(f"📝 Detected text to remove: {removed_text[:100]}...")
+
+        # Create mask for text regions
+        mask = np.zeros(img_array.shape[:2], dtype=np.uint8)
+
+        for (bbox, text, prob) in results:
+            # Get bounding box coordinates
+            (top_left, top_right, bottom_right, bottom_left) = bbox
+
+            # Convert to integer coordinates
+            pts = np.array([top_left, top_right, bottom_right, bottom_left], dtype=np.int32)
+
+            # Draw filled polygon on mask (white = area to inpaint)
+            cv2.fillPoly(mask, [pts], 255)
+
+        # Convert RGB to BGR for OpenCV
+        img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+
+        # Apply inpainting (Navier-Stokes based method for natural fill)
+        inpainted = cv2.inpaint(img_bgr, mask, inpaintRadius=7, flags=cv2.INPAINT_NS)
+
+        # Convert back to RGB
+        result_rgb = cv2.cvtColor(inpainted, cv2.COLOR_BGR2RGB)
+        result_image = Image.fromarray(result_rgb)
+
+        # Convert result to base64
+        buffered = BytesIO()
+        result_image.save(buffered, format="PNG")
+        result_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+        logger.info("✅ Text removal completed")
+
+        return jsonify({
+            'ok': True,
+            'data': {
+                'removed_text': removed_text,
+                'result_image': f'data:image/png;base64,{result_base64}'
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Text removal failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'TEXT_REMOVAL_ERROR',
+                'message': str(e)
+            }
+        }), 500
+
+
 @bp.route('/api/image/translate', methods=['POST'])
 def translate_image_text():
     """

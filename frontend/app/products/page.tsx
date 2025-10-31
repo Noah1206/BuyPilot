@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore } from '@/lib/api'
 import Header from '@/components/Header'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload } from 'lucide-react'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
 interface Product {
@@ -46,6 +46,7 @@ export default function ProductsPage() {
   const [zoom, setZoom] = useState(60)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [translating, setTranslating] = useState(false)
+  const [removingText, setRemovingText] = useState(false)
 
   useEffect(() => {
     loadProducts()
@@ -143,6 +144,47 @@ export default function ProductsPage() {
       toast('번역 중 오류가 발생했습니다.', 'error')
     } finally {
       setTranslating(false)
+    }
+  }
+
+  const removeTextFromImage = async () => {
+    if (!editingProduct || selectedImageIndex === undefined) return
+
+    setRemovingText(true)
+
+    try {
+      // Get current image URL based on edit mode
+      const currentImages = editMode === 'main-image' ? editData.allImages : editData.descImages
+      const imageUrl = normalizeImageUrl(currentImages[selectedImageIndex])
+
+      const response = await fetch('/api/image/remove-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: imageUrl }),
+      })
+
+      const result = await response.json()
+
+      if (result.ok && result.data?.result_image) {
+        // Replace current image with text-removed version
+        const newImages = [...currentImages]
+        newImages[selectedImageIndex] = result.data.result_image
+
+        if (editMode === 'main-image') {
+          setEditData({ ...editData, allImages: newImages, mainImage: result.data.result_image })
+        } else {
+          setEditData({ ...editData, descImages: newImages })
+        }
+
+        const removedCount = result.data.removed_text ? result.data.removed_text.split('\n').length : 0
+        toast(`자막 제거 완료! (${removedCount}개 텍스트 제거됨)`)
+      } else {
+        toast(result.error?.message || '자막 제거 실패', 'error')
+      }
+    } catch (err) {
+      toast('자막 제거 중 오류가 발생했습니다.', 'error')
+    } finally {
+      setRemovingText(false)
     }
   }
 
@@ -1021,6 +1063,21 @@ export default function ProductsPage() {
                         {translating ? '번역 중...' : '원클릭 번역'}
                       </div>
                       <div className="text-xs text-slate-500">(4)</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={removeTextFromImage}
+                    className="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-blue-500 transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={removingText}
+                  >
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Eraser size={18} className={`text-blue-500 ${removingText ? 'animate-pulse' : ''}`} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-sm text-slate-900">
+                        {removingText ? '제거 중...' : '자막 제거'}
+                      </div>
+                      <div className="text-xs text-slate-500">(5)</div>
                     </div>
                   </button>
                   <button className="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-orange-500 transition-all flex items-center gap-3">
