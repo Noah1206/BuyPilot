@@ -293,7 +293,12 @@ export default function ProductsPage() {
       const updateData: any = {}
 
       if (editMode === 'main-image') {
+        // Save both main image and all images (for translated/edited images)
         updateData.image_url = editData.mainImage
+        updateData.data = {
+          ...editingProduct.data,
+          images: editData.allImages  // Save all edited images
+        }
       } else if (editMode === 'detail-images') {
         updateData.data = {
           ...editingProduct.data,
