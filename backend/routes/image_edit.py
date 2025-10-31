@@ -129,16 +129,16 @@ def inpaint_status():
 @bp.route('/api/image/remove-text', methods=['POST'])
 def remove_image_text():
     """
-    이미지에서 텍스트 영역만 제거하고 배경으로 자연스럽게 채움 (Inpainting)
+    사용자가 그린 마스크 영역을 Inpainting으로 제거
 
     Body: {
-        image_url: string  // 이미지 URL
+        image_url: string,  // 원본 이미지 URL
+        mask_data: string   // 사용자가 그린 마스크 (base64)
     }
 
     Returns: {
         ok: boolean,
         data: {
-            removed_text: string,  // 제거된 텍스트
             result_image: string (base64)
         }
     }
@@ -146,26 +146,21 @@ def remove_image_text():
     try:
         data = request.get_json()
         image_url = data.get('image_url')
+        mask_data = data.get('mask_data')
 
-        if not image_url:
+        if not image_url or not mask_data:
             return jsonify({
                 'ok': False,
                 'error': {
                     'code': 'MISSING_DATA',
-                    'message': 'image_url is required'
+                    'message': 'image_url and mask_data are required'
                 }
             }), 400
 
-        logger.info(f"🧹 Removing text from image: {image_url}")
-
-        # Download image
-        response = requests.get(image_url, timeout=30)
-        response.raise_for_status()
-        image = Image.open(BytesIO(response.content))
+        logger.info(f"🧹 Removing masked area from image")
 
         # Import dependencies
         try:
-            import easyocr
             import numpy as np
             import cv2
         except ImportError as e:
@@ -178,48 +173,33 @@ def remove_image_text():
                 }
             }), 500
 
-        # Initialize EasyOCR reader
-        reader = easyocr.Reader(['ch_sim', 'en'], gpu=False)
+        # Download original image
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+        image = Image.open(BytesIO(response.content))
 
-        # Convert PIL to numpy array
+        # Convert PIL to numpy array (RGB)
         img_array = np.array(image)
 
-        # Detect text regions
-        results = reader.readtext(img_array)
+        # Decode mask from base64
+        mask_base64 = mask_data.split(',')[1] if ',' in mask_data else mask_data
+        mask_bytes = base64.b64decode(mask_base64)
+        mask_image = Image.open(BytesIO(mask_bytes))
 
-        if not results:
-            logger.info("ℹ️ No text detected in image")
-            return jsonify({
-                'ok': True,
-                'data': {
-                    'removed_text': '',
-                    'result_image': f'data:image/png;base64,{image_url}'  # Return original
-                }
-            }), 200
+        # Resize mask to match image size
+        mask_image = mask_image.resize(image.size, Image.LANCZOS)
 
-        # Extract detected text for logging
-        removed_texts = [text for (bbox, text, prob) in results]
-        removed_text = '\n'.join(removed_texts)
-        logger.info(f"📝 Detected text to remove: {removed_text[:100]}...")
+        # Convert mask to grayscale numpy array
+        mask_array = np.array(mask_image.convert('L'))
 
-        # Create mask for text regions
-        mask = np.zeros(img_array.shape[:2], dtype=np.uint8)
-
-        for (bbox, text, prob) in results:
-            # Get bounding box coordinates
-            (top_left, top_right, bottom_right, bottom_left) = bbox
-
-            # Convert to integer coordinates
-            pts = np.array([top_left, top_right, bottom_right, bottom_left], dtype=np.int32)
-
-            # Draw filled polygon on mask (white = area to inpaint)
-            cv2.fillPoly(mask, [pts], 255)
+        # Threshold to create binary mask (white = remove area)
+        _, mask_binary = cv2.threshold(mask_array, 10, 255, cv2.THRESH_BINARY)
 
         # Convert RGB to BGR for OpenCV
         img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
-        # Apply inpainting (Navier-Stokes based method for natural fill)
-        inpainted = cv2.inpaint(img_bgr, mask, inpaintRadius=7, flags=cv2.INPAINT_NS)
+        # Apply inpainting (Telea algorithm for better quality)
+        inpainted = cv2.inpaint(img_bgr, mask_binary, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
 
         # Convert back to RGB
         result_rgb = cv2.cvtColor(inpainted, cv2.COLOR_BGR2RGB)
@@ -230,24 +210,23 @@ def remove_image_text():
         result_image.save(buffered, format="PNG")
         result_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-        logger.info("✅ Text removal completed")
+        logger.info("✅ Inpainting completed")
 
         return jsonify({
             'ok': True,
             'data': {
-                'removed_text': removed_text,
                 'result_image': f'data:image/png;base64,{result_base64}'
             }
         }), 200
 
     except Exception as e:
-        logger.error(f"❌ Text removal failed: {str(e)}")
+        logger.error(f"❌ Inpainting failed: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
             'ok': False,
             'error': {
-                'code': 'TEXT_REMOVAL_ERROR',
+                'code': 'INPAINTING_ERROR',
                 'message': str(e)
             }
         }), 500

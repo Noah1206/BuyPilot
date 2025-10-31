@@ -47,10 +47,25 @@ export default function ProductsPage() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [translating, setTranslating] = useState(false)
   const [removingText, setRemovingText] = useState(false)
+  const [isDrawingMode, setIsDrawingMode] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [maskCanvas, setMaskCanvas] = useState<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
     loadProducts()
   }, [page, searchQuery])
+
+  useEffect(() => {
+    // Resize canvas to match image size
+    if (isDrawingMode) {
+      const img = document.getElementById('main-image-canvas') as HTMLImageElement
+      const canvas = document.getElementById('mask-canvas') as HTMLCanvasElement
+      if (img && canvas) {
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+      }
+    }
+  }, [isDrawingMode, editData.mainImage])
 
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
     setShowToast({ message, type })
@@ -147,8 +162,32 @@ export default function ProductsPage() {
     }
   }
 
-  const removeTextFromImage = async () => {
-    if (!editingProduct || selectedImageIndex === undefined) return
+  const startDrawingMode = () => {
+    setIsDrawingMode(true)
+    setMaskCanvas(null)
+    toast('마우스로 제거할 영역을 그려주세요')
+  }
+
+  const cancelDrawingMode = () => {
+    setIsDrawingMode(false)
+    setMaskCanvas(null)
+    toast('자막 제거 취소')
+  }
+
+  const clearMask = () => {
+    const canvas = document.getElementById('mask-canvas') as HTMLCanvasElement
+    if (canvas) {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        setMaskCanvas(null)
+      }
+    }
+    toast('마스크 초기화')
+  }
+
+  const applyTextRemoval = async () => {
+    if (!editingProduct || selectedImageIndex === undefined || !maskCanvas) return
 
     setRemovingText(true)
 
@@ -157,10 +196,16 @@ export default function ProductsPage() {
       const currentImages = editMode === 'main-image' ? editData.allImages : editData.descImages
       const imageUrl = normalizeImageUrl(currentImages[selectedImageIndex])
 
+      // Convert mask canvas to base64
+      const maskDataUrl = maskCanvas.toDataURL('image/png')
+
       const response = await fetch('/api/image/remove-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: imageUrl }),
+        body: JSON.stringify({
+          image_url: imageUrl,
+          mask_data: maskDataUrl
+        }),
       })
 
       const result = await response.json()
@@ -176,8 +221,9 @@ export default function ProductsPage() {
           setEditData({ ...editData, descImages: newImages })
         }
 
-        const removedCount = result.data.removed_text ? result.data.removed_text.split('\n').length : 0
-        toast(`자막 제거 완료! (${removedCount}개 텍스트 제거됨)`)
+        toast('자막 제거 완료!')
+        setIsDrawingMode(false)
+        setMaskCanvas(null)
       } else {
         toast(result.error?.message || '자막 제거 실패', 'error')
       }
@@ -1066,16 +1112,16 @@ export default function ProductsPage() {
                     </div>
                   </button>
                   <button
-                    onClick={removeTextFromImage}
+                    onClick={startDrawingMode}
                     className="w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:bg-slate-50 hover:border-blue-500 transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={removingText}
+                    disabled={isDrawingMode || removingText}
                   >
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Eraser size={18} className={`text-blue-500 ${removingText ? 'animate-pulse' : ''}`} />
+                      <Eraser size={18} className={`text-blue-500 ${isDrawingMode ? 'animate-pulse' : ''}`} />
                     </div>
                     <div>
                       <div className="font-medium text-sm text-slate-900">
-                        {removingText ? '제거 중...' : '자막 제거'}
+                        {isDrawingMode ? '영역 그리는 중...' : '자막 제거'}
                       </div>
                       <div className="text-xs text-slate-500">(5)</div>
                     </div>
@@ -1116,12 +1162,85 @@ export default function ProductsPage() {
                 editMode === 'detail-images' ? 'items-start justify-start' : 'items-center justify-center'
               }`}>
                 {editMode === 'main-image' && (
-                  <div className="bg-white rounded-2xl shadow-xl border border-slate-200" style={{ maxWidth: `${zoom}%` }}>
+                  <div className="bg-white rounded-2xl shadow-xl border border-slate-200 relative" style={{ maxWidth: `${zoom}%` }}>
                     <img
                       src={editData.mainImage}
                       alt="Main"
                       className="w-full h-auto rounded-xl"
+                      id="main-image-canvas"
                     />
+                    {isDrawingMode && (
+                      <>
+                        <canvas
+                          id="mask-canvas"
+                          className="absolute top-0 left-0 w-full h-full rounded-xl cursor-crosshair"
+                          style={{
+                            imageRendering: 'pixelated',
+                            backgroundColor: 'rgba(255, 0, 0, 0.15)'
+                          }}
+                          onMouseDown={(e) => {
+                            setIsDrawing(true)
+                            const canvas = e.currentTarget
+                            const rect = canvas.getBoundingClientRect()
+                            const scaleX = canvas.width / rect.width
+                            const scaleY = canvas.height / rect.height
+                            const x = (e.clientX - rect.left) * scaleX
+                            const y = (e.clientY - rect.top) * scaleY
+                            const ctx = canvas.getContext('2d')
+                            if (ctx) {
+                              ctx.beginPath()
+                              ctx.moveTo(x, y)
+                            }
+                          }}
+                          onMouseMove={(e) => {
+                            if (!isDrawing) return
+                            const canvas = e.currentTarget
+                            const rect = canvas.getBoundingClientRect()
+                            const scaleX = canvas.width / rect.width
+                            const scaleY = canvas.height / rect.height
+                            const x = (e.clientX - rect.left) * scaleX
+                            const y = (e.clientY - rect.top) * scaleY
+                            const ctx = canvas.getContext('2d')
+                            if (ctx) {
+                              ctx.strokeStyle = 'white'
+                              ctx.lineWidth = 30
+                              ctx.lineCap = 'round'
+                              ctx.lineJoin = 'round'
+                              ctx.lineTo(x, y)
+                              ctx.stroke()
+                            }
+                          }}
+                          onMouseUp={() => {
+                            setIsDrawing(false)
+                            const canvas = document.getElementById('mask-canvas') as HTMLCanvasElement
+                            if (canvas) setMaskCanvas(canvas)
+                          }}
+                          onMouseLeave={() => setIsDrawing(false)}
+                        />
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                          <button
+                            onClick={clearMask}
+                            disabled={!maskCanvas}
+                            className="px-6 py-3 bg-yellow-500 text-white rounded-lg font-medium shadow-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          >
+                            초기화
+                          </button>
+                          <button
+                            onClick={applyTextRemoval}
+                            disabled={removingText || !maskCanvas}
+                            className="px-6 py-3 bg-blue-500 text-white rounded-lg font-medium shadow-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          >
+                            {removingText ? '제거 중...' : '적용'}
+                          </button>
+                          <button
+                            onClick={cancelDrawingMode}
+                            className="px-6 py-3 bg-slate-500 text-white rounded-lg font-medium shadow-lg hover:bg-slate-600 transition-all"
+                          >
+                            취소
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
