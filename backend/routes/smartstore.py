@@ -90,16 +90,18 @@ def register_products():
         use_aws_proxy = os.getenv('USE_AWS_PROXY', 'false').lower() == 'true'
 
         if use_aws_proxy:
-            logger.info("🔄 Proxying Naver API request to AWS EC2...")
+            proxy_url = f"{AWS_EC2_ENDPOINT}/api/v1/smartstore/register-products"
+            logger.info(f"🔄 Proxying Naver API request to AWS EC2: {proxy_url}")
             try:
                 # Forward entire request to AWS EC2
                 aws_response = requests.post(
-                    f"{AWS_EC2_ENDPOINT}/api/v1/smartstore/register-products",
+                    proxy_url,
                     json=request.get_json(force=True),
                     headers={'Content-Type': 'application/json'},
                     timeout=180  # 3 minutes for product registration
                 )
 
+                logger.info(f"✅ AWS EC2 response: status={aws_response.status_code}, body={aws_response.text[:200]}")
                 # Return AWS EC2 response
                 return jsonify(aws_response.json()), aws_response.status_code
 
