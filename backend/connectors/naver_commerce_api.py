@@ -203,15 +203,17 @@ class NaverCommerceAPI:
                 # Upload to Naver - Use correct endpoint
                 endpoint = '/external/v1/product-images/upload'
 
-                # Check if image is WebP (Naver doesn't support WebP)
+                # Check file type
                 filename = image_url.split('/')[-1].split('?')[0]
                 is_webp = filename.endswith('.webp') or img_response.headers.get('Content-Type') == 'image/webp'
+                is_png = filename.endswith('.png') or img_response.headers.get('Content-Type') == 'image/png'
 
                 # Always process image for consistency
                 image = Image.open(BytesIO(img_response.content))
 
-                # Convert RGBA to RGB if needed
+                # Convert RGBA to RGB if needed (PNG often has RGBA)
                 if image.mode in ('RGBA', 'LA', 'P'):
+                    logger.info(f"🔄 Converting {image.mode} to RGB for JPEG compatibility...")
                     background = Image.new('RGB', image.size, (255, 255, 255))
                     if image.mode == 'P':
                         image = image.convert('RGBA')
@@ -226,16 +228,20 @@ class NaverCommerceAPI:
                     image = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
                     logger.info(f"📐 Resized image to {target_width}x{new_height}px")
 
-                # Save as JPEG
+                # Save as JPEG (always)
                 output = BytesIO()
                 image.save(output, format='JPEG', quality=95)
                 image_content = output.getvalue()
                 content_type = 'image/jpeg'
 
+                # Update filename to .jpg
                 if is_webp:
                     filename = filename.replace('.webp', '.jpg')
                     logger.info(f"✅ Converted WebP to JPEG: {filename}")
-                elif not any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
+                elif is_png:
+                    filename = filename.replace('.png', '.jpg')
+                    logger.info(f"✅ Converted PNG to JPEG: {filename}")
+                elif not any(filename.endswith(ext) for ext in ['.jpg', '.jpeg']):
                     filename = 'image.jpg'
 
                 files = {'imageFiles': (filename, image_content, content_type)}
