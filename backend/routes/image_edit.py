@@ -210,8 +210,13 @@ def translate_image_text():
 
         translated_texts = []
         for text in original_texts:
-            translated = translator.translate(text, source='zh', target='ko')
-            translated_texts.append(translated)
+            # Use translate_product_title for Chinese to Korean translation
+            translated = translator.translate_product_title(text)
+            if translated:
+                translated_texts.append(translated)
+            else:
+                # Fallback to original text if translation fails
+                translated_texts.append(text)
 
         translated_text = '\n'.join(translated_texts)
 
