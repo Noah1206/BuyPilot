@@ -333,6 +333,13 @@ class NaverCommerceAPI:
 
         except Exception as e:
             logger.error(f"❌ Failed to register product: {str(e)}")
+            # Log detailed error response if available
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_details = e.response.json()
+                    logger.error(f"❌ Naver API Error Response: {error_details}")
+                except:
+                    logger.error(f"❌ Naver API Response Text: {e.response.text[:1000]}")
             return {
                 'success': False,
                 'error': str(e)
