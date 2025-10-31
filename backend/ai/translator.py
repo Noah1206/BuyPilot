@@ -21,8 +21,32 @@ class AITranslator:
             self.client = None
         else:
             genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel('gemini-2.5-flash')
-            logger.info("✅ AI Translator initialized (Gemini 2.5 Flash)")
+
+            # Configure safety settings to allow translation of all content
+            safety_settings = [
+                {
+                    "category": "HARM_CATEGORY_HARASSMENT",
+                    "threshold": "BLOCK_NONE"
+                },
+                {
+                    "category": "HARM_CATEGORY_HATE_SPEECH",
+                    "threshold": "BLOCK_NONE"
+                },
+                {
+                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    "threshold": "BLOCK_NONE"
+                },
+                {
+                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    "threshold": "BLOCK_NONE"
+                }
+            ]
+
+            self.client = genai.GenerativeModel(
+                'gemini-2.5-flash',
+                safety_settings=safety_settings
+            )
+            logger.info("✅ AI Translator initialized (Gemini 2.5 Flash with relaxed safety)")
 
     def translate_korean_to_chinese(self, korean_text: str) -> Optional[str]:
         """
@@ -54,6 +78,12 @@ Korean text: {korean_text}
 Chinese translation:"""
 
             response = self.client.generate_content(prompt)
+
+            # Safely access response text
+            if not response or not response.parts:
+                logger.warning(f"⚠️ Empty response from Gemini (finish_reason: {response.candidates[0].finish_reason if response.candidates else 'unknown'})")
+                return korean_text
+
             chinese_text = response.text.strip()
             logger.info(f"✅ Korean→Chinese: {chinese_text[:50]}...")
             return chinese_text
@@ -94,13 +124,19 @@ Chinese title: {chinese_title}
 Korean translation:"""
 
             response = self.client.generate_content(prompt)
+
+            # Safely access response text
+            if not response or not response.parts:
+                logger.warning(f"⚠️ Empty response from Gemini (finish_reason: {response.candidates[0].finish_reason if response.candidates else 'unknown'})")
+                return chinese_title  # Return original if translation blocked
+
             korean_title = response.text.strip()
             logger.info(f"✅ Translated title: {korean_title[:50]}...")
             return korean_title
 
         except Exception as e:
             logger.error(f"❌ Translation failed: {str(e)}")
-            return None
+            return chinese_title  # Return original text instead of None
 
     def translate_product_description(self, chinese_desc: str) -> Optional[str]:
         """
@@ -139,13 +175,19 @@ Chinese description:
 Korean translation:"""
 
             response = self.client.generate_content(prompt)
+
+            # Safely access response text
+            if not response or not response.parts:
+                logger.warning(f"⚠️ Empty response from Gemini (finish_reason: {response.candidates[0].finish_reason if response.candidates else 'unknown'})")
+                return chinese_desc  # Return original if translation blocked
+
             korean_desc = response.text.strip()
             logger.info(f"✅ Translated description ({len(korean_desc)} chars)")
             return korean_desc
 
         except Exception as e:
             logger.error(f"❌ Description translation failed: {str(e)}")
-            return None
+            return chinese_desc  # Return original text instead of None
 
     def translate_product(self, product_data: Dict) -> Dict:
         """
