@@ -439,11 +439,17 @@ def update_product(product_id):
 
                 # Handle images array (accept base64 directly)
                 if 'images' in update_data and isinstance(update_data['images'], list):
-                    logger.info(f"✅ Updated {len(update_data['images'])} images")
+                    base64_count = sum(1 for img in update_data['images'] if img and img.startswith('data:image'))
+                    logger.info(f"✅ Updated {len(update_data['images'])} images ({base64_count} base64, {len(update_data['images']) - base64_count} URLs)")
+                    # Log first image type for debugging
+                    if len(update_data['images']) > 0:
+                        first_img = update_data['images'][0]
+                        logger.info(f"📝 First image type: {'base64' if first_img.startswith('data:image') else 'URL'} ({len(first_img)} chars)")
 
                 # Handle desc_imgs array (accept base64 directly)
                 if 'desc_imgs' in update_data and isinstance(update_data['desc_imgs'], list):
-                    logger.info(f"✅ Updated {len(update_data['desc_imgs'])} detail images")
+                    base64_count = sum(1 for img in update_data['desc_imgs'] if img and img.startswith('data:image'))
+                    logger.info(f"✅ Updated {len(update_data['desc_imgs'])} detail images ({base64_count} base64, {len(update_data['desc_imgs']) - base64_count} URLs)")
 
                 # Handle thumbnail and detail images separately
                 if 'thumbnail_image_url' in update_data:
@@ -462,7 +468,18 @@ def update_product(product_id):
 
             db.commit()
 
-            logger.info(f"✅ Product updated: {product_id}")
+            # Verify what was saved to database
+            if product.data and 'images' in product.data:
+                saved_images = product.data['images']
+                if isinstance(saved_images, list) and len(saved_images) > 0:
+                    first_saved = saved_images[0]
+                    is_base64 = first_saved.startswith('data:image') if first_saved else False
+                    logger.info(f"✅ Product updated: {product_id}")
+                    logger.info(f"📦 Saved to DB: {len(saved_images)} images, first is {'base64' if is_base64 else 'URL'} ({len(first_saved)} chars)")
+                else:
+                    logger.info(f"✅ Product updated: {product_id} (no images in data)")
+            else:
+                logger.info(f"✅ Product updated: {product_id}")
 
             return jsonify({
                 'ok': True,
