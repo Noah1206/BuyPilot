@@ -143,7 +143,7 @@ def register_products():
         with get_db() as db:
             # Fetch settings from database
             settings_rows = db.execute(text('SELECT key, value FROM settings')).fetchall()
-            db_settings = {row['key']: row['value'] for row in settings_rows}
+            db_settings = {row[0]: row[1] for row in settings_rows}
 
         # Get settings (from request body or database)
         settings = data.get('settings', {})
