@@ -345,7 +345,7 @@ class NaverCommerceAPI:
         stock: int,
         image_ids: List[str],
         detail_html: str,
-        category_id: str = "50008188",  # Default: 신발/슬리퍼 (패션잡화)
+        category_id: str = "50000790",  # Valid leaf category from seller center
         origin_area: str = "0801",  # China
         brand: str = "",
         manufacturer: str = "",
