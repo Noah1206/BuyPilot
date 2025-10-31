@@ -50,6 +50,7 @@ export default function ProductsPage() {
   const [isDrawingMode, setIsDrawingMode] = useState(false)
   const [isDrawing, setIsDrawing] = useState(false)
   const [maskCanvas, setMaskCanvas] = useState<HTMLCanvasElement | null>(null)
+  const [brushSize, setBrushSize] = useState(30)
 
   useEffect(() => {
     loadProducts()
@@ -241,9 +242,13 @@ export default function ProductsPage() {
     setSelectedImageIndex(0)
 
     if (mode === 'main-image') {
+      // Use edited images from DB if available (they include base64 edited images)
+      const allImages = product.data?.images || []
+      const mainImage = allImages.length > 0 ? allImages[0] : getValidImageUrl(product)
+
       setEditData({
-        mainImage: getValidImageUrl(product),
-        allImages: product.data?.images || []
+        mainImage: mainImage,
+        allImages: allImages.length > 0 ? allImages : [getValidImageUrl(product)]
       })
     } else if (mode === 'detail-images') {
       setEditData({
@@ -1208,7 +1213,7 @@ export default function ProductsPage() {
                             const ctx = canvas.getContext('2d')
                             if (ctx) {
                               ctx.strokeStyle = 'white'
-                              ctx.lineWidth = 30
+                              ctx.lineWidth = brushSize
                               ctx.lineCap = 'round'
                               ctx.lineJoin = 'round'
                               ctx.lineTo(x, y)
@@ -1222,27 +1227,47 @@ export default function ProductsPage() {
                           }}
                           onMouseLeave={() => setIsDrawing(false)}
                         />
-                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                          <button
-                            onClick={clearMask}
-                            disabled={!maskCanvas}
-                            className="px-6 py-3 bg-yellow-500 text-white rounded-lg font-medium shadow-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                          >
-                            초기화
-                          </button>
-                          <button
-                            onClick={applyTextRemoval}
-                            disabled={removingText || !maskCanvas}
-                            className="px-6 py-3 bg-blue-500 text-white rounded-lg font-medium shadow-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                          >
-                            {removingText ? '제거 중...' : '적용'}
-                          </button>
-                          <button
-                            onClick={cancelDrawingMode}
-                            className="px-6 py-3 bg-slate-500 text-white rounded-lg font-medium shadow-lg hover:bg-slate-600 transition-all"
-                          >
-                            취소
-                          </button>
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col gap-3">
+                          {/* Brush size control */}
+                          <div className="bg-white/95 backdrop-blur-sm px-6 py-3 rounded-lg shadow-lg flex items-center gap-4">
+                            <span className="text-sm font-medium text-slate-700">브러시 크기:</span>
+                            <input
+                              type="range"
+                              min="10"
+                              max="100"
+                              value={brushSize}
+                              onChange={(e) => setBrushSize(Number(e.target.value))}
+                              className="w-48 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                              style={{
+                                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((brushSize - 10) / 90) * 100}%, #e2e8f0 ${((brushSize - 10) / 90) * 100}%, #e2e8f0 100%)`
+                              }}
+                            />
+                            <span className="text-sm font-bold text-slate-900 w-10">{brushSize}px</span>
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={clearMask}
+                              disabled={!maskCanvas}
+                              className="px-6 py-3 bg-yellow-500 text-white rounded-lg font-medium shadow-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            >
+                              초기화
+                            </button>
+                            <button
+                              onClick={applyTextRemoval}
+                              disabled={removingText || !maskCanvas}
+                              className="px-6 py-3 bg-blue-500 text-white rounded-lg font-medium shadow-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            >
+                              {removingText ? '제거 중...' : '적용'}
+                            </button>
+                            <button
+                              onClick={cancelDrawingMode}
+                              className="px-6 py-3 bg-slate-500 text-white rounded-lg font-medium shadow-lg hover:bg-slate-600 transition-all"
+                            >
+                              취소
+                            </button>
+                          </div>
                         </div>
                       </>
                     )}
