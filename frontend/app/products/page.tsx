@@ -334,7 +334,7 @@ export default function ProductsPage() {
   }
 
   const normalizeImageUrl = (url: string): string => {
-    if (!url || url.startsWith('blob:')) return url
+    if (!url || url.startsWith('blob:') || url.startsWith('data:')) return url
     if (url.startsWith('//')) return `https:${url}`
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return `https://${url}`
