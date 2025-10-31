@@ -5,13 +5,23 @@ Downloads product images from Taobao and optimizes them
 import os
 import logging
 import hashlib
+import base64
 from typing import List, Optional
 from urllib.parse import urlparse
 import requests
 from PIL import Image
 from io import BytesIO
+import cloudinary
+import cloudinary.uploader
 
 logger = logging.getLogger(__name__)
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET')
+)
 
 
 class ImageService:
@@ -252,6 +262,37 @@ class ImageService:
 
         logger.info(f"✅ Downloaded {len(local_paths)}/{len(urls)} images successfully")
         return local_paths
+
+    def upload_base64_image(self, base64_data: str, public_id: str) -> Optional[str]:
+        """
+        Upload base64 image to Cloudinary
+
+        Args:
+            base64_data: Base64 encoded image (with or without data:image prefix)
+            public_id: Public ID for the image in Cloudinary
+
+        Returns:
+            Cloudinary URL or None if upload failed
+        """
+        try:
+            logger.info(f"🔄 Uploading image to Cloudinary: {public_id}")
+
+            # Upload to Cloudinary
+            result = cloudinary.uploader.upload(
+                base64_data,
+                public_id=public_id,
+                folder="buypilot/products",
+                overwrite=True,
+                resource_type="image"
+            )
+
+            cloudinary_url = result.get('secure_url')
+            logger.info(f"✅ Image uploaded to Cloudinary: {cloudinary_url}")
+            return cloudinary_url
+
+        except Exception as e:
+            logger.error(f"❌ Failed to upload image to Cloudinary: {str(e)}")
+            return None
 
     def get_public_url(self, filepath: str, base_url: str = "") -> str:
         """
