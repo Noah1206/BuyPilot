@@ -220,9 +220,24 @@ def register_products():
                         failed_count += 1
                         continue
 
-                    # Step 2: Build detail HTML with description images + shipping notice
-                    logger.info("📝 Step 2/3: Building product detail HTML...")
-                    detail_html = _build_detail_html(product)
+                    # Step 2: Upload description images and build detail HTML
+                    logger.info("📝 Step 2/3: Uploading description images and building detail HTML...")
+
+                    # Upload description images to Naver
+                    desc_image_urls = []
+                    desc_images = product.data.get('downloaded_desc_imgs', [])
+                    if not desc_images:
+                        desc_images = product.data.get('desc_imgs', [])
+
+                    for desc_img_url in desc_images[:20]:  # Max 20 detail images
+                        try:
+                            uploaded_desc_img = naver_api.upload_image(desc_img_url)
+                            if uploaded_desc_img:
+                                desc_image_urls.append(uploaded_desc_img)
+                        except Exception as e:
+                            logger.warning(f"⚠️ Failed to upload description image {desc_img_url}: {str(e)}")
+
+                    detail_html = _build_detail_html_from_uploaded_images(desc_image_urls)
 
                     # Step 3: Prepare product data
                     logger.info("📦 Step 3/3: Registering product...")
@@ -320,28 +335,26 @@ def register_products():
         }), 500
 
 
-def _build_detail_html(product: Product) -> str:
+def _build_detail_html_from_uploaded_images(uploaded_image_urls: List[str]) -> str:
     """
-    Build HTML detail content with description images and shipping notice
+    Build HTML detail content from uploaded Naver image URLs
 
     Args:
-        product: Product model instance
+        uploaded_image_urls: List of Naver-uploaded image URLs
 
     Returns:
         HTML string for product detail page
     """
     html_parts = []
 
-    # Add description images (removed shipping notice - use relative path issue)
-    desc_images = product.data.get('downloaded_desc_imgs', [])
-    if not desc_images:
-        desc_images = product.data.get('desc_imgs', [])
-
-    if desc_images:
+    if uploaded_image_urls and len(uploaded_image_urls) > 0:
         html_parts.append('<div style="width: 100%;">')
-        for img_url in desc_images:
+        for img_url in uploaded_image_urls:
             html_parts.append(f'<img src="{img_url}" alt="상품 상세" style="max-width: 100%; height: auto; display: block;" />')
         html_parts.append('</div>')
+    else:
+        # Default content if no description images
+        html_parts.append('<div style="padding: 20px; text-align: center;">상품 상세 설명</div>')
 
     return '\n'.join(html_parts)
 
