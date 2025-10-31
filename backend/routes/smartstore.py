@@ -138,9 +138,15 @@ def register_products():
                 }
             }), 400
 
-        # Get settings
+        # Get settings from database
+        with get_db() as db:
+            # Fetch settings from database
+            settings_rows = db.execute('SELECT key, value FROM settings').fetchall()
+            db_settings = {row['key']: row['value'] for row in settings_rows}
+
+        # Get settings (from request body or database)
         settings = data.get('settings', {})
-        category_id = settings.get('category_id')  # Required: leaf category ID from seller center
+        category_id = settings.get('category_id') or db_settings.get('naver_category_id')  # Required
         stock_quantity = settings.get('stock_quantity', 999)
         origin_area = settings.get('origin_area', '0801')  # China
         brand = settings.get('brand', '')
