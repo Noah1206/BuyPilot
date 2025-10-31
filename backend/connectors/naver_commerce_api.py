@@ -171,41 +171,43 @@ class NaverCommerceAPI:
                 logger.error(f"Response: {e.response.text}")
             raise
 
-    def upload_image(self, image_url: str) -> Optional[str]:
+    def upload_image(self, image_url: str, max_retries: int = 3) -> Optional[str]:
         """
         Upload image to Naver and get image ID
-        Converts WebP to JPEG since Naver only supports JPEG/JPG/GIF/PNG/BMP
+        Converts WebP to JPEG, resizes to 1000px width for consistency
+        Retries on 502 errors
 
         Args:
             image_url: URL of image to upload
+            max_retries: Maximum retry attempts for 502 errors
 
         Returns:
             Naver image ID or None if failed
         """
-        try:
-            from PIL import Image
-            from io import BytesIO
+        import time
 
-            # Fix URL if scheme is missing
-            if not image_url.startswith(('http://', 'https://')):
-                image_url = f'https://{image_url}'
-                logger.info(f"🔧 Fixed image URL (added https://): {image_url}")
+        for attempt in range(max_retries):
+            try:
+                from PIL import Image
+                from io import BytesIO
 
-            # Download image
-            img_response = requests.get(image_url, timeout=30)
-            img_response.raise_for_status()
+                # Fix URL if scheme is missing
+                if not image_url.startswith(('http://', 'https://')):
+                    image_url = f'https://{image_url}'
+                    logger.info(f"🔧 Fixed image URL (added https://): {image_url}")
 
-            # Upload to Naver - Use correct endpoint
-            endpoint = '/external/v1/product-images/upload'
+                # Download image
+                img_response = requests.get(image_url, timeout=30)
+                img_response.raise_for_status()
 
-            # Check if image is WebP (Naver doesn't support WebP)
-            filename = image_url.split('/')[-1].split('?')[0]
-            is_webp = filename.endswith('.webp') or img_response.headers.get('Content-Type') == 'image/webp'
+                # Upload to Naver - Use correct endpoint
+                endpoint = '/external/v1/product-images/upload'
 
-            if is_webp:
-                logger.info(f"🔄 Converting WebP to JPEG for Naver compatibility...")
+                # Check if image is WebP (Naver doesn't support WebP)
+                filename = image_url.split('/')[-1].split('?')[0]
+                is_webp = filename.endswith('.webp') or img_response.headers.get('Content-Type') == 'image/webp'
 
-                # Convert WebP to JPEG
+                # Always process image for consistency
                 image = Image.open(BytesIO(img_response.content))
 
                 # Convert RGBA to RGB if needed
@@ -216,60 +218,76 @@ class NaverCommerceAPI:
                     background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
                     image = background
 
+                # Resize to consistent width (1000px) while maintaining aspect ratio
+                target_width = 1000
+                if image.width > target_width:
+                    ratio = target_width / image.width
+                    new_height = int(image.height * ratio)
+                    image = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
+                    logger.info(f"📐 Resized image to {target_width}x{new_height}px")
+
                 # Save as JPEG
                 output = BytesIO()
                 image.save(output, format='JPEG', quality=95)
                 image_content = output.getvalue()
                 content_type = 'image/jpeg'
-                filename = filename.replace('.webp', '.jpg')
 
-                logger.info(f"✅ Converted to JPEG: {filename}")
-            else:
-                image_content = img_response.content
-                content_type = img_response.headers.get('Content-Type', 'image/jpeg')
-                if not any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
+                if is_webp:
+                    filename = filename.replace('.webp', '.jpg')
+                    logger.info(f"✅ Converted WebP to JPEG: {filename}")
+                elif not any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
                     filename = 'image.jpg'
 
-            files = {'imageFiles': (filename, image_content, content_type)}
+                files = {'imageFiles': (filename, image_content, content_type)}
 
-            url = f"{self.BASE_URL}{endpoint}"
+                url = f"{self.BASE_URL}{endpoint}"
 
-            # Get valid OAuth 2.0 access token
-            access_token = self._get_access_token()
+                # Get valid OAuth 2.0 access token
+                access_token = self._get_access_token()
 
-            headers = {
-                'Authorization': f'Bearer {access_token}'
-            }
+                headers = {
+                    'Authorization': f'Bearer {access_token}'
+                }
 
-            response = requests.post(url, headers=headers, files=files, timeout=30)
+                response = requests.post(url, headers=headers, files=files, timeout=30)
 
-            # Log response for debugging
-            logger.info(f"🔍 Upload response status: {response.status_code}")
-            logger.info(f"🔍 Upload response body: {response.text[:500]}")
+                # Log response for debugging
+                logger.info(f"🔍 Upload response status: {response.status_code}")
+                logger.info(f"🔍 Upload response body: {response.text[:500]}")
 
-            response.raise_for_status()
+                response.raise_for_status()
 
-            result = response.json()
+                result = response.json()
 
-            # Extract image URL from Naver response
-            # Format: {"images":[{"url":"https://shop-phinf.pstatic.net/..."}]}
-            image_url = None
-            if 'images' in result and len(result['images']) > 0:
-                image_url = result['images'][0].get('url')
+                # Extract image URL from Naver response
+                # Format: {"images":[{"url":"https://shop-phinf.pstatic.net/..."}]}
+                image_url_result = None
+                if 'images' in result and len(result['images']) > 0:
+                    image_url_result = result['images'][0].get('url')
 
-            # Fallback to other possible fields
-            if not image_url:
-                image_url = result.get('imageId') or result.get('id') or result.get('url')
+                # Fallback to other possible fields
+                if not image_url_result:
+                    image_url_result = result.get('imageId') or result.get('id') or result.get('url')
 
-            logger.info(f"✅ Image uploaded successfully: {image_url}")
-            return image_url
+                logger.info(f"✅ Image uploaded successfully: {image_url_result}")
+                return image_url_result
 
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"❌ Failed to upload image (HTTP {e.response.status_code}): {e.response.text[:500]}")
-            return None
-        except Exception as e:
-            logger.error(f"❌ Failed to upload image: {str(e)}")
-            return None
+            except requests.exceptions.HTTPError as e:
+                # Retry on 502 Bad Gateway errors
+                if e.response.status_code == 502 and attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 2  # 2s, 4s, 6s
+                    logger.warning(f"⚠️ 502 error, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(wait_time)
+                    continue
+
+                logger.error(f"❌ Failed to upload image (HTTP {e.response.status_code}): {e.response.text[:500]}")
+                return None
+            except Exception as e:
+                logger.error(f"❌ Failed to upload image: {str(e)}")
+                return None
+
+        logger.error(f"❌ Failed to upload image after {max_retries} attempts")
+        return None
 
     def get_categories(self) -> Dict:
         """
