@@ -332,12 +332,7 @@ def _build_detail_html(product: Product) -> str:
     """
     html_parts = []
 
-    # Add shipping notice image first
-    html_parts.append('<div style="width: 100%; text-align: center;">')
-    html_parts.append('<img src="/shipping-notice.png" alt="배송 안내" style="max-width: 100%; height: auto;" />')
-    html_parts.append('</div>')
-
-    # Add description images
+    # Add description images (removed shipping notice - use relative path issue)
     desc_images = product.data.get('downloaded_desc_imgs', [])
     if not desc_images:
         desc_images = product.data.get('desc_imgs', [])
