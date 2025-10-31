@@ -16,6 +16,9 @@ urllib3==2.0.7
 # Image processing
 Pillow==10.4.0
 cloudinary==1.41.0
+easyocr==1.7.2
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
 
 # AI/ML
 google-generativeai==0.8.5
