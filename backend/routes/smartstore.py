@@ -14,6 +14,7 @@ from models import get_db, Product, SmartStoreOrder, SmartStoreOrderStatus, Talk
 from connectors.naver_commerce_api import get_naver_commerce_api
 from connectors.naver_talktalk_api import NaverTalkTalkAPI
 from services.image_service import get_image_service
+from ai.category_analyzer import get_category_analyzer
 
 bp = Blueprint('smartstore', __name__)
 logger = logging.getLogger(__name__)
@@ -60,6 +61,131 @@ def get_categories():
             'error': {
                 'code': 'INTERNAL_ERROR',
                 'message': 'Internal server error',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+@bp.route('/smartstore/suggest-category', methods=['POST'])
+def suggest_category():
+    """
+    Suggest appropriate Naver SmartStore category for a product using AI
+
+    Body: {
+        product_id: string (optional),
+        product_data: {
+            title: string (required),
+            price: number (optional),
+            desc: string (optional)
+        }
+    }
+
+    Returns: {
+        ok: bool,
+        data: {
+            suggestions: [
+                {
+                    category_id: string,
+                    category_path: string,
+                    confidence: number (0-100),
+                    reason: string
+                }
+            ]
+        }
+    }
+    """
+    try:
+        data = request.get_json(force=True)
+
+        # Get product data
+        product_data = data.get('product_data')
+        product_id = data.get('product_id')
+
+        if not product_data:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'product_data is required',
+                    'details': {}
+                }
+            }), 400
+
+        # If product_id is provided, fetch from database
+        if product_id:
+            with get_db() as db:
+                product = db.query(Product).filter(Product.id == product_id).first()
+                if product:
+                    # Merge database product data with provided data
+                    product_data = {
+                        'title': product_data.get('title', product.title),
+                        'price': product_data.get('price', product.price),
+                        'desc': product_data.get('desc', product.data.get('description', ''))
+                    }
+
+        # Validate required fields
+        if not product_data.get('title'):
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'product_data.title is required',
+                    'details': {}
+                }
+            }), 400
+
+        logger.info(f"🤖 Analyzing product for category suggestion: {product_data.get('title', '')[:50]}...")
+
+        # Get Naver categories
+        naver_api = get_naver_commerce_api()
+        categories_result = naver_api.get_categories()
+
+        if not categories_result.get('success'):
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'API_ERROR',
+                    'message': 'Failed to fetch Naver categories',
+                    'details': {'error': categories_result.get('error')}
+                }
+            }), 500
+
+        categories = categories_result.get('categories', [])
+
+        # Get AI suggestions
+        category_analyzer = get_category_analyzer()
+        suggestions = category_analyzer.suggest_categories(
+            product_data=product_data,
+            categories_tree=categories,
+            top_k=3
+        )
+
+        if not suggestions:
+            logger.warning("⚠️ No category suggestions generated")
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'suggestions': [],
+                    'message': 'Could not generate category suggestions. Please select manually.'
+                }
+            }), 200
+
+        logger.info(f"✅ Generated {len(suggestions)} category suggestions")
+
+        return jsonify({
+            'ok': True,
+            'data': {
+                'suggestions': suggestions
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Category suggestion error: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'INTERNAL_ERROR',
+                'message': 'Failed to generate category suggestions',
                 'details': {'error': str(e)}
             }
         }), 500

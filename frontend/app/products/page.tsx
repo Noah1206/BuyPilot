@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore } from '@/lib/api'
 import Header from '@/components/Header'
+import CategorySelectionModal from '@/components/CategorySelectionModal'
 import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
@@ -48,6 +49,10 @@ export default function ProductsPage() {
   const [translating, setTranslating] = useState(false)
   const [removingText, setRemovingText] = useState(false)
   const [isDrawingMode, setIsDrawingMode] = useState(false)
+
+  // Category selection modal state
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [maskCanvas, setMaskCanvas] = useState<HTMLCanvasElement | null>(null)
   const [brushSize, setBrushSize] = useState(30)
@@ -542,6 +547,14 @@ export default function ProductsPage() {
       return
     }
 
+    // Show category selection modal
+    setShowCategoryModal(true)
+  }
+
+  const handleCategoryConfirmed = async (categoryId: string) => {
+    setShowCategoryModal(false)
+    setSelectedCategoryId(categoryId)
+
     if (!confirm(`선택된 ${selectedProducts.size}개 상품을 스마트스토어에 등록하시겠습니까?`)) {
       return
     }
@@ -552,7 +565,13 @@ export default function ProductsPage() {
     try {
       // Load SmartStore settings from localStorage
       const settingsJson = localStorage.getItem('smartstore_settings')
-      const settings = settingsJson ? JSON.parse(settingsJson) : undefined
+      const baseSettings = settingsJson ? JSON.parse(settingsJson) : {}
+
+      // Merge with selected category
+      const settings = {
+        ...baseSettings,
+        category_id: categoryId
+      }
 
       const response = await registerToSmartStore(Array.from(selectedProducts), settings)
 
@@ -1462,6 +1481,16 @@ export default function ProductsPage() {
             {showToast.message}
           </div>
         </div>
+      )}
+
+      {/* Category Selection Modal */}
+      {showCategoryModal && selectedProducts.size > 0 && (
+        <CategorySelectionModal
+          isOpen={showCategoryModal}
+          productTitle={products.find(p => selectedProducts.has(p.id))?.title || '선택된 상품'}
+          onConfirm={handleCategoryConfirmed}
+          onCancel={() => setShowCategoryModal(false)}
+        />
       )}
     </div>
   )
