@@ -236,7 +236,11 @@ def register_products():
                     if not desc_images:
                         desc_images = product.data.get('desc_imgs', [])
 
-                    for desc_img_url in desc_images[:20]:  # Max 20 detail images
+                    # Add shipping notice as first image
+                    shipping_notice_url = f"{os.getenv('RAILWAY_PUBLIC_DOMAIN', 'https://buypilot-production.up.railway.app')}/shipping-notice.png"
+                    desc_images_with_notice = [shipping_notice_url] + list(desc_images[:19])  # shipping notice + 19 others = 20 max
+
+                    for desc_img_url in desc_images_with_notice:
                         try:
                             uploaded_desc_img = naver_api.upload_image(desc_img_url)
                             if uploaded_desc_img:
