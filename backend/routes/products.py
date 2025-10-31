@@ -464,6 +464,10 @@ def update_product(product_id):
                 product.data.update({k: v for k, v in update_data.items()
                                    if k not in ['thumbnail_image_url', 'detail_image_url']})
 
+                # Mark JSONB field as modified for SQLAlchemy to detect changes
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(product, 'data')
+
             product.updated_at = datetime.utcnow()
 
             db.commit()
