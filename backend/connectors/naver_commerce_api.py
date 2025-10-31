@@ -431,7 +431,9 @@ class NaverCommerceAPI:
                             "noRefundReason": "상품상세참조",
                             "qualityAssuranceStandard": "상품상세참조",
                             "compensationProcedure": "상품상세참조",
-                            "itemName": "상품상세참조"
+                            "itemName": "상품상세참조",
+                            "modelName": "상품상세참조",
+                            "manufacturer": manufacturer or "상품상세참조"
                         }
                     }
                 }
