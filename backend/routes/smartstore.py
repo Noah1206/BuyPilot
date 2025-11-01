@@ -237,14 +237,15 @@ def suggest_category():
 @bp.route('/smartstore/register-products', methods=['POST'])
 def register_products():
     """
-    Register selected products to Naver SmartStore
+    Register selected products to Naver SmartStore with AI-powered category auto-selection
 
     Railway (main) forwards Naver API requests to AWS EC2 (Elastic IP for whitelist)
 
     Body: {
         product_ids: string[],  # List of product IDs to register
         settings: {  # Optional SmartStore settings
-            category_id: string,
+            category_id: string,  # Optional - AI will auto-select if not provided
+            use_ai_category: boolean,  # Default: true - Enable AI category selection
             stock_quantity: number,
             origin_area: string,
             brand: string,
@@ -252,7 +253,36 @@ def register_products():
         }
     }
 
-    Returns: {ok: bool, data: {results: [...], summary: {...}}}
+    Returns: {
+        ok: bool,
+        data: {
+            results: [
+                {
+                    product_id: string,
+                    product_name: string,
+                    success: bool,
+                    smartstore_product_id: string,
+                    smartstore_url: string,
+                    ai_category: {  # Only present if AI was used
+                        category_id: string,
+                        category_path: string,
+                        confidence: number,
+                        reason: string
+                    }
+                }
+            ],
+            summary: {total: number, success: number, failed: number}
+        }
+    }
+
+    How AI Category Selection Works:
+    1. If use_ai_category=true (default) and category_id is NOT provided:
+       - AI analyzes each product's title/description
+       - Automatically selects best matching category (highest confidence)
+    2. If category_id IS provided:
+       - Uses provided category for all products (no AI)
+    3. If AI fails and no default category:
+       - Product registration fails with error
     """
     try:
         # Check if we should proxy to AWS EC2 (for Naver IP whitelist)
@@ -318,29 +348,37 @@ def register_products():
 
         # Get settings (from request body or database)
         settings = data.get('settings', {})
-        category_id = settings.get('category_id') or db_settings.get('naver_category_id')  # Required
+        default_category_id = settings.get('category_id') or db_settings.get('naver_category_id')  # Optional (AI will auto-select if not provided)
         stock_quantity = settings.get('stock_quantity', 999)
         origin_area = settings.get('origin_area', '0801')  # China
         brand = settings.get('brand', '')
         manufacturer = settings.get('manufacturer', '')
-
-        # Validate category_id (required)
-        if not category_id:
-            return jsonify({
-                'ok': False,
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': 'category_id is required in settings',
-                    'details': {
-                        'hint': 'Get valid category ID from Naver Seller Center Network tab: attribute-group?leafCategoryId=XXXXX'
-                    }
-                }
-            }), 400
+        use_ai_category = settings.get('use_ai_category', True)  # Enable AI auto-category by default
 
         logger.info(f"📦 Starting SmartStore registration for {len(product_ids)} products")
+        logger.info(f"🤖 AI auto-category: {'Enabled' if use_ai_category else 'Disabled'}")
+        if default_category_id:
+            logger.info(f"📋 Default category ID: {default_category_id}")
 
-        # Initialize Naver Commerce API
+        # Initialize Naver Commerce API and AI Category Analyzer
         naver_api = get_naver_commerce_api()
+        category_analyzer = None
+        naver_categories = None
+
+        if use_ai_category:
+            try:
+                category_analyzer = get_category_analyzer()
+                # Get Naver categories for AI analysis
+                categories_result = naver_api.get_categories()
+                if categories_result.get('success'):
+                    naver_categories = categories_result.get('categories', [])
+                    logger.info(f"✅ Loaded {len(naver_categories)} categories for AI analysis")
+                else:
+                    logger.warning("⚠️ Failed to load categories for AI, will use default category")
+                    use_ai_category = False
+            except Exception as e:
+                logger.warning(f"⚠️ AI category analyzer initialization failed: {str(e)}")
+                use_ai_category = False
 
         # Results tracking
         results = []
@@ -365,6 +403,75 @@ def register_products():
                         continue
 
                     logger.info(f"🔄 Processing: {product.title[:50]}...")
+
+                    # Step 0: AI Category Selection (if enabled)
+                    product_category_id = default_category_id  # Default to user-provided or DB category
+                    ai_category_info = None
+
+                    if use_ai_category and category_analyzer and naver_categories:
+                        try:
+                            logger.info("🤖 Step 0/4: AI category analysis...")
+                            product_data_for_ai = {
+                                'title': product.title,
+                                'price': product.price,
+                                'desc': product.data.get('description', '') if product.data else ''
+                            }
+
+                            suggestions = category_analyzer.suggest_categories(
+                                product_data=product_data_for_ai,
+                                categories_tree=naver_categories,
+                                top_k=3
+                            )
+
+                            if suggestions and len(suggestions) > 0:
+                                # Use the highest confidence category
+                                best_suggestion = suggestions[0]
+                                product_category_id = best_suggestion['category_id']
+                                ai_category_info = {
+                                    'category_id': best_suggestion['category_id'],
+                                    'category_path': best_suggestion['category_path'],
+                                    'confidence': best_suggestion['confidence'],
+                                    'reason': best_suggestion['reason']
+                                }
+                                logger.info(f"✅ AI selected category: {best_suggestion['category_path']} ({best_suggestion['confidence']}% confidence)")
+                            else:
+                                logger.warning("⚠️ AI returned no suggestions, using default category")
+                                if not product_category_id:
+                                    logger.error("❌ No category available (AI failed + no default)")
+                                    results.append({
+                                        'product_id': str(product.id),
+                                        'product_name': product.title,
+                                        'success': False,
+                                        'error': 'No category available: AI failed and no default category set'
+                                    })
+                                    failed_count += 1
+                                    continue
+
+                        except Exception as ai_error:
+                            logger.warning(f"⚠️ AI category analysis failed: {str(ai_error)}, using default")
+                            if not product_category_id:
+                                logger.error("❌ No category available (AI failed + no default)")
+                                results.append({
+                                    'product_id': str(product.id),
+                                    'product_name': product.title,
+                                    'success': False,
+                                    'error': f'AI category analysis failed and no default category: {str(ai_error)}'
+                                })
+                                failed_count += 1
+                                continue
+                    elif not product_category_id:
+                        # No AI and no default category
+                        logger.error("❌ No category available (AI disabled + no default)")
+                        results.append({
+                            'product_id': str(product.id),
+                            'product_name': product.title,
+                            'success': False,
+                            'error': 'No category available: AI disabled and no default category set'
+                        })
+                        failed_count += 1
+                        continue
+
+                    logger.info(f"📋 Using category ID: {product_category_id}")
 
                     # Step 1: Upload images to Naver
                     logger.info("📷 Step 1/3: Uploading images to Naver...")
@@ -433,7 +540,7 @@ def register_products():
                         stock=stock_quantity,
                         image_ids=image_ids,
                         detail_html=detail_html,
-                        category_id=category_id,
+                        category_id=product_category_id,
                         origin_area=origin_area,
                         brand=brand,
                         manufacturer=manufacturer,
@@ -465,13 +572,19 @@ def register_products():
                             except Exception as cleanup_error:
                                 logger.warning(f"⚠️ Image cleanup failed (non-critical): {str(cleanup_error)}")
 
-                        results.append({
+                        result_data = {
                             'product_id': str(product.id),
                             'product_name': product.title,
                             'success': True,
                             'smartstore_product_id': result.get('product_id'),
                             'smartstore_url': f"https://smartstore.naver.com/product/{result.get('product_id')}"
-                        })
+                        }
+
+                        # Add AI category info if available
+                        if ai_category_info:
+                            result_data['ai_category'] = ai_category_info
+
+                        results.append(result_data)
                         success_count += 1
                     else:
                         logger.error(f"❌ Registration failed: {result.get('error')}")
