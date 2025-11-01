@@ -57,6 +57,9 @@ export default function ProductsPage() {
   const [maskCanvas, setMaskCanvas] = useState<HTMLCanvasElement | null>(null)
   const [brushSize, setBrushSize] = useState(30)
 
+  // AI category suggestions cache
+  const [categoryCache, setCategoryCache] = useState<Map<string, any>>(new Map())
+
   useEffect(() => {
     loadProducts()
   }, [page, searchQuery])
@@ -88,7 +91,43 @@ export default function ProductsPage() {
     if (response.ok && response.data) {
       setProducts(response.data.products)
       setTotal(response.data.total)
+
+      // Load AI category suggestions for each product
+      loadAICategorySuggestions(response.data.products)
     }
+  }
+
+  const loadAICategorySuggestions = async (products: Product[]) => {
+    const newCache = new Map(categoryCache)
+
+    // Fetch category suggestions for products that don't have cached suggestions
+    for (const product of products) {
+      if (!newCache.has(product.id)) {
+        try {
+          const response = await fetch('/api/v1/smartstore/suggest-category', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              product_data: {
+                title: getProductTitle(product),
+                price: getProductPrice(product),
+                desc: product.data?.description || ''
+              }
+            })
+          })
+
+          const result = await response.json()
+
+          if (result.ok && result.data?.suggestions && result.data.suggestions.length > 0) {
+            newCache.set(product.id, result.data.suggestions[0]) // Store best suggestion
+          }
+        } catch (err) {
+          console.error(`Failed to get category for product ${product.id}:`, err)
+        }
+      }
+    }
+
+    setCategoryCache(newCache)
   }
 
   const handleImport = async (e: React.FormEvent) => {
@@ -547,30 +586,23 @@ export default function ProductsPage() {
       return
     }
 
-    // Show category selection modal
-    setShowCategoryModal(true)
-  }
-
-  const handleCategoryConfirmed = async (categoryId: string) => {
-    setShowCategoryModal(false)
-    setSelectedCategoryId(categoryId)
-
-    if (!confirm(`선택된 ${selectedProducts.size}개 상품을 스마트스토어에 등록하시겠습니까?`)) {
+    if (!confirm(`선택된 ${selectedProducts.size}개 상품을 스마트스토어에 등록하시겠습니까?\n\nAI가 각 상품마다 최적의 카테고리를 자동으로 선택합니다.`)) {
       return
     }
 
     setLoading(true)
-    toast('스마트스토어에 상품을 등록하는 중...')
+    toast('스마트스토어에 상품을 등록하는 중... (AI가 카테고리를 자동 선택합니다)')
 
     try {
       // Load SmartStore settings from localStorage
       const settingsJson = localStorage.getItem('smartstore_settings')
       const baseSettings = settingsJson ? JSON.parse(settingsJson) : {}
 
-      // Merge with selected category
+      // Don't provide category_id - let AI auto-select for each product
       const settings = {
         ...baseSettings,
-        category_id: categoryId
+        use_ai_category: true  // Enable AI auto-category
+        // category_id is intentionally omitted - AI will select per product
       }
 
       const response = await registerToSmartStore(Array.from(selectedProducts), settings)
@@ -587,6 +619,9 @@ export default function ProductsPage() {
           toast(`${summary.success}개 등록 성공, ${summary.failed}개 실패`, 'error')
         }
 
+        // Show detailed results including AI category info
+        console.log('Registration results:', results)
+
         // Show detailed results for failed products
         if (summary.failed > 0) {
           const failedProducts = results.filter(r => !r.success)
@@ -601,6 +636,12 @@ export default function ProductsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCategoryConfirmed = async (categoryId: string) => {
+    // This function is no longer used, but kept for backward compatibility
+    setShowCategoryModal(false)
+    setSelectedCategoryId(categoryId)
   }
 
   const totalPages = Math.ceil(total / limit)
@@ -857,6 +898,21 @@ export default function ProductsPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* AI Recommended Category */}
+                      {categoryCache.get(product.id) && (
+                        <div className="mb-2">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                            <Sparkles size={12} className="text-blue-500" />
+                            <span className="text-xs font-medium text-blue-700">
+                              {categoryCache.get(product.id).category_path}
+                            </span>
+                            <span className="text-xs font-semibold text-blue-500">
+                              ({categoryCache.get(product.id).confidence}%)
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Options */}
                       {product.data?.options && product.data.options.length > 0 && (
