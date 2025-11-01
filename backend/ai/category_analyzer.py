@@ -150,30 +150,52 @@ class CategoryAnalyzer:
         """
         Extract relevant keywords from product title for category filtering
 
+        Handles Korean compound nouns like:
+        - 실내화 (indoor shoes)
+        - 운동화 (sneakers)
+        - 슬리퍼 (slippers)
+
         Args:
             title: Product title in Korean
 
         Returns:
             List of keywords to match against categories
         """
-        # Common product-related keywords in Korean
-        # Split by common separators and extract meaningful words
         import re
 
-        # Remove common symbols and split
+        # Common Korean product category keywords (주요 상품 카테고리 키워드)
+        category_keywords = [
+            '운동화', '슬리퍼', '실내화', '샌들', '부츠', '구두', '로퍼', '스니커즈',
+            '청바지', '원피스', '티셔츠', '후드', '맨투맨', '바지', '치마', '재킷',
+            '가방', '지갑', '벨트', '모자', '장갑', '목도리', '스카프',
+            '화장품', '로션', '크림', '세럼', '마스크팩', '립스틱', '파운데이션',
+            '케이스', '충전기', '이어폰', '헤드폰', '키보드', '마우스',
+            '담요', '쿠션', '방석', '이불', '베개', '커튼',
+            '의자', '책상', '침대', '수납장', '선반',
+        ]
+
+        keywords = []
+
+        # 1. Extract known category keywords from compound words
+        for cat_keyword in category_keywords:
+            if cat_keyword in title:
+                keywords.append(cat_keyword)
+
+        # 2. Remove common symbols and split
         title_clean = re.sub(r'[/\-_\[\](){}]', ' ', title)
         words = title_clean.split()
 
-        # Filter out very short words (< 2 chars) and numbers only
-        keywords = []
+        # 3. Add individual words (길이 >= 2, 숫자 제외)
         for word in words:
             word = word.strip()
-            if len(word) >= 2 and not word.isdigit():
+            if len(word) >= 2 and not word.isdigit() and word not in keywords:
                 keywords.append(word)
 
-        # Add original title as well for compound matches
-        keywords.append(title)
+        # 4. Add original title for full context matching
+        if title not in keywords:
+            keywords.append(title)
 
+        logger.info(f"🔍 Extracted keywords: {keywords[:10]}")
         return keywords
 
     def _build_analysis_prompt(
