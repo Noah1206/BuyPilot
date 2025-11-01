@@ -11,8 +11,7 @@ import * as XLSX from 'xlsx'
 
 interface ExcelRow {
   타오바오_링크: string
-  카테고리_ID?: string
-  카테고리_경로?: string
+  카테고리?: string
   배송비?: number
   마진율?: number
   무게?: number
@@ -24,8 +23,7 @@ interface ExcelRow {
 interface ParsedProduct {
   row: number
   taobao_url: string
-  category_id?: string
-  category_path?: string
+  category_name?: string  // 한국어 카테고리명 (예: "슬리퍼")
   shipping_cost?: number
   margin?: number
   weight?: number
@@ -53,10 +51,10 @@ export default function BulkImportPage() {
 
     // Sheet 1: Product Data Template
     const templateData = [
-      ['타오바오_링크', '카테고리_ID', '카테고리_경로', '배송비', '마진율', '무게', '관세율', '부가세율', '메모'],
-      ['필수 입력', '선택 (비우면 AI)', '참고용', '원 단위', '% 단위', 'kg 단위', '% 단위', '% 단위', ''],
-      ['https://item.taobao.com/item.htm?id=123456', '50004198', '패션잡화 > 여성신발 > 실내화', '3000', '30', '0.5', '8', '10', 'VIP 고객용'],
-      ['https://item.taobao.com/item.htm?id=789012', '', '', '2500', '25', '', '', '', 'AI 자동 분석']
+      ['타오바오_링크', '카테고리', '배송비', '마진율', '무게', '관세율', '부가세율', '메모'],
+      ['필수 입력', '선택 (비우면 AI)', '원 단위', '% 단위', 'kg 단위', '% 단위', '% 단위', ''],
+      ['https://item.taobao.com/item.htm?id=123456', '슬리퍼', '3000', '30', '0.5', '8', '10', 'VIP 고객용'],
+      ['https://item.taobao.com/item.htm?id=789012', '', '2500', '25', '', '', '', 'AI 자동 분석']
     ]
     const ws1 = XLSX.utils.aoa_to_sheet(templateData)
     XLSX.utils.book_append_sheet(wb, ws1, '상품정보')
@@ -69,8 +67,9 @@ export default function BulkImportPage() {
       ['   - 타오바오 상품 URL을 입력하세요'],
       ['   - 예: https://item.taobao.com/item.htm?id=123456'],
       [''],
-      ['2. 카테고리_ID (선택)'],
-      ['   - 네이버 스마트스토어 카테고리 ID를 입력하세요'],
+      ['2. 카테고리 (선택)'],
+      ['   - 네이버 스마트스토어 카테고리명을 한글로 입력하세요'],
+      ['   - 예: "슬리퍼", "운동화", "티셔츠" 등'],
       ['   - 비워두면 AI가 자동으로 분석합니다'],
       ['   - "네이버 카테고리 목록" 파일을 다운받아 참고하세요'],
       [''],
@@ -103,8 +102,8 @@ export default function BulkImportPage() {
 
         const wb = XLSX.utils.book_new()
         const data = [
-          ['카테고리_ID', '카테고리_이름', '카테고리_경로'],
-          ...categories.map((cat: any) => [cat.id, cat.name, cat.path])
+          ['카테고리명', '전체_경로', '카테고리_ID'],
+          ...categories.map((cat: any) => [cat.name, cat.path, cat.id])
         ]
 
         const ws = XLSX.utils.aoa_to_sheet(data)
@@ -158,8 +157,7 @@ export default function BulkImportPage() {
           const product: ParsedProduct = {
             row: index + 2, // Excel row number (1-indexed + header)
             taobao_url: row.타오바오_링크?.trim() || '',
-            category_id: row.카테고리_ID?.toString().trim() || undefined,
-            category_path: row.카테고리_경로?.trim() || undefined,
+            category_name: row.카테고리?.toString().trim() || undefined,
             shipping_cost: row.배송비 ? Number(row.배송비) : undefined,
             margin: row.마진율 ? Number(row.마진율) : undefined,
             weight: row.무게 ? Number(row.무게) : undefined,
@@ -216,7 +214,7 @@ export default function BulkImportPage() {
       // Prepare products data for API
       const products = validProducts.map(p => ({
         taobao_url: p.taobao_url,
-        category_id: p.category_id,
+        category_name: p.category_name,  // 한국어 카테고리명
         shipping_cost: p.shipping_cost,
         margin: p.margin,
         weight: p.weight,

@@ -968,23 +968,44 @@ def bulk_import():
                 if downloaded_images:
                     product_data['downloaded_images'] = downloaded_images
 
-                # Step 4: Category selection (manual vs AI)
-                category_id = item.get('category_id', '').strip() if item.get('category_id') else None
+                # Step 4: Category selection (manual Korean name → ID mapping, or AI)
+                category_name = item.get('category_name', '').strip() if item.get('category_name') else None
+                category_id = None
                 category_source = 'manual'
                 category_path = None
                 ai_confidence = None
 
-                if category_id:
-                    # Manual category
+                if category_name:
+                    # Manual category - convert Korean name to category ID
                     manual_category_count += 1
 
-                    # Find category path
+                    # Find category by Korean name (exact or partial match)
                     if naver_categories:
+                        # Try exact match first
                         for cat in naver_categories:
-                            if cat.get('id') == category_id:
+                            if cat.get('name') == category_name:
+                                category_id = cat.get('id')
                                 category_path = cat.get('path')
+                                logger.info(f"✅ Exact match: {category_name} → {category_id}")
                                 break
-                else:
+
+                        # If no exact match, try partial match (category name in path)
+                        if not category_id:
+                            for cat in naver_categories:
+                                if category_name in cat.get('name', ''):
+                                    category_id = cat.get('id')
+                                    category_path = cat.get('path')
+                                    logger.info(f"✅ Partial match: {category_name} → {category_path}")
+                                    break
+
+                        # If still not found, log warning and fall back to AI
+                        if not category_id:
+                            logger.warning(f"⚠️ Category '{category_name}' not found, falling back to AI")
+                            category_source = 'ai'  # Fall back to AI
+                            manual_category_count -= 1  # Don't count as manual
+
+                # If no manual category or manual category not found, use AI
+                if not category_id:
                     # AI category analysis
                     if use_ai_category and category_analyzer and naver_categories:
                         try:
