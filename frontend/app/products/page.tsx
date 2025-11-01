@@ -108,9 +108,22 @@ export default function ProductsPage() {
   const loadAICategorySuggestions = async (products: Product[]) => {
     const newCache = new Map(categoryCache)
 
-    // Fetch category suggestions for products that don't have cached suggestions
+    // Load category suggestions for each product
     for (const product of products) {
-      if (!newCache.has(product.id)) {
+      // Priority 1: Check if DB has selected_category or ai_categories
+      const selectedCategory = product.data?.selected_category
+      const aiCategories = product.data?.ai_categories
+
+      if (selectedCategory) {
+        // User has manually selected a category - use it (put it first)
+        const otherCategories = aiCategories || []
+        const categoriesWithSelected = [selectedCategory, ...otherCategories.filter((c: any) => c.category_id !== selectedCategory.category_id)]
+        newCache.set(product.id, categoriesWithSelected)
+      } else if (aiCategories && aiCategories.length > 0) {
+        // DB has AI-analyzed categories - use them
+        newCache.set(product.id, aiCategories)
+      } else if (!newCache.has(product.id)) {
+        // No categories in DB - fetch from AI
         try {
           const response = await fetch('/api/v1/smartstore/suggest-category', {
             method: 'POST',
@@ -119,7 +132,8 @@ export default function ProductsPage() {
               product_data: {
                 title: getProductTitle(product),
                 price: getProductPrice(product),
-                desc: product.data?.description || ''
+                desc: product.data?.description || '',
+                images: product.data?.images || []
               }
             })
           })
@@ -128,6 +142,18 @@ export default function ProductsPage() {
 
           if (result.ok && result.data?.suggestions && result.data.suggestions.length > 0) {
             newCache.set(product.id, result.data.suggestions) // Store ALL suggestions (top 3)
+
+            // Save to DB for persistence
+            await fetch(`/api/v1/products/${product.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                data: {
+                  ...product.data,
+                  ai_categories: result.data.suggestions
+                }
+              })
+            })
           }
         } catch (err) {
           console.error(`Failed to get category for product ${product.id}:`, err)
@@ -666,7 +692,7 @@ export default function ProductsPage() {
     setSelectedCategoryId(categoryId)
   }
 
-  const selectCategory = (productId: string, categoryIndex: number) => {
+  const selectCategory = async (productId: string, categoryIndex: number) => {
     const categories = categoryCache.get(productId)
     if (!categories || categoryIndex >= categories.length) return
 
@@ -680,11 +706,32 @@ export default function ProductsPage() {
     newCache.set(productId, newCategories)
     setCategoryCache(newCache)
 
+    // Save to DB
+    try {
+      const response = await fetch(`/api/v1/products/${productId}/category`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selected)
+      })
+
+      const result = await response.json()
+
+      if (!result.ok) {
+        console.error('Failed to save category:', result.error)
+        toast('카테고리 저장 실패', 'error')
+        return
+      }
+    } catch (err) {
+      console.error('Error saving category:', err)
+      toast('카테고리 저장 중 오류 발생', 'error')
+      return
+    }
+
     // Close modal
     setShowCategorySelectorModal(false)
     setSelectedProductForCategory(null)
 
-    toast(`카테고리가 "${selected.category_path}"(으)로 변경되었습니다`)
+    toast(`카테고리가 "${selected.category_path}"(으)로 변경 및 저장되었습니다`)
   }
 
   const totalPages = Math.ceil(total / limit)

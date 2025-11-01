@@ -1107,3 +1107,70 @@ def bulk_import():
                 'details': {'error': str(e)}
             }
         }), 500
+
+
+@bp.route('/products/<product_id>/category', methods=['PATCH'])
+def update_product_category(product_id):
+    """
+    Update selected category for a product
+
+    Body: {
+        "category_id": "50000790",
+        "category_path": "패션의류/잡화 > 여성신발 > 운동화",
+        "confidence": 95,
+        "reason": "선택 이유"
+    }
+    """
+    try:
+        data = request.get_json(force=True)
+
+        with get_db() as db:
+            product = db.query(Product).filter(Product.id == product_id).first()
+
+            if not product:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'NOT_FOUND',
+                        'message': 'Product not found',
+                        'details': {'product_id': product_id}
+                    }
+                }), 404
+
+            # Update selected_category in data field
+            if not product.data:
+                product.data = {}
+
+            product.data['selected_category'] = {
+                'category_id': data.get('category_id'),
+                'category_path': data.get('category_path'),
+                'confidence': data.get('confidence'),
+                'reason': data.get('reason')
+            }
+
+            # Mark as modified (important for JSONB updates)
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(product, 'data')
+
+            db.commit()
+
+            logger.info(f"✅ Updated category for product {product_id}: {data.get('category_path')}")
+
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'message': 'Category updated successfully',
+                    'selected_category': product.data['selected_category']
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Error updating category: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'UPDATE_ERROR',
+                'message': 'Failed to update category',
+                'details': {'error': str(e)}
+            }
+        }), 500
