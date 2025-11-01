@@ -298,25 +298,49 @@ class NaverCommerceAPI:
 
     def get_categories(self) -> Dict:
         """
-        Get SmartStore category list
+        Get SmartStore category list from local JSON file
+
+        Note: Naver Commerce API doesn't provide /external/v2/categories endpoint (404).
+        Instead, we use a pre-downloaded category list stored in data/naver_categories.json
 
         Returns:
-            Category tree with IDs and names
+            {
+                'success': bool,
+                'categories': list of category dicts,
+                'error': str (if failed)
+            }
         """
         try:
-            logger.info("📋 Fetching SmartStore category list...")
+            logger.info("📋 Loading SmartStore category list from local file...")
 
-            endpoint = '/external/v2/categories'
-            response = self._make_request('GET', endpoint)
+            # Get path to categories JSON file
+            import os
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            categories_file = os.path.join(current_dir, '..', 'data', 'naver_categories.json')
 
-            logger.info(f"✅ Retrieved {len(response.get('categories', []))} categories")
+            # Check if file exists
+            if not os.path.exists(categories_file):
+                logger.error(f"❌ Categories file not found: {categories_file}")
+                return {
+                    'success': False,
+                    'error': f'Categories file not found: {categories_file}'
+                }
+
+            # Read JSON file
+            import json
+            with open(categories_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            categories = data.get('categories', [])
+            logger.info(f"✅ Loaded {len(categories)} categories from local file")
+
             return {
                 'success': True,
-                'categories': response.get('categories', [])
+                'categories': categories
             }
 
         except Exception as e:
-            logger.error(f"❌ Failed to fetch categories: {str(e)}")
+            logger.error(f"❌ Failed to load categories from file: {str(e)}")
             return {
                 'success': False,
                 'error': str(e)
