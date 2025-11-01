@@ -720,7 +720,7 @@ export default function ProductsPage() {
     setSelectedCategoryId(categoryId)
   }
 
-  const selectCategory = async (productId: string, categoryIndex: number) => {
+  const selectCategoryFromModal = async (productId: string, categoryIndex: number) => {
     const categories = categoryCache.get(productId)
     if (!categories || categoryIndex >= categories.length) return
 
@@ -919,7 +919,7 @@ export default function ProductsPage() {
     setFilteredCategories(allCategories.slice(0, 50))
   }
 
-  const selectCategory = async (productId: string, category: any) => {
+  const selectCategoryFromSearch = async (productId: string, category: any) => {
     try {
       const categoryData = {
         category_id: category.id,
@@ -1162,7 +1162,7 @@ export default function ProductsPage() {
                             filteredCategories.map((cat: any) => (
                               <button
                                 key={cat.id}
-                                onClick={() => selectCategory(product.id, cat)}
+                                onClick={() => selectCategoryFromSearch(product.id, cat)}
                                 className="w-full text-left px-3 py-2 text-xs hover:bg-orange-50 rounded transition-colors border-b border-slate-100 last:border-b-0"
                               >
                                 <div className="font-medium text-slate-900">{cat.name}</div>
@@ -1980,7 +1980,7 @@ export default function ProductsPage() {
                 {categoryCache.get(selectedProductForCategory)?.map((category: any, index: number) => (
                   <button
                     key={index}
-                    onClick={() => selectCategory(selectedProductForCategory, index)}
+                    onClick={() => selectCategoryFromModal(selectedProductForCategory, index)}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all hover:shadow-md ${
                       index === 0
                         ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
