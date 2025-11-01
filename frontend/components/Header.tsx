@@ -41,47 +41,43 @@ export default function Header() {
 
           {/* Menu */}
           <div className="hidden md:flex items-center gap-1">
-            {!isDashboard ? (
+            {!user && (
+              <a
+                href="/"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive('/')
+                    ? 'text-orange-600 bg-orange-50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <Home size={18} />
+                홈
+              </a>
+            )}
+            {user && (
               <>
-                {!user && (
-                  <a
-                    href="/"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      isActive('/')
-                        ? 'text-orange-600 bg-orange-50'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <Home size={18} />
-                    홈
-                  </a>
-                )}
-                {user && (
-                  <>
-                    <a
-                      href="/dashboard"
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        isActive('/dashboard')
-                          ? 'text-orange-600 bg-orange-50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Package size={18} />
-                      주문 관리
-                    </a>
-                    <a
-                      href="/settings"
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        isActive('/settings')
-                          ? 'text-orange-600 bg-orange-50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Settings size={18} />
-                      설정
-                    </a>
-                  </>
-                )}
+                <a
+                  href="/dashboard"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive('/dashboard')
+                      ? 'text-orange-600 bg-orange-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Package size={18} />
+                  주문 관리
+                </a>
+                <a
+                  href="/settings"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive('/settings')
+                      ? 'text-orange-600 bg-orange-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Settings size={18} />
+                  설정
+                </a>
                 <a
                   href="/products"
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -127,10 +123,10 @@ export default function Header() {
                   경쟁사 분석
                 </a>
               </>
-            ) : null}
+            )}
 
             {/* Auth buttons */}
-            <div className={`${isDashboard ? '' : 'ml-4 pl-4 border-l border-slate-200'} flex items-center gap-2`}>
+            <div className="ml-4 pl-4 border-l border-slate-200 flex items-center gap-2">
               {user ? (
                 <>
                   <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700">
