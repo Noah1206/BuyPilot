@@ -349,6 +349,7 @@ def register_products():
         # Get settings (from request body or database)
         settings = data.get('settings', {})
         default_category_id = settings.get('category_id') or db_settings.get('naver_category_id')  # Optional (AI will auto-select if not provided)
+        product_categories = settings.get('product_categories', {})  # Product-specific category mapping
         stock_quantity = settings.get('stock_quantity', 999)
         origin_area = settings.get('origin_area', '0801')  # China
         brand = settings.get('brand', '')
@@ -404,11 +405,15 @@ def register_products():
 
                     logger.info(f"🔄 Processing: {product.title[:50]}...")
 
-                    # Step 0: AI Category Selection (if enabled)
+                    # Step 0: Category Selection (prioritize cached category from frontend)
                     product_category_id = default_category_id  # Default to user-provided or DB category
                     ai_category_info = None
 
-                    if use_ai_category and category_analyzer and naver_categories:
+                    # Check if frontend provided a specific category for this product
+                    if product_id in product_categories:
+                        product_category_id = product_categories[product_id]
+                        logger.info(f"📋 Using cached category from frontend: {product_category_id}")
+                    elif use_ai_category and category_analyzer and naver_categories:
                         try:
                             logger.info("🤖 Step 0/4: AI category analysis...")
                             product_data_for_ai = {
