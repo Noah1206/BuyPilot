@@ -90,7 +90,7 @@ class CategoryAnalyzer:
                 'title': Korean product title,
                 'price': Product price,
                 'desc': Optional product description,
-                'images': Optional image URLs
+                'images': Optional image URLs (list)
             }
             categories_tree: Full Naver category hierarchy
             top_k: Number of suggestions to return (default: 3)
@@ -121,6 +121,7 @@ class CategoryAnalyzer:
             title = product_data.get('title', '')
             price = product_data.get('price', 0)
             desc = product_data.get('desc', product_data.get('description', ''))
+            images = product_data.get('images', [])
 
             if not title:
                 logger.error("❌ Product title is required for category analysis")
@@ -129,10 +130,34 @@ class CategoryAnalyzer:
             # Build prompt
             prompt = self._build_analysis_prompt(title, price, desc, leaf_categories, top_k)
 
+            # Prepare content for Gemini (with image if available)
+            content_parts = [prompt]
+
+            # Add first image for visual analysis (if available)
+            if images and len(images) > 0:
+                try:
+                    import requests
+                    from PIL import Image
+                    import io
+
+                    first_image_url = images[0]
+                    logger.info(f"🖼️ Adding product image for visual analysis: {first_image_url}")
+
+                    # Download image
+                    response = requests.get(first_image_url, timeout=5)
+                    if response.status_code == 200:
+                        img = Image.open(io.BytesIO(response.content))
+                        content_parts.append(img)
+                        logger.info(f"✅ Image added to analysis")
+                    else:
+                        logger.warning(f"⚠️ Failed to download image: {response.status_code}")
+                except Exception as img_error:
+                    logger.warning(f"⚠️ Image processing failed, continuing with text only: {str(img_error)}")
+
             # Call Gemini API
             logger.info(f"🤖 Calling Gemini AI for category analysis...")
             response = self.model.generate_content(
-                prompt,
+                content_parts,
                 safety_settings=self.safety_settings
             )
 
@@ -294,21 +319,49 @@ class CategoryAnalyzer:
         categories_formatted = '\n'.join(categories_text)
 
         prompt = f"""당신은 네이버 스마트스토어 상품 카테고리 분석 전문가입니다.
-주어진 상품 정보를 분석하여 가장 적합한 카테고리 {top_k}개를 추천해주세요.
+주어진 상품 정보를 **깊이 있게 분석**하여 가장 적합한 카테고리 {top_k}개를 추천해주세요.
 
 **상품 정보:**
 - 제목: {title}
 - 가격: {price:,}원
 - 설명: {desc[:200] if desc else '없음'}
+{"- 이미지: 첨부됨 (상품 이미지를 자세히 관찰하세요)" if images else ""}
 
 **사용 가능한 카테고리 (일부):**
 {categories_formatted}
 
-**요구사항:**
-1. 상품 제목과 설명을 분석하여 가장 적합한 카테고리를 선택하세요
-2. 반드시 위 목록에 있는 카테고리 ID만 사용하세요
-3. 가능한 구체적인 (하위) 카테고리를 선택하세요
-4. 각 추천에 대한 신뢰도(0-100)와 이유를 제공하세요
+**분석 가이드라인 (매우 중요):**
+
+1. **이미지 우선 분석 (이미지가 있는 경우)**
+   - 이미지에서 상품의 **실제 형태, 구조, 디자인**을 먼저 파악
+   - 제목의 단어보다 **실제 보이는 형태**가 더 중요
+   - 예: 제목에 "실내화"라고 해도, 이미지가 슬리퍼처럼 생겼으면 → 슬리퍼 카테고리
+
+2. **상품의 본질을 파악하세요**
+   - 제목에 여러 키워드가 있어도, 상품의 **핵심 용도**와 **실제 형태**를 우선 고려
+   - 예: "리본 실내화" → 리본은 장식, 실내화가 핵심이지만 **슬리퍼 형태**라면 슬리퍼 카테고리 우선
+
+3. **형태와 용도를 함께 고려하세요**
+   - "실내화"라는 단어가 있어도:
+     * 슬리퍼 형태 (끈 없이 신는, 뒤꿈치 개방) → "슬리퍼" 카테고리
+     * 운동화 형태 (끈으로 묶는, 발목까지 감싸는) → "실내화" 또는 "운동화" 카테고리
+     * 샌들 형태 → "샌들" 카테고리
+
+4. **카테고리 우선순위**
+   - 더 구체적이고 세밀한 카테고리를 우선 선택
+   - 상위 카테고리보다 하위 카테고리 선택
+   - 예: "신발" < "슬리퍼" < "실내 슬리퍼"
+
+5. **키워드 함정 주의**
+   - 제목의 모든 단어를 카테고리로 반영하지 말 것
+   - 장식적 요소 (리본, 포근, 기모 등)는 카테고리가 아니라 상품 특징
+   - 핵심 상품 유형에 집중
+
+6. **신뢰도 점수 기준**
+   - 95-100%: 이미지와 제목에서 상품 형태와 용도가 명확하게 일치
+   - 80-94%: 상품 유형은 맞지만 세부 사항 불확실
+   - 60-79%: 대략적으로 맞지만 다른 해석 가능
+   - 60% 미만: 추천하지 마세요
 
 **응답 형식 (JSON only):**
 ```json
@@ -317,12 +370,12 @@ class CategoryAnalyzer:
     "category_id": "카테고리ID",
     "category_path": "전체 카테고리 경로",
     "confidence": 95,
-    "reason": "추천 이유 (한국어)"
+    "reason": "이미지 분석 결과: [실제 형태 설명] + 추천 이유 (한국어, 구체적으로)"
   }}
 ]
 ```
 
-JSON으로만 응답하세요. 다른 텍스트는 포함하지 마세요."""
+**중요**: JSON만 출력하세요. 다른 설명이나 마크다운은 절대 포함하지 마세요."""
 
         return prompt
 
