@@ -72,6 +72,13 @@ export default function ProductsPage() {
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState<string>('')
 
+  // Category editing state
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [categorySearchQuery, setCategorySearchQuery] = useState<string>('')
+  const [allCategories, setAllCategories] = useState<any[]>([])
+  const [filteredCategories, setFilteredCategories] = useState<any[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
+
   useEffect(() => {
     loadProducts()
   }, [page, searchQuery])
@@ -87,6 +94,23 @@ export default function ProductsPage() {
       }
     }
   }, [isDrawingMode, editData.mainImage])
+
+  // Filter categories based on search query
+  useEffect(() => {
+    if (!categorySearchQuery.trim()) {
+      setFilteredCategories(allCategories.slice(0, 50)) // Show first 50
+      return
+    }
+
+    const query = categorySearchQuery.toLowerCase()
+    const filtered = allCategories.filter((cat: any) =>
+      cat.name.toLowerCase().includes(query) ||
+      cat.path.toLowerCase().includes(query) ||
+      cat.id.includes(query)
+    ).slice(0, 50) // Limit to 50 results
+
+    setFilteredCategories(filtered)
+  }, [categorySearchQuery, allCategories])
 
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
     setShowToast({ message, type })
@@ -864,6 +888,71 @@ export default function ProductsPage() {
     }
   }
 
+  const startEditingCategory = async (productId: string) => {
+    setEditingCategoryId(productId)
+    setCategorySearchQuery('')
+
+    // Load all categories if not loaded
+    if (allCategories.length === 0) {
+      setLoadingCategories(true)
+      try {
+        const response = await fetch('/api/v1/smartstore/categories')
+        if (response.ok) {
+          const result = await response.json()
+          if (result.ok && result.data?.categories) {
+            setAllCategories(result.data.categories)
+            setFilteredCategories(result.data.categories.slice(0, 50))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error)
+        toast('카테고리 목록을 불러오는데 실패했습니다', 'error')
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+  }
+
+  const cancelEditingCategory = () => {
+    setEditingCategoryId(null)
+    setCategorySearchQuery('')
+    setFilteredCategories(allCategories.slice(0, 50))
+  }
+
+  const selectCategory = async (productId: string, category: any) => {
+    try {
+      const categoryData = {
+        category_id: category.id,
+        category_path: category.path,
+        confidence: 100, // User-selected
+        reason: '사용자 직접 선택'
+      }
+
+      const response = await fetch(`/api/v1/products/${productId}/category`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(categoryData)
+      })
+
+      if (!response.ok) {
+        throw new Error('카테고리 저장 실패')
+      }
+
+      // Update cache with selected category at the top
+      const newCache = new Map(categoryCache)
+      const existingCategories = newCache.get(productId) || []
+      const otherCategories = existingCategories.filter(c => c.category_id !== category.id)
+      newCache.set(productId, [categoryData, ...otherCategories])
+      setCategoryCache(newCache)
+
+      toast(`카테고리가 "${category.name}"(으)로 변경되었습니다`)
+      cancelEditingCategory()
+    } catch (error) {
+      console.error('Error saving category:', error)
+      toast('카테고리 저장에 실패했습니다', 'error')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <Header />
@@ -1037,14 +1126,63 @@ export default function ProductsPage() {
                     {isSelected && <CheckSquare size={16} className="text-white" strokeWidth={3} />}
                   </button>
 
-                  {/* AI Recommended Category - Top Right */}
-                  {categoryCache.get(product.id) && categoryCache.get(product.id)!.length > 0 && (
-                    <div className="absolute top-4 right-4 z-10">
+                  {/* Category Display/Edit - Top Right */}
+                  {editingCategoryId === product.id ? (
+                    <div className="absolute top-4 right-4 z-20 w-80 bg-white rounded-lg shadow-xl border-2 border-orange-500">
+                      <div className="p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-semibold text-slate-900">카테고리 선택</h4>
+                          <button
+                            onClick={cancelEditingCategory}
+                            className="p-1 rounded hover:bg-slate-100"
+                          >
+                            <X size={16} className="text-slate-500" />
+                          </button>
+                        </div>
+
+                        <input
+                          type="text"
+                          value={categorySearchQuery}
+                          onChange={(e) => setCategorySearchQuery(e.target.value)}
+                          placeholder="카테고리 검색..."
+                          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none mb-2"
+                          autoFocus
+                        />
+
+                        <div className="max-h-64 overflow-y-auto">
+                          {loadingCategories ? (
+                            <div className="text-center py-4 text-sm text-slate-500">
+                              카테고리 로딩 중...
+                            </div>
+                          ) : filteredCategories.length === 0 ? (
+                            <div className="text-center py-4 text-sm text-slate-500">
+                              검색 결과가 없습니다
+                            </div>
+                          ) : (
+                            filteredCategories.map((cat: any) => (
+                              <button
+                                key={cat.id}
+                                onClick={() => selectCategory(product.id, cat)}
+                                className="w-full text-left px-3 py-2 text-xs hover:bg-orange-50 rounded transition-colors border-b border-slate-100 last:border-b-0"
+                              >
+                                <div className="font-medium text-slate-900">{cat.name}</div>
+                                <div className="text-slate-500 mt-0.5 truncate">{cat.path}</div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+
+                        {!loadingCategories && filteredCategories.length > 0 && (
+                          <div className="mt-2 text-xs text-slate-500 text-center">
+                            {filteredCategories.length}개 표시 중
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : categoryCache.get(product.id) && categoryCache.get(product.id)!.length > 0 ? (
+                    <div className="absolute top-4 right-4 z-10 group">
                       <button
-                        onClick={() => {
-                          setSelectedProductForCategory(product.id)
-                          setShowCategorySelectorModal(true)
-                        }}
+                        onClick={() => startEditingCategory(product.id)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg shadow-sm hover:bg-blue-100 hover:border-blue-300 transition-all cursor-pointer"
                       >
                         <Sparkles size={12} className="text-blue-500" />
@@ -1054,6 +1192,17 @@ export default function ProductsPage() {
                         <span className="text-xs font-semibold text-blue-500">
                           ({categoryCache.get(product.id)![0].confidence}%)
                         </span>
+                        <Edit size={12} className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="absolute top-4 right-4 z-10">
+                      <button
+                        onClick={() => startEditingCategory(product.id)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg shadow-sm hover:bg-slate-100 hover:border-slate-300 transition-all cursor-pointer"
+                      >
+                        <Plus size={12} className="text-slate-500" />
+                        <span className="text-xs font-medium text-slate-600">카테고리 선택</span>
                       </button>
                     </div>
                   )}
