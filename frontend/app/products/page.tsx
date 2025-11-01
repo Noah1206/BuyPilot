@@ -1221,6 +1221,11 @@ export default function ProductsPage() {
                         alt={`Thumb ${idx + 1}`}
                         className="w-full h-full object-cover"
                       />
+                      {editMode === 'main-image' && idx === 0 && (
+                        <div className="absolute top-1 left-1 px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded shadow-md">
+                          대표
+                        </div>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
