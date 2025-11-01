@@ -350,7 +350,8 @@ export default function ProductsPage() {
         updateData.image_url = editData.mainImage
         updateData.data = {
           ...editingProduct.data,
-          images: editData.allImages  // Save all edited images
+          images: editData.allImages,  // Save all edited images
+          downloaded_images: editData.allImages  // Update downloaded_images to reflect new order
         }
       } else if (editMode === 'detail-images') {
         updateData.data = {
