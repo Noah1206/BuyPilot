@@ -613,12 +613,8 @@ export default function ProductsPage() {
       return
     }
 
-    if (!confirm(`선택된 ${selectedProducts.size}개 상품을 스마트스토어에 등록하시겠습니까?\n\n각 상품마다 AI가 선택한 카테고리로 등록됩니다.`)) {
-      return
-    }
-
     setLoading(true)
-    toast('스마트스토어에 상품을 등록하는 중...')
+    toast(`${selectedProducts.size}개 상품을 스마트스토어에 등록 중...`)
 
     try {
       // Load SmartStore settings from localStorage
