@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore } from '@/lib/api'
 import Header from '@/components/Header'
 import CategorySelectionModal from '@/components/CategorySelectionModal'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser } from 'lucide-react'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser, Edit, Check } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
 interface Product {
@@ -67,6 +67,10 @@ export default function ProductsPage() {
   // Drag and drop state for image reordering
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  // Title editing state
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState<string>('')
 
   useEffect(() => {
     loadProducts()
@@ -813,6 +817,53 @@ export default function ProductsPage() {
     }
   }
 
+  const startEditingTitle = (productId: string, currentTitle: string) => {
+    setEditingTitleId(productId)
+    setEditingTitle(currentTitle)
+  }
+
+  const cancelEditingTitle = () => {
+    setEditingTitleId(null)
+    setEditingTitle('')
+  }
+
+  const saveProductTitle = async (productId: string) => {
+    if (!editingTitle.trim()) {
+      toast('상품명을 입력해주세요', 'error')
+      return
+    }
+
+    if (editingTitle.length > 25) {
+      toast('상품명은 25자를 초과할 수 없습니다', 'error')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/v1/products/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editingTitle.trim()
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('상품명 저장 실패')
+      }
+
+      // Update local state
+      setProducts(products.map(p =>
+        p.id === productId ? { ...p, title: editingTitle.trim() } : p
+      ))
+
+      toast('상품명이 저장되었습니다')
+      cancelEditingTitle()
+    } catch (error) {
+      console.error('Error saving title:', error)
+      toast('상품명 저장에 실패했습니다', 'error')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <Header />
@@ -1029,9 +1080,58 @@ export default function ProductsPage() {
 
                     {/* Product info */}
                     <div className="flex-1 min-w-0 pl-6">
-                      <h3 className="text-base font-semibold text-slate-900 mb-1.5 line-clamp-2">
-                        {title}
-                      </h3>
+                      {/* Product title with edit */}
+                      {editingTitleId === product.id ? (
+                        <div className="mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              maxLength={25}
+                              className="flex-1 px-2 py-1 text-sm font-semibold text-slate-900 bg-white border-2 border-orange-500 rounded focus:outline-none focus:ring-2 focus:ring-orange-100"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  saveProductTitle(product.id)
+                                } else if (e.key === 'Escape') {
+                                  cancelEditingTitle()
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => saveProductTitle(product.id)}
+                              className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-all"
+                              title="저장"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={cancelEditingTitle}
+                              className="p-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all"
+                              title="취소"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {editingTitle.length}/25자
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2 mb-1.5 group">
+                          <h3 className="flex-1 text-base font-semibold text-slate-900 line-clamp-2">
+                            {title}
+                          </h3>
+                          <button
+                            onClick={() => startEditingTitle(product.id, title)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100"
+                            title="상품명 편집"
+                          >
+                            <Edit size={14} className="text-slate-500" />
+                          </button>
+                        </div>
+                      )}
 
                       <div className="mb-2">
                         <div className="flex items-center gap-2 mb-1">

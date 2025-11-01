@@ -126,7 +126,7 @@ async function importProduct() {
 
       // Show instruction
       setTimeout(() => {
-        showStatus('익스텐션을 닫아도 작업이 계속됩니다. 완료되면 알림이 표시됩니다.', 'success');
+        showStatus('브라우저를 닫아도 작업이 계속됩니다. 완료되면 알림이 표시됩니다.', 'success');
       }, 2500);
 
     } else {

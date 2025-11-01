@@ -41,11 +41,44 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
+// Listen for browser startup - Resume pending imports
+chrome.runtime.onStartup.addListener(async () => {
+  console.log('🚀 Browser started, checking for pending imports...');
+
+  try {
+    const { pendingImport } = await chrome.storage.local.get(['pendingImport']);
+
+    if (pendingImport && pendingImport.productData) {
+      console.log('📦 Found pending import, resuming:', pendingImport.productData.title);
+
+      // Add to queue
+      importQueue.push(pendingImport);
+
+      // Start processing
+      processImportQueue();
+    } else {
+      console.log('ℹ️ No pending imports found');
+    }
+  } catch (error) {
+    console.error('❌ Error checking pending imports:', error);
+  }
+});
+
 // Listen for messages from content scripts or popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('📨 Background received message:', request);
 
   if (request.action === 'importProduct') {
+    // Save to storage first (브라우저 종료에 대비)
+    chrome.storage.local.set({
+      pendingImport: {
+        productData: request.data,
+        addedAt: Date.now()
+      }
+    }).then(() => {
+      console.log('💾 Product saved to storage for safe processing');
+    });
+
     // Add to queue and process in background
     importQueue.push({
       productData: request.data,
@@ -129,8 +162,22 @@ async function processImportQueue() {
  */
 async function handleProductImport(productData) {
   try {
+    // If productData is null/undefined, try to load from storage (브라우저 종료 후 재시작 시)
+    if (!productData || !productData.taobao_item_id) {
+      console.log('📦 Product data not provided, loading from storage...');
+      const storageData = await chrome.storage.local.get(['currentProduct']);
+      if (storageData.currentProduct) {
+        productData = storageData.currentProduct;
+        console.log('✅ Loaded product from storage:', productData.title);
+      } else {
+        throw new Error('No product data available in storage');
+      }
+    }
+
     const { backendUrl } = await chrome.storage.sync.get(['backendUrl']);
     const apiUrl = `${backendUrl || 'https://buypilot-production.up.railway.app'}/api/v1/products/import-from-extension`;
+
+    console.log(`📡 Sending to backend: ${apiUrl}`);
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -146,6 +193,11 @@ async function handleProductImport(productData) {
     }
 
     const result = await response.json();
+
+    // Clear storage after successful import (both currentProduct and pendingImport)
+    await chrome.storage.local.remove(['currentProduct', 'pendingImport']);
+    console.log('🗑️  Cleared product from storage after successful import');
+
     return result;
 
   } catch (error) {
