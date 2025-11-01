@@ -43,28 +43,45 @@ export default function Header() {
           <div className="hidden md:flex items-center gap-1">
             {!isDashboard ? (
               <>
-                <a
-                  href="/"
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive('/')
-                      ? 'text-orange-600 bg-orange-50'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Home size={18} />
-                  홈
-                </a>
-                <a
-                  href="/dashboard"
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive('/dashboard')
-                      ? 'text-orange-600 bg-orange-50'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Package size={18} />
-                  주문 관리
-                </a>
+                {!user && (
+                  <a
+                    href="/"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isActive('/')
+                        ? 'text-orange-600 bg-orange-50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Home size={18} />
+                    홈
+                  </a>
+                )}
+                {user && (
+                  <>
+                    <a
+                      href="/dashboard"
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        isActive('/dashboard')
+                          ? 'text-orange-600 bg-orange-50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Package size={18} />
+                      주문 관리
+                    </a>
+                    <a
+                      href="/settings"
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        isActive('/settings')
+                          ? 'text-orange-600 bg-orange-50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Settings size={18} />
+                      설정
+                    </a>
+                  </>
+                )}
                 <a
                   href="/products"
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -116,27 +133,12 @@ export default function Header() {
             <div className={`${isDashboard ? '' : 'ml-4 pl-4 border-l border-slate-200'} flex items-center gap-2`}>
               {user ? (
                 <>
-                  {isDashboard && (
-                    <a
-                      href="/settings"
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        isActive('/settings')
-                          ? 'text-orange-600 bg-orange-50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Settings size={18} />
-                      설정
-                    </a>
-                  )}
-                  {!isDashboard && (
-                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700">
-                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <User size={16} className="text-orange-600" />
-                      </div>
-                      <span className="font-medium">{user.name}</span>
+                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700">
+                    <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <User size={16} className="text-orange-600" />
                     </div>
-                  )}
+                    <span className="font-medium">{user.name}</span>
+                  </div>
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 transition-all"
