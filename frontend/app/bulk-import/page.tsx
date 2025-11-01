@@ -408,9 +408,9 @@ export default function BulkImportPage() {
                         {product.taobao_url.substring(0, 50)}...
                       </td>
                       <td className="px-4 py-3">
-                        {product.category_id ? (
+                        {product.category_name ? (
                           <span className="px-2 py-1 bg-green-50 border border-green-200 rounded text-xs font-medium text-green-700">
-                            ✅ {product.category_id}
+                            ✅ {product.category_name}
                           </span>
                         ) : (
                           <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-medium text-blue-700">
