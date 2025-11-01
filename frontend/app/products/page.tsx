@@ -60,6 +60,10 @@ export default function ProductsPage() {
   // AI category suggestions cache
   const [categoryCache, setCategoryCache] = useState<Map<string, any>>(new Map())
 
+  // Drag and drop state for image reordering
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
   useEffect(() => {
     loadProducts()
   }, [page, searchQuery])
@@ -646,6 +650,67 @@ export default function ProductsPage() {
 
   const totalPages = Math.ceil(total / limit)
 
+  const reorderImages = (fromIndex: number, toIndex: number) => {
+    if (editMode === 'main-image') {
+      const newImages = [...editData.allImages]
+      const [movedImage] = newImages.splice(fromIndex, 1)
+      newImages.splice(toIndex, 0, movedImage)
+
+      setEditData({ ...editData, allImages: newImages, mainImage: normalizeImageUrl(newImages[0]) })
+
+      // Update selected index if needed
+      if (selectedImageIndex === fromIndex) {
+        setSelectedImageIndex(toIndex)
+      } else if (fromIndex < selectedImageIndex && toIndex >= selectedImageIndex) {
+        setSelectedImageIndex(selectedImageIndex - 1)
+      } else if (fromIndex > selectedImageIndex && toIndex <= selectedImageIndex) {
+        setSelectedImageIndex(selectedImageIndex + 1)
+      }
+    } else if (editMode === 'detail-images') {
+      const newImages = [...editData.descImages]
+      const [movedImage] = newImages.splice(fromIndex, 1)
+      newImages.splice(toIndex, 0, movedImage)
+
+      setEditData({ ...editData, descImages: newImages })
+
+      // Update selected index if needed
+      if (selectedImageIndex === fromIndex) {
+        setSelectedImageIndex(toIndex)
+      } else if (fromIndex < selectedImageIndex && toIndex >= selectedImageIndex) {
+        setSelectedImageIndex(selectedImageIndex - 1)
+      } else if (fromIndex > selectedImageIndex && toIndex <= selectedImageIndex) {
+        setSelectedImageIndex(selectedImageIndex + 1)
+      }
+    }
+  }
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedImageIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverIndex(index)
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+
+    if (draggedImageIndex !== null && draggedImageIndex !== dropIndex) {
+      reorderImages(draggedImageIndex, dropIndex)
+    }
+
+    setDraggedImageIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedImageIndex(null)
+    setDragOverIndex(null)
+  }
+
   const removeImage = (index: number) => {
     if (editMode === 'main-image') {
       const newImages = editData.allImages.filter((_: any, i: number) => i !== index)
@@ -1130,10 +1195,19 @@ export default function ProductsPage() {
                   {(editMode === 'main-image' ? editData.allImages : editData.descImages)?.map((img: string, idx: number) => (
                     <div
                       key={idx}
-                      className={`relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-                        selectedImageIndex === idx
-                          ? 'border-orange-500 ring-2 ring-orange-200 shadow-lg'
-                          : 'border-slate-200 hover:border-orange-400'
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDrop={(e) => handleDrop(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      className={`relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 transition-all ${
+                        draggedImageIndex === idx
+                          ? 'opacity-50 cursor-grabbing'
+                          : dragOverIndex === idx
+                          ? 'border-blue-500 ring-2 ring-blue-200 shadow-lg cursor-grab scale-105'
+                          : selectedImageIndex === idx
+                          ? 'border-orange-500 ring-2 ring-orange-200 shadow-lg cursor-grab'
+                          : 'border-slate-200 hover:border-orange-400 cursor-grab'
                       }`}
                       onClick={() => {
                         setSelectedImageIndex(idx)
