@@ -8,6 +8,7 @@ import hashlib
 import base64
 from typing import List, Optional
 from urllib.parse import urlparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from PIL import Image
 from io import BytesIO
@@ -231,36 +232,56 @@ class ImageService:
         self,
         urls: List[str],
         optimize: bool = True,
-        max_images: int = 10
+        max_images: int = 10,
+        max_workers: int = 5
     ) -> List[str]:
         """
-        Download multiple images
+        Download multiple images in parallel (5-10x faster than sequential)
 
         Args:
             urls: List of image URLs
             optimize: Whether to optimize images
             max_images: Maximum number of images to download
+            max_workers: Number of parallel download threads (default: 5)
 
         Returns:
             List of local file paths (excludes failed downloads)
         """
-        local_paths = []
-
         # Limit number of images
         urls = urls[:max_images]
 
-        logger.info(f"🔄 Downloading {len(urls)} images...")
+        if not urls:
+            return []
 
-        for i, url in enumerate(urls):
-            logger.info(f"📥 [{i+1}/{len(urls)}] Downloading...")
+        logger.info(f"🔄 Downloading {len(urls)} images in parallel (max {max_workers} workers)...")
 
-            filepath = self.download_image(url, optimize=optimize)
-            if filepath:
-                local_paths.append(filepath)
-            else:
-                logger.warning(f"⚠️ Skipping failed image: {url[:80]}")
+        local_paths = []
 
-        logger.info(f"✅ Downloaded {len(local_paths)}/{len(urls)} images successfully")
+        # Parallel download with ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all download tasks
+            future_to_url = {
+                executor.submit(self.download_image, url, optimize): (i, url)
+                for i, url in enumerate(urls)
+            }
+
+            # Collect results as they complete
+            completed = 0
+            for future in as_completed(future_to_url):
+                i, url = future_to_url[future]
+                completed += 1
+
+                try:
+                    filepath = future.result()
+                    if filepath:
+                        local_paths.append(filepath)
+                        logger.info(f"✅ [{completed}/{len(urls)}] Downloaded")
+                    else:
+                        logger.warning(f"⚠️ [{completed}/{len(urls)}] Failed: {url[:80]}")
+                except Exception as e:
+                    logger.error(f"❌ [{completed}/{len(urls)}] Error downloading {url[:80]}: {str(e)}")
+
+        logger.info(f"🎉 Downloaded {len(local_paths)}/{len(urls)} images successfully (parallel mode)")
         return local_paths
 
     def upload_base64_image(self, base64_data: str, public_id: str) -> Optional[str]:

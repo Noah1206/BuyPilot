@@ -221,24 +221,6 @@ export default function ImageEditor({ imageUrl, productId, onSave, onCancel }: I
             </button>
           </div>
 
-          {/* Brush Size */}
-          <div className="flex items-center gap-3 px-4 py-2 bg-[#21262d] rounded-lg border border-[#30363d]">
-            <label className="text-sm font-medium text-[#e6edf3]">크기</label>
-            <input
-              type="range"
-              min="5"
-              max="100"
-              value={brushSize}
-              onChange={(e) => setBrushSize(Number(e.target.value))}
-              className="w-32 h-2 bg-[#30363d] rounded-lg appearance-none cursor-pointer
-                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r
-                [&::-webkit-slider-thumb]:from-[#238636] [&::-webkit-slider-thumb]:to-[#2ea043]
-                [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-[#238636]/50"
-            />
-            <span className="text-sm font-mono text-[#58a6ff] w-10 text-right">{brushSize}px</span>
-          </div>
-
           {/* History Controls */}
           <div className="flex gap-2">
             <button
@@ -276,76 +258,108 @@ export default function ImageEditor({ imageUrl, productId, onSave, onCancel }: I
           </button>
         </div>
 
-        {/* Canvas Area */}
-        <div className="flex-1 bg-gradient-to-br from-[#0d1117] to-[#161b22] p-6 overflow-auto">
-          <div className="flex items-center justify-center h-full">
-            <div className="relative">
-              {/* Checkerboard background pattern */}
-              <div className="absolute inset-0 opacity-20" style={{
-                backgroundImage: `
-                  repeating-conic-gradient(#30363d 0% 25%, transparent 0% 50%) 50% / 20px 20px
-                `,
-              }}></div>
+        {/* Main Content Area - Flex Row */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Canvas Area */}
+          <div className="flex-1 bg-gradient-to-br from-[#0d1117] to-[#161b22] p-6 overflow-auto">
+            <div className="flex items-center justify-center h-full">
+              <div className="relative">
+                {/* Checkerboard background pattern */}
+                <div className="absolute inset-0 opacity-20" style={{
+                  backgroundImage: `
+                    repeating-conic-gradient(#30363d 0% 25%, transparent 0% 50%) 50% / 20px 20px
+                  `,
+                }}></div>
 
-              <canvas
-                ref={canvasRef}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                className="cursor-crosshair border-2 border-[#30363d] rounded-lg shadow-2xl relative bg-white"
-                style={{
-                  cursor: tool === 'eraser' ? 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\'><circle cx=\'12\' cy=\'12\' r=\'10\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'2\'/></svg>") 12 12, crosshair' : 'crosshair'
-                }}
-              />
+                <canvas
+                  ref={canvasRef}
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  className="cursor-crosshair border-2 border-[#30363d] rounded-lg shadow-2xl relative bg-white"
+                  style={{
+                    cursor: tool === 'eraser' ? 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\'><circle cx=\'12\' cy=\'12\' r=\'10\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'2\'/></svg>") 12 12, crosshair' : 'crosshair'
+                  }}
+                />
 
-              {/* Brush preview cursor */}
-              <div
-                className="pointer-events-none absolute hidden"
-                style={{
-                  width: brushSize + 'px',
-                  height: brushSize + 'px',
-                  border: '2px solid ' + (tool === 'eraser' ? '#ff6b6b' : '#4dabf7'),
-                  borderRadius: '50%',
-                  transform: 'translate(-50%, -50%)'
-                }}
-              ></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer with Actions */}
-        <div className="flex items-center justify-between p-6 border-t border-[#30363d] bg-[#0d1117]">
-          {/* Tips */}
-          <div className="flex items-start gap-3 flex-1 mr-6">
-            <div className="text-2xl">💡</div>
-            <div className="text-xs text-[#8d96a0] space-y-1">
-              <p><strong className="text-[#e6edf3]">사용 팁:</strong></p>
-              <p>• 지우개로 워터마크, 로고, 배경 텍스트 제거</p>
-              <p>• 브러시로 지운 부분을 흰색으로 복원</p>
-              <p>• 브러시 크기를 조절하여 정밀하게 편집</p>
+                {/* Brush preview cursor */}
+                <div
+                  className="pointer-events-none absolute hidden"
+                  style={{
+                    width: brushSize + 'px',
+                    height: brushSize + 'px',
+                    border: '2px solid ' + (tool === 'eraser' ? '#ff6b6b' : '#4dabf7'),
+                    borderRadius: '50%',
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                ></div>
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <button
-              onClick={onCancel}
-              className="px-6 py-3 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded-lg transition-all font-medium border border-[#30363d]"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isUploading}
-              className="px-8 py-3 bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#238636]
-                text-white font-bold rounded-lg transition-all shadow-lg shadow-[#238636]/30
-                hover:shadow-xl hover:shadow-[#238636]/40 flex items-center gap-2
-                disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="text-lg">{isUploading ? '⏳' : '💾'}</span>
-              {isUploading ? '업로드 중...' : '저장하기'}
-            </button>
+          {/* Right Sidebar - Controls */}
+          <div className="w-80 bg-[#0d1117] border-l border-[#30363d] p-6 overflow-y-auto">
+            {/* Brush Size Control */}
+            <div className="mb-6">
+              <h3 className="text-sm font-bold text-[#e6edf3] mb-3">브러시 크기</h3>
+              <div className="space-y-3">
+                <input
+                  type="range"
+                  min="5"
+                  max="150"
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(Number(e.target.value))}
+                  className="w-full h-3 bg-[#30363d] rounded-lg appearance-none cursor-pointer
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r
+                    [&::-webkit-slider-thumb]:from-[#238636] [&::-webkit-slider-thumb]:to-[#2ea043]
+                    [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-[#238636]/50
+                    [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:hover:scale-110
+                    [&::-webkit-slider-thumb]:transition-transform"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#8d96a0]">5px</span>
+                  <span className="text-2xl font-bold text-[#58a6ff]">{brushSize}px</span>
+                  <span className="text-xs text-[#8d96a0]">150px</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div className="mb-6 p-4 bg-[#161b22] rounded-lg border border-[#30363d]">
+              <div className="flex items-start gap-2 mb-2">
+                <div className="text-xl">💡</div>
+                <h3 className="text-sm font-bold text-[#e6edf3]">사용 팁</h3>
+              </div>
+              <div className="text-xs text-[#8d96a0] space-y-2">
+                <p>• 지우개로 워터마크, 로고, 배경 텍스트 제거</p>
+                <p>• 브러시로 지운 부분을 흰색으로 복원</p>
+                <p>• 브러시 크기를 조절하여 정밀하게 편집</p>
+                <p>• 하단 중앙 자막도 자유롭게 제거 가능</p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={handleSave}
+                disabled={isUploading}
+                className="w-full px-6 py-4 bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#238636]
+                  text-white font-bold rounded-lg transition-all shadow-lg shadow-[#238636]/30
+                  hover:shadow-xl hover:shadow-[#238636]/40 flex items-center justify-center gap-2
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="text-xl">{isUploading ? '⏳' : '💾'}</span>
+                {isUploading ? '업로드 중...' : '저장하기'}
+              </button>
+              <button
+                onClick={onCancel}
+                className="w-full px-6 py-3 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded-lg transition-all font-medium border border-[#30363d]"
+              >
+                취소
+              </button>
+            </div>
           </div>
         </div>
       </div>
