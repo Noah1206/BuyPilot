@@ -269,8 +269,8 @@ export default function BulkImportPage() {
 
   const validCount = parsedProducts.filter(p => !p.error).length
   const errorCount = parsedProducts.filter(p => p.error).length
-  const manualCategoryCount = parsedProducts.filter(p => p.category_id && !p.error).length
-  const aiCategoryCount = parsedProducts.filter(p => !p.category_id && !p.error).length
+  const manualCategoryCount = parsedProducts.filter(p => p.category_name && !p.error).length
+  const aiCategoryCount = parsedProducts.filter(p => !p.category_name && !p.error).length
 
   return (
     <div className="min-h-screen bg-slate-50">
