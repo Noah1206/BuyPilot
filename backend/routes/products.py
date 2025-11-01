@@ -393,7 +393,7 @@ def get_product(product_id):
         }), 500
 
 
-@bp.route('/products/<product_id>', methods=['PUT'])
+@bp.route('/products/<product_id>', methods=['PUT', 'PATCH'])
 def update_product(product_id):
     """
     Update product
