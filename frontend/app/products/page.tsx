@@ -57,8 +57,12 @@ export default function ProductsPage() {
   const [maskCanvas, setMaskCanvas] = useState<HTMLCanvasElement | null>(null)
   const [brushSize, setBrushSize] = useState(30)
 
-  // AI category suggestions cache
-  const [categoryCache, setCategoryCache] = useState<Map<string, any>>(new Map())
+  // AI category suggestions cache (stores all suggestions, not just the best one)
+  const [categoryCache, setCategoryCache] = useState<Map<string, any[]>>(new Map())
+
+  // Category selection modal state
+  const [showCategorySelectorModal, setShowCategorySelectorModal] = useState(false)
+  const [selectedProductForCategory, setSelectedProductForCategory] = useState<string | null>(null)
 
   // Drag and drop state for image reordering
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null)
@@ -123,7 +127,7 @@ export default function ProductsPage() {
           const result = await response.json()
 
           if (result.ok && result.data?.suggestions && result.data.suggestions.length > 0) {
-            newCache.set(product.id, result.data.suggestions[0]) // Store best suggestion
+            newCache.set(product.id, result.data.suggestions) // Store ALL suggestions (top 3)
           }
         } catch (err) {
           console.error(`Failed to get category for product ${product.id}:`, err)
@@ -596,9 +600,9 @@ export default function ProductsPage() {
     let missingCategoryCount = 0
 
     selectedProducts.forEach(productId => {
-      const cachedCategory = categoryCache.get(productId)
-      if (cachedCategory && cachedCategory.category_id) {
-        productCategoryMap[productId] = cachedCategory.category_id
+      const cachedCategories = categoryCache.get(productId)
+      if (cachedCategories && cachedCategories.length > 0 && cachedCategories[0].category_id) {
+        productCategoryMap[productId] = cachedCategories[0].category_id
       } else {
         missingCategoryCount++
       }
@@ -664,6 +668,27 @@ export default function ProductsPage() {
     // This function is no longer used, but kept for backward compatibility
     setShowCategoryModal(false)
     setSelectedCategoryId(categoryId)
+  }
+
+  const selectCategory = (productId: string, categoryIndex: number) => {
+    const categories = categoryCache.get(productId)
+    if (!categories || categoryIndex >= categories.length) return
+
+    // Reorder the suggestions array to put selected category first
+    const newCategories = [...categories]
+    const [selected] = newCategories.splice(categoryIndex, 1)
+    newCategories.unshift(selected)
+
+    // Update cache
+    const newCache = new Map(categoryCache)
+    newCache.set(productId, newCategories)
+    setCategoryCache(newCache)
+
+    // Close modal
+    setShowCategorySelectorModal(false)
+    setSelectedProductForCategory(null)
+
+    toast(`카테고리가 "${selected.category_path}"(으)로 변경되었습니다`)
   }
 
   const totalPages = Math.ceil(total / limit)
@@ -919,17 +944,23 @@ export default function ProductsPage() {
                   </button>
 
                   {/* AI Recommended Category - Top Right */}
-                  {categoryCache.get(product.id) && (
+                  {categoryCache.get(product.id) && categoryCache.get(product.id)!.length > 0 && (
                     <div className="absolute top-4 right-4 z-10">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
+                      <button
+                        onClick={() => {
+                          setSelectedProductForCategory(product.id)
+                          setShowCategorySelectorModal(true)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg shadow-sm hover:bg-blue-100 hover:border-blue-300 transition-all cursor-pointer"
+                      >
                         <Sparkles size={12} className="text-blue-500" />
                         <span className="text-xs font-medium text-blue-700">
-                          {categoryCache.get(product.id).category_path}
+                          {categoryCache.get(product.id)![0].category_path}
                         </span>
                         <span className="text-xs font-semibold text-blue-500">
-                          ({categoryCache.get(product.id).confidence}%)
+                          ({categoryCache.get(product.id)![0].confidence}%)
                         </span>
-                      </div>
+                      </button>
                     </div>
                   )}
 
@@ -1632,6 +1663,86 @@ export default function ProductsPage() {
               : 'bg-red-600 text-white'
           }`}>
             {showToast.message}
+          </div>
+        </div>
+      )}
+
+      {/* AI Category Selector Modal */}
+      {showCategorySelectorModal && selectedProductForCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-white">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Sparkles size={24} className="text-blue-500" />
+                AI 추천 카테고리 선택
+              </h2>
+              <p className="text-sm text-slate-600 mt-1">
+                {products.find(p => p.id === selectedProductForCategory)?.title.substring(0, 50)}...
+              </p>
+            </div>
+
+            {/* Category List */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-3">
+                {categoryCache.get(selectedProductForCategory)?.map((category: any, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => selectCategory(selectedProductForCategory, index)}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all hover:shadow-md ${
+                      index === 0
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100'
+                        : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {index === 0 && (
+                            <span className="px-2 py-0.5 bg-blue-500 text-white text-xs font-bold rounded">
+                              현재 선택됨
+                            </span>
+                          )}
+                          <span className={`text-sm font-semibold ${
+                            index === 0 ? 'text-blue-600' : 'text-slate-600'
+                          }`}>
+                            #{index + 1}
+                          </span>
+                        </div>
+                        <div className={`text-base font-medium mb-2 ${
+                          index === 0 ? 'text-blue-900' : 'text-slate-900'
+                        }`}>
+                          {category.category_path}
+                        </div>
+                        <div className="text-sm text-slate-600 line-clamp-2">
+                          {category.reason}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className={`text-2xl font-bold ${
+                          index === 0 ? 'text-blue-600' : 'text-slate-400'
+                        }`}>
+                          {category.confidence}%
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+              <button
+                onClick={() => {
+                  setShowCategorySelectorModal(false)
+                  setSelectedProductForCategory(null)
+                }}
+                className="w-full px-4 py-2.5 rounded-lg font-medium text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition-all"
+              >
+                닫기
+              </button>
+            </div>
           </div>
         </div>
       )}
