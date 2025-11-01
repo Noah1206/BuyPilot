@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { Home, Package, TrendingUp, LogIn, UserPlus, LogOut, User, Settings, Truck } from 'lucide-react'
+import { Home, Package, TrendingUp, LogIn, UserPlus, LogOut, User, Settings, Truck, FileSpreadsheet } from 'lucide-react'
 
 export default function Header() {
   const router = useRouter()
@@ -86,6 +86,17 @@ export default function Header() {
                 >
                   <Truck size={18} />
                   배송비 설정
+                </a>
+                <a
+                  href="/bulk-import"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive('/bulk-import')
+                      ? 'text-orange-600 bg-orange-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <FileSpreadsheet size={18} />
+                  대량 수집
                 </a>
                 <a
                   href="/competitor"

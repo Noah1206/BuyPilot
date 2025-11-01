@@ -843,3 +843,267 @@ def upload_edited_image(product_id):
                 'details': {'error': str(e)}
             }
         }), 500
+
+
+@bp.route('/products/bulk-import', methods=['POST'])
+def bulk_import():
+    """
+    Bulk import products from Excel data
+
+    Body: {
+        products: [
+            {
+                taobao_url: string,
+                category_id?: string,
+                shipping_cost?: number,
+                margin?: number,
+                weight?: number,
+                customs_rate?: number,
+                vat_rate?: number,
+                memo?: string
+            }
+        ],
+        use_ai_category?: boolean
+    }
+
+    Returns: {ok: bool, data: {summary, results}}
+    """
+    try:
+        data = request.get_json(force=True)
+        products_data = data.get('products', [])
+        use_ai_category = data.get('use_ai_category', True)
+
+        if not products_data or len(products_data) == 0:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'No products provided',
+                    'details': {}
+                }
+            }), 400
+
+        logger.info(f"📦 Starting bulk import for {len(products_data)} products")
+
+        # Initialize AI category analyzer if needed
+        category_analyzer = None
+        naver_categories = None
+
+        if use_ai_category:
+            try:
+                from ai.category_analyzer import get_category_analyzer
+                import json
+
+                category_analyzer = get_category_analyzer()
+
+                # Load Naver categories from JSON file
+                categories_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'naver_categories.json')
+                with open(categories_file, 'r', encoding='utf-8') as f:
+                    categories_data = json.load(f)
+                    naver_categories = categories_data.get('categories', [])
+
+                logger.info(f"✅ AI category analyzer initialized with {len(naver_categories)} categories")
+            except Exception as e:
+                logger.warning(f"⚠️ AI category analyzer initialization failed: {str(e)}")
+                use_ai_category = False
+
+        # Results tracking
+        results = []
+        success_count = 0
+        failed_count = 0
+        manual_category_count = 0
+        ai_category_count = 0
+
+        # Get connectors
+        taobao_api = get_taobao_rapidapi()
+        translator = get_translator()
+        image_service = get_image_service()
+
+        # Process each product
+        for idx, item in enumerate(products_data):
+            try:
+                taobao_url = item.get('taobao_url', '').strip()
+
+                if not taobao_url:
+                    results.append({
+                        'index': idx,
+                        'success': False,
+                        'error': 'Missing taobao_url'
+                    })
+                    failed_count += 1
+                    continue
+
+                logger.info(f"🔄 ({idx + 1}/{len(products_data)}) Processing: {taobao_url}")
+
+                # Step 1: Fetch product data from Taobao
+                product_data = taobao_api.get_product_details(taobao_url)
+
+                if not product_data:
+                    results.append({
+                        'index': idx,
+                        'success': False,
+                        'error': 'Failed to fetch product from Taobao'
+                    })
+                    failed_count += 1
+                    continue
+
+                # Step 2: Translate title and description
+                if product_data.get('title'):
+                    product_data['title'] = translator.translate(product_data['title'])
+
+                if product_data.get('description'):
+                    product_data['description'] = translator.translate(product_data['description'])
+
+                # Step 3: Download images
+                downloaded_images = []
+                if product_data.get('images'):
+                    for img_url in product_data['images'][:10]:  # Max 10 images
+                        try:
+                            local_path = image_service.download_and_optimize(img_url)
+                            if local_path:
+                                downloaded_images.append(local_path)
+                        except Exception as img_error:
+                            logger.warning(f"⚠️ Failed to download image {img_url}: {str(img_error)}")
+
+                if downloaded_images:
+                    product_data['downloaded_images'] = downloaded_images
+
+                # Step 4: Category selection (manual vs AI)
+                category_id = item.get('category_id', '').strip() if item.get('category_id') else None
+                category_source = 'manual'
+                category_path = None
+                ai_confidence = None
+
+                if category_id:
+                    # Manual category
+                    manual_category_count += 1
+
+                    # Find category path
+                    if naver_categories:
+                        for cat in naver_categories:
+                            if cat.get('id') == category_id:
+                                category_path = cat.get('path')
+                                break
+                else:
+                    # AI category analysis
+                    if use_ai_category and category_analyzer and naver_categories:
+                        try:
+                            suggestions = category_analyzer.suggest_categories(
+                                product_data={
+                                    'title': product_data.get('title', ''),
+                                    'price': product_data.get('price', 0),
+                                    'desc': product_data.get('description', '')
+                                },
+                                categories_tree=naver_categories,
+                                top_k=3
+                            )
+
+                            if suggestions and len(suggestions) > 0:
+                                best = suggestions[0]
+                                category_id = best['category_id']
+                                category_path = best['category_path']
+                                ai_confidence = best['confidence']
+                                category_source = 'ai'
+                                ai_category_count += 1
+                                logger.info(f"🤖 AI selected category: {category_path} ({ai_confidence}%)")
+                        except Exception as ai_error:
+                            logger.warning(f"⚠️ AI category analysis failed: {str(ai_error)}")
+
+                # Step 5: Add user input values
+                if item.get('shipping_cost') is not None:
+                    product_data['shipping_cost'] = float(item['shipping_cost'])
+
+                if item.get('margin') is not None:
+                    product_data['margin'] = float(item['margin'])
+                else:
+                    product_data['margin'] = 30  # Default margin
+
+                if item.get('weight') is not None:
+                    product_data['weight'] = float(item['weight'])
+
+                if item.get('customs_rate') is not None:
+                    product_data['customs_rate'] = float(item['customs_rate'])
+
+                if item.get('vat_rate') is not None:
+                    product_data['vat_rate'] = float(item['vat_rate'])
+
+                if item.get('memo'):
+                    product_data['memo'] = item['memo']
+
+                # Store category info
+                if category_id:
+                    product_data['category_id'] = category_id
+
+                # Step 6: Save to database
+                with get_db() as db:
+                    product = Product(
+                        id=str(uuid.uuid4()),
+                        source='taobao',
+                        source_url=taobao_url,
+                        supplier_id=product_data.get('seller_id'),
+                        title=product_data.get('title', 'Unknown Product'),
+                        price=product_data.get('price', 0),
+                        currency='CNY',
+                        stock=product_data.get('stock', 0),
+                        image_url=downloaded_images[0] if downloaded_images else product_data.get('images', [''])[0],
+                        data=product_data,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+
+                    db.add(product)
+                    db.commit()
+
+                    result = {
+                        'index': idx,
+                        'success': True,
+                        'product_id': product.id,
+                        'title': product.title,
+                        'category_source': category_source,
+                        'category_id': category_id,
+                        'category_path': category_path
+                    }
+
+                    if ai_confidence is not None:
+                        result['ai_confidence'] = ai_confidence
+
+                    results.append(result)
+                    success_count += 1
+
+                    logger.info(f"✅ Product saved: {product.title}")
+
+            except Exception as e:
+                logger.error(f"❌ Failed to import product {idx}: {str(e)}", exc_info=True)
+                results.append({
+                    'index': idx,
+                    'success': False,
+                    'error': str(e)
+                })
+                failed_count += 1
+
+        logger.info(f"📊 Bulk import complete: {success_count} success, {failed_count} failed")
+
+        return jsonify({
+            'ok': True,
+            'data': {
+                'summary': {
+                    'total': len(products_data),
+                    'success': success_count,
+                    'failed': failed_count,
+                    'manual_category': manual_category_count,
+                    'ai_category': ai_category_count
+                },
+                'results': results
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Bulk import error: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'BULK_IMPORT_ERROR',
+                'message': 'Failed to process bulk import',
+                'details': {'error': str(e)}
+            }
+        }), 500
