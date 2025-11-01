@@ -146,6 +146,36 @@ class CategoryAnalyzer:
             logger.error(f"❌ Category analysis failed: {str(e)}", exc_info=True)
             return []
 
+    def _extract_keywords(self, title: str) -> List[str]:
+        """
+        Extract relevant keywords from product title for category filtering
+
+        Args:
+            title: Product title in Korean
+
+        Returns:
+            List of keywords to match against categories
+        """
+        # Common product-related keywords in Korean
+        # Split by common separators and extract meaningful words
+        import re
+
+        # Remove common symbols and split
+        title_clean = re.sub(r'[/\-_\[\](){}]', ' ', title)
+        words = title_clean.split()
+
+        # Filter out very short words (< 2 chars) and numbers only
+        keywords = []
+        for word in words:
+            word = word.strip()
+            if len(word) >= 2 and not word.isdigit():
+                keywords.append(word)
+
+        # Add original title as well for compound matches
+        keywords.append(title)
+
+        return keywords
+
     def _build_analysis_prompt(
         self,
         title: str,
@@ -156,10 +186,31 @@ class CategoryAnalyzer:
     ) -> str:
         """Build structured prompt for Gemini AI"""
 
-        # Format categories for prompt (limit to prevent token overflow)
-        # Group by main category to reduce size
-        category_groups = {}
+        # Smart filtering: extract keywords from product title
+        keywords = self._extract_keywords(title)
+
+        # Filter categories based on keywords for better relevance
+        relevant_categories = []
+        other_categories = []
+
         for cat in categories:
+            # Check if any keyword matches category path
+            is_relevant = any(keyword.lower() in cat['path'].lower() for keyword in keywords)
+
+            if is_relevant:
+                relevant_categories.append(cat)
+            else:
+                other_categories.append(cat)
+
+        # Combine: prioritize relevant categories, then add others
+        # Gemini 2.0 Flash has 1M token context, so we can include many categories
+        selected_categories = relevant_categories[:500] + other_categories[:500]
+
+        logger.info(f"📊 Filtered {len(relevant_categories)} relevant categories (keywords: {keywords})")
+
+        # Group by main category
+        category_groups = {}
+        for cat in selected_categories:
             parts = cat['path'].split(' > ')
             main_cat = parts[0] if parts else 'Unknown'
 
@@ -171,11 +222,11 @@ class CategoryAnalyzer:
                 'path': cat['path']
             })
 
-        # Format for prompt
+        # Format for prompt - include more categories for better accuracy
         categories_text = []
-        for main_cat, subcats in list(category_groups.items())[:20]:  # Limit to top 20 main categories
+        for main_cat, subcats in category_groups.items():
             categories_text.append(f"\n[{main_cat}]")
-            for subcat in subcats[:10]:  # Limit subcategories per main
+            for subcat in subcats[:50]:  # Increased from 10 to 50 subcategories per main
                 categories_text.append(f"  ID: {subcat['id']} - {subcat['path']}")
 
         categories_formatted = '\n'.join(categories_text)
