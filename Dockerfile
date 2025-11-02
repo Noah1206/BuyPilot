@@ -14,6 +14,7 @@ COPY frontend/tailwind.config.ts ./
 COPY frontend/postcss.config.js ./
 COPY frontend/next-env.d.ts ./
 COPY frontend/app ./app
+# Force rebuild of components (ImageEditor sidebar UI update)
 COPY frontend/components ./components
 COPY frontend/lib ./lib
 COPY frontend/public ./public

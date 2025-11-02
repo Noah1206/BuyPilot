@@ -14,6 +14,7 @@ export default function ImageEditor({ imageUrl, productId, onSave, onCancel }: I
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [brushSize, setBrushSize] = useState(20)
+  // Updated: Sidebar UI - 2025-11-02
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [tool, setTool] = useState<'eraser' | 'brush'>('eraser')
   const [history, setHistory] = useState<ImageData[]>([])
