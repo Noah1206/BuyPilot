@@ -197,46 +197,8 @@ export default function ImageEditor({ imageUrl, productId, onSave, onCancel }: I
 
         {/* Main Content Area - Flex Row */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Canvas Area */}
-          <div className="flex-1 bg-gradient-to-br from-[#0d1117] to-[#161b22] p-6 overflow-auto">
-            <div className="flex items-center justify-center h-full">
-              <div className="relative">
-                {/* Checkerboard background pattern */}
-                <div className="absolute inset-0 opacity-20" style={{
-                  backgroundImage: `
-                    repeating-conic-gradient(#30363d 0% 25%, transparent 0% 50%) 50% / 20px 20px
-                  `,
-                }}></div>
-
-                <canvas
-                  ref={canvasRef}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                  className="cursor-crosshair border-2 border-[#30363d] rounded-lg shadow-2xl relative bg-white"
-                  style={{
-                    cursor: tool === 'eraser' ? 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\'><circle cx=\'12\' cy=\'12\' r=\'10\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'2\'/></svg>") 12 12, crosshair' : 'crosshair'
-                  }}
-                />
-
-                {/* Brush preview cursor */}
-                <div
-                  className="pointer-events-none absolute hidden"
-                  style={{
-                    width: brushSize + 'px',
-                    height: brushSize + 'px',
-                    border: '2px solid ' + (tool === 'eraser' ? '#ff6b6b' : '#4dabf7'),
-                    borderRadius: '50%',
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Sidebar - Controls */}
-          <div className="w-80 bg-[#0d1117] border-l border-[#30363d] p-6 overflow-y-auto">
+          {/* Left Sidebar - Controls */}
+          <div className="w-80 bg-[#0d1117] border-r border-[#30363d] p-6 overflow-y-auto">
             {/* Tool Selection */}
             <div className="mb-6">
               <h3 className="text-sm font-bold text-[#e6edf3] mb-3">편집 도구</h3>
@@ -364,6 +326,44 @@ export default function ImageEditor({ imageUrl, productId, onSave, onCancel }: I
               >
                 취소
               </button>
+            </div>
+          </div>
+
+          {/* Canvas Area */}
+          <div className="flex-1 bg-gradient-to-br from-[#0d1117] to-[#161b22] p-6 overflow-auto">
+            <div className="flex items-center justify-center h-full">
+              <div className="relative">
+                {/* Checkerboard background pattern */}
+                <div className="absolute inset-0 opacity-20" style={{
+                  backgroundImage: `
+                    repeating-conic-gradient(#30363d 0% 25%, transparent 0% 50%) 50% / 20px 20px
+                  `,
+                }}></div>
+
+                <canvas
+                  ref={canvasRef}
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  className="cursor-crosshair border-2 border-[#30363d] rounded-lg shadow-2xl relative bg-white"
+                  style={{
+                    cursor: tool === 'eraser' ? 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\'><circle cx=\'12\' cy=\'12\' r=\'10\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'2\'/></svg>") 12 12, crosshair' : 'crosshair'
+                  }}
+                />
+
+                {/* Brush preview cursor */}
+                <div
+                  className="pointer-events-none absolute hidden"
+                  style={{
+                    width: brushSize + 'px',
+                    height: brushSize + 'px',
+                    border: '2px solid ' + (tool === 'eraser' ? '#ff6b6b' : '#4dabf7'),
+                    borderRadius: '50%',
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                ></div>
+              </div>
             </div>
           </div>
         </div>
