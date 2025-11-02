@@ -1,4 +1,5 @@
 # Multi-stage build: Build frontend, serve both
+# Force rebuild - 2025-11-02
 FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend
