@@ -88,15 +88,17 @@ WORKDIR /app/backend
 # Upgrade pip first for better download reliability
 RUN pip install --upgrade pip
 
-# Install packages with retry logic and increased timeout
-# Install torch/torchvision separately first (they're large dependencies from easyocr)
+# Install PyTorch CPU-only version first (required by easyocr)
 RUN pip install --no-cache-dir --timeout=300 --retries=5 \
-    torch torchvision --index-url https://download.pytorch.org/whl/cpu || \
-    pip install --no-cache-dir --timeout=300 --retries=5 \
-    torch torchvision --index-url https://download.pytorch.org/whl/cpu
+    torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cpu
 
-# Install remaining requirements with retry logic
-RUN pip install --no-cache-dir --timeout=300 --retries=5 -r requirements.txt
+# Install remaining requirements with retry logic, excluding easyocr first
+RUN grep -v "easyocr" requirements.txt > /tmp/requirements_temp.txt && \
+    pip install --no-cache-dir --timeout=300 --retries=5 -r /tmp/requirements_temp.txt
+
+# Install easyocr separately with --no-deps to prevent torch reinstall
+RUN pip install --no-cache-dir --no-deps easyocr==1.7.2 && \
+    pip install --no-cache-dir python-bidi PyYAML Pillow scikit-image opencv-python-headless scipy
 
 # Create storage directory for downloaded images
 RUN mkdir -p /app/backend/storage/images
