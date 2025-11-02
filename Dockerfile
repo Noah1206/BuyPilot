@@ -88,17 +88,27 @@ WORKDIR /app/backend
 # Upgrade pip first for better download reliability
 RUN pip install --upgrade pip
 
-# Install PyTorch CPU-only version first (required by easyocr)
+# Set environment variable to force CPU-only PyTorch
+ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+
+# Install PyTorch CPU-only version first with explicit version lock
 RUN pip install --no-cache-dir --timeout=300 --retries=5 \
-    torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cpu
+    torch==2.1.0+cpu torchvision==0.16.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Install remaining requirements with retry logic, excluding easyocr first
-RUN grep -v "easyocr" requirements.txt > /tmp/requirements_temp.txt && \
-    pip install --no-cache-dir --timeout=300 --retries=5 -r /tmp/requirements_temp.txt
+# Create temporary requirements without easyocr and opencv
+RUN cat requirements.txt | grep -v "easyocr" | grep -v "opencv-python-headless" > /tmp/requirements_base.txt
 
-# Install easyocr separately with --no-deps to prevent torch reinstall
-RUN pip install --no-cache-dir --no-deps easyocr==1.7.2 && \
-    pip install --no-cache-dir python-bidi PyYAML Pillow scikit-image opencv-python-headless scipy
+# Install base requirements
+RUN pip install --no-cache-dir --timeout=300 --retries=5 -r /tmp/requirements_base.txt
+
+# Install opencv-python-headless (smaller than regular opencv)
+RUN pip install --no-cache-dir opencv-python-headless==4.10.0.84
+
+# Install easyocr dependencies manually without torch
+RUN pip install --no-cache-dir python-bidi pyclipper shapely
+
+# Install easyocr with --no-deps to prevent any dependency reinstall
+RUN pip install --no-cache-dir --no-deps easyocr==1.7.2
 
 # Create storage directory for downloaded images
 RUN mkdir -p /app/backend/storage/images
