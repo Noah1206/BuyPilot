@@ -6,7 +6,16 @@ echo ""
 
 # 1. 최신 코드 가져오기
 echo "📥 Step 1/5: Git pull..."
-cd /home/ec2-user/BuyPilot
+# EC2 사용자에 맞게 경로 자동 감지
+if [ -d "/home/ec2-user/BuyPilot" ]; then
+  cd /home/ec2-user/BuyPilot
+elif [ -d "/home/ubuntu/BuyPilot" ]; then
+  cd /home/ubuntu/BuyPilot
+else
+  echo "❌ BuyPilot 디렉토리를 찾을 수 없습니다."
+  exit 1
+fi
+
 git pull origin main
 
 # 2. 기존 컨테이너 중지
