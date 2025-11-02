@@ -19,6 +19,9 @@ COPY frontend/components ./components
 COPY frontend/lib ./lib
 COPY frontend/public ./public
 
+# Delete .next folder to force fresh build
+RUN rm -rf .next
+
 # Build Next.js standalone
 RUN npm run build
 
