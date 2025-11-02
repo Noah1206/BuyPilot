@@ -193,70 +193,6 @@ export default function ImageEditor({ imageUrl, productId, onSave, onCancel }: I
           </button>
         </div>
 
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-4 p-4 bg-[#0d1117] border-b border-[#30363d]">
-          {/* Tools */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTool('eraser')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                tool === 'eraser'
-                  ? 'bg-gradient-to-r from-[#238636] to-[#2ea043] text-white shadow-lg shadow-[#238636]/30'
-                  : 'bg-[#21262d] text-[#8d96a0] hover:bg-[#30363d] hover:text-[#e6edf3]'
-              }`}
-            >
-              <span className="text-lg">🧹</span>
-              지우개
-            </button>
-            <button
-              onClick={() => setTool('brush')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                tool === 'brush'
-                  ? 'bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white shadow-lg shadow-[#1f6feb]/30'
-                  : 'bg-[#21262d] text-[#8d96a0] hover:bg-[#30363d] hover:text-[#e6edf3]'
-              }`}
-            >
-              <span className="text-lg">🖌️</span>
-              브러시
-            </button>
-          </div>
-
-          {/* History Controls */}
-          <div className="flex gap-2">
-            <button
-              onClick={undo}
-              disabled={historyStep <= 0}
-              className="px-3 py-2 bg-[#21262d] hover:bg-[#30363d] disabled:bg-[#21262d] disabled:opacity-30
-                text-[#e6edf3] disabled:text-[#6e7681] rounded-lg text-sm transition-all flex items-center gap-2"
-              title="실행 취소 (Ctrl+Z)"
-            >
-              <span className="text-lg">↶</span>
-              실행취소
-            </button>
-            <button
-              onClick={redo}
-              disabled={historyStep >= history.length - 1}
-              className="px-3 py-2 bg-[#21262d] hover:bg-[#30363d] disabled:bg-[#21262d] disabled:opacity-30
-                text-[#e6edf3] disabled:text-[#6e7681] rounded-lg text-sm transition-all flex items-center gap-2"
-              title="다시 실행 (Ctrl+Y)"
-            >
-              <span className="text-lg">↷</span>
-              다시실행
-            </button>
-          </div>
-
-          <div className="flex-1"></div>
-
-          {/* Reset */}
-          <button
-            onClick={handleReset}
-            className="px-4 py-2 bg-[#6e7681]/20 hover:bg-[#6e7681]/30 text-[#8d96a0] hover:text-[#e6edf3]
-              rounded-lg text-sm transition-all flex items-center gap-2 border border-[#6e7681]/30"
-          >
-            <span className="text-lg">🔄</span>
-            초기화
-          </button>
-        </div>
 
         {/* Main Content Area - Flex Row */}
         <div className="flex-1 flex overflow-hidden">
@@ -300,6 +236,74 @@ export default function ImageEditor({ imageUrl, productId, onSave, onCancel }: I
 
           {/* Right Sidebar - Controls */}
           <div className="w-80 bg-[#0d1117] border-l border-[#30363d] p-6 overflow-y-auto">
+            {/* Tool Selection */}
+            <div className="mb-6">
+              <h3 className="text-sm font-bold text-[#e6edf3] mb-3">편집 도구</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setTool('eraser')}
+                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-all flex flex-col items-center gap-2 ${
+                    tool === 'eraser'
+                      ? 'bg-gradient-to-r from-[#238636] to-[#2ea043] text-white shadow-lg shadow-[#238636]/30'
+                      : 'bg-[#21262d] text-[#8d96a0] hover:bg-[#30363d] hover:text-[#e6edf3]'
+                  }`}
+                >
+                  <span className="text-2xl">🧹</span>
+                  지우개
+                </button>
+                <button
+                  onClick={() => setTool('brush')}
+                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-all flex flex-col items-center gap-2 ${
+                    tool === 'brush'
+                      ? 'bg-gradient-to-r from-[#1f6feb] to-[#58a6ff] text-white shadow-lg shadow-[#1f6feb]/30'
+                      : 'bg-[#21262d] text-[#8d96a0] hover:bg-[#30363d] hover:text-[#e6edf3]'
+                  }`}
+                >
+                  <span className="text-2xl">🖌️</span>
+                  브러시
+                </button>
+              </div>
+            </div>
+
+            {/* History Controls */}
+            <div className="mb-6">
+              <h3 className="text-sm font-bold text-[#e6edf3] mb-3">실행 취소/복구</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={undo}
+                  disabled={historyStep <= 0}
+                  className="px-3 py-3 bg-[#21262d] hover:bg-[#30363d] disabled:bg-[#21262d] disabled:opacity-30
+                    text-[#e6edf3] disabled:text-[#6e7681] rounded-lg text-sm transition-all flex flex-col items-center gap-1"
+                  title="실행 취소 (Ctrl+Z)"
+                >
+                  <span className="text-xl">↶</span>
+                  <span className="text-xs">실행취소</span>
+                </button>
+                <button
+                  onClick={redo}
+                  disabled={historyStep >= history.length - 1}
+                  className="px-3 py-3 bg-[#21262d] hover:bg-[#30363d] disabled:bg-[#21262d] disabled:opacity-30
+                    text-[#e6edf3] disabled:text-[#6e7681] rounded-lg text-sm transition-all flex flex-col items-center gap-1"
+                  title="다시 실행 (Ctrl+Y)"
+                >
+                  <span className="text-xl">↷</span>
+                  <span className="text-xs">다시실행</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Reset Button */}
+            <div className="mb-6">
+              <button
+                onClick={handleReset}
+                className="w-full px-4 py-3 bg-[#6e7681]/20 hover:bg-[#6e7681]/30 text-[#8d96a0] hover:text-[#e6edf3]
+                  rounded-lg text-sm transition-all flex items-center justify-center gap-2 border border-[#6e7681]/30"
+              >
+                <span className="text-lg">🔄</span>
+                초기화
+              </button>
+            </div>
+
             {/* Brush Size Control */}
             <div className="mb-6">
               <h3 className="text-sm font-bold text-[#e6edf3] mb-3">브러시 크기</h3>
