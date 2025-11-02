@@ -84,7 +84,19 @@ ENV CHROME_BIN=/usr/bin/google-chrome-stable \
 # Copy backend
 COPY backend/ /app/backend/
 WORKDIR /app/backend
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Upgrade pip first for better download reliability
+RUN pip install --upgrade pip
+
+# Install packages with retry logic and increased timeout
+# Install torch/torchvision separately first (they're large dependencies from easyocr)
+RUN pip install --no-cache-dir --timeout=300 --retries=5 \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu || \
+    pip install --no-cache-dir --timeout=300 --retries=5 \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining requirements with retry logic
+RUN pip install --no-cache-dir --timeout=300 --retries=5 -r requirements.txt
 
 # Create storage directory for downloaded images
 RUN mkdir -p /app/backend/storage/images
