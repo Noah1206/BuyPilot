@@ -8,8 +8,33 @@ import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore } from '@/lib/api'
 import Header from '@/components/Header'
 import CategorySelectionModal from '@/components/CategorySelectionModal'
-import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser, Edit, Check } from 'lucide-react'
+import ProductOptionsModal from '@/components/ProductOptionsModal'
+import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser, Edit, Check, Layers } from 'lucide-react'
 import * as XLSX from 'xlsx'
+
+// Product option value definition
+interface ProductOptionValue {
+  vid: string
+  name: string
+  image?: string
+  available?: boolean
+}
+
+// Product option definition (e.g., Color, Size)
+interface ProductOption {
+  pid: string
+  name: string
+  values: ProductOptionValue[]
+}
+
+// Product variant definition (specific combination of options)
+interface ProductVariant {
+  sku_id: string
+  options: Record<string, string>  // e.g., {"颜色分类": "红色", "尺码": "M"}
+  price: number
+  stock: number
+  image?: string
+}
 
 interface Product {
   id: string
@@ -22,7 +47,11 @@ interface Product {
   stock?: number
   image_url?: string
   score?: number
-  data: any
+  data: {
+    options?: ProductOption[]
+    variants?: ProductVariant[]
+    [key: string]: any
+  }
   created_at: string
   updated_at: string
 }
@@ -78,6 +107,10 @@ export default function ProductsPage() {
   const [allCategories, setAllCategories] = useState<any[]>([])
   const [filteredCategories, setFilteredCategories] = useState<any[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
+
+  // Options modal state
+  const [showOptionsModal, setShowOptionsModal] = useState(false)
+  const [selectedProductForOptions, setSelectedProductForOptions] = useState<Product | null>(null)
 
   useEffect(() => {
     loadProducts()
@@ -190,6 +223,18 @@ export default function ProductsPage() {
     }
 
     setCategoryCache(newCache)
+  }
+
+  // Open options modal
+  const openOptionsModal = (product: Product) => {
+    setSelectedProductForOptions(product)
+    setShowOptionsModal(true)
+  }
+
+  // Close options modal
+  const closeOptionsModal = () => {
+    setShowOptionsModal(false)
+    setSelectedProductForOptions(null)
   }
 
   const handleImport = async (e: React.FormEvent) => {
@@ -1225,6 +1270,18 @@ export default function ProductsPage() {
                       <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-xs font-medium bg-orange-500 text-white">
                         {platform}
                       </div>
+
+                      {/* Variants badge */}
+                      {product.data?.variants && product.data.variants.length > 0 && (
+                        <button
+                          onClick={() => openOptionsModal(product)}
+                          className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500 text-white flex items-center gap-1 hover:bg-blue-600 hover:scale-105 transition-all cursor-pointer"
+                          title="옵션 보기"
+                        >
+                          <Layers size={10} strokeWidth={2.5} />
+                          <span>{product.data.variants.length}</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Product info */}
@@ -2046,6 +2103,19 @@ export default function ProductsPage() {
           productTitle={products.find(p => selectedProducts.has(p.id))?.title || '선택된 상품'}
           onConfirm={handleCategoryConfirmed}
           onCancel={() => setShowCategoryModal(false)}
+        />
+      )}
+
+      {/* Product Options Modal */}
+      {showOptionsModal && selectedProductForOptions && (
+        <ProductOptionsModal
+          isOpen={showOptionsModal}
+          onClose={closeOptionsModal}
+          productTitle={selectedProductForOptions.title}
+          options={selectedProductForOptions.data?.options || []}
+          variants={selectedProductForOptions.data?.variants || []}
+          basePrice={selectedProductForOptions.price}
+          currency={selectedProductForOptions.currency}
         />
       )}
     </div>

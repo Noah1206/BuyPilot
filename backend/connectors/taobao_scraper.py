@@ -314,8 +314,9 @@ class TaobaoScraper:
 
             # Extract product specifications and options
             product_data['specifications'] = self._extract_specifications(soup)
-            product_data['options'] = self._extract_product_options(soup)
-            product_data['variants'] = self._extract_product_variants(soup)
+            options = self._extract_product_options(soup)
+            product_data['options'] = options
+            product_data['variants'] = self._extract_product_variants(soup, options)
 
             logger.info(f"✅ Scraped Taobao product: {product_data.get('title', '')[:50]}...")
             return product_data
@@ -545,30 +546,142 @@ class TaobaoScraper:
 
         return options
 
-    def _extract_product_variants(self, soup: BeautifulSoup) -> List[Dict[str, Any]]:
+    def _extract_product_variants(self, soup: BeautifulSoup, options: List[Dict]) -> List[Dict[str, Any]]:
         """
-        Extract product variants with pricing
+        Extract product variants with pricing from JavaScript data
 
         Args:
             soup: BeautifulSoup object
+            options: List of option definitions for mapping
 
         Returns:
-            List of variant dictionaries
+            List of variant dictionaries with options, price, and stock
+
+        Example:
+            [{
+                'sku_id': '1627207:28341;20509:28314',
+                'options': {'颜色分类': '红色', '尺码': 'M'},
+                'price': 29.90,
+                'stock': 100,
+                'image': 'https://...'
+            }]
         """
         variants = []
 
         try:
+            # Build option lookup map for later use
+            option_map = {}
+            for opt in options:
+                pid = opt.get('pid', '')
+                opt_name = opt.get('name', '')
+                option_map[pid] = {
+                    'name': opt_name,
+                    'values': {}
+                }
+
+                for val in opt.get('values', []):
+                    vid = val.get('vid', '')
+                    option_map[pid]['values'][vid] = {
+                        'name': val.get('name', ''),
+                        'image': val.get('image', '')
+                    }
+
             # Try to extract variant data from JavaScript
             scripts = soup.find_all('script')
-            for script in scripts:
-                if script.string and ('skuMap' in script.string or 'valItemInfo' in script.string):
-                    # This would require more complex parsing of JavaScript
-                    # For now, we'll extract basic variant information
-                    logger.info("📍 Found variant data in script (advanced parsing needed)")
-                    break
+            sku_map_data = None
+            val_item_info_data = None
 
-            # Basic variant extraction from option combinations
-            # This is a simplified approach - real implementation would need JS parsing
+            for script in scripts:
+                if not script.string:
+                    continue
+
+                script_text = script.string
+
+                # Look for skuMap (contains price and stock data)
+                if 'skuMap' in script_text and not sku_map_data:
+                    try:
+                        # Extract skuMap JSON object using regex
+                        import re
+                        # Pattern: skuMap: {...}
+                        match = re.search(r'skuMap\s*:\s*(\{[^}]+\})', script_text)
+                        if match:
+                            import json
+                            sku_map_str = match.group(1)
+                            # Clean up JavaScript object to valid JSON
+                            sku_map_str = re.sub(r'(\w+):', r'"\1":', sku_map_str)  # Add quotes to keys
+                            sku_map_data = json.loads(sku_map_str)
+                            logger.info(f"✅ Extracted skuMap with {len(sku_map_data)} entries")
+                    except Exception as e:
+                        logger.debug(f"Failed to parse skuMap: {str(e)}")
+
+                # Look for valItemInfo (contains option images)
+                if 'valItemInfo' in script_text and not val_item_info_data:
+                    try:
+                        import re
+                        import json
+                        match = re.search(r'valItemInfo\s*:\s*(\{[^}]+\})', script_text)
+                        if match:
+                            val_item_str = match.group(1)
+                            val_item_str = re.sub(r'(\w+):', r'"\1":', val_item_str)
+                            val_item_info_data = json.loads(val_item_str)
+                            logger.info(f"✅ Extracted valItemInfo")
+                    except Exception as e:
+                        logger.debug(f"Failed to parse valItemInfo: {str(e)}")
+
+            # Parse skuMap into variants
+            if sku_map_data and option_map:
+                for sku_id, sku_data in sku_map_data.items():
+                    try:
+                        # Parse price
+                        price = float(sku_data.get('price', 0))
+
+                        # Parse stock
+                        stock = int(sku_data.get('stock', 0))
+
+                        # Map SKU ID to option names
+                        # sku_id format: "1627207:28341;20509:28314"
+                        option_values = {}
+                        variant_image = None
+
+                        property_pairs = sku_id.split(';')
+                        for pair in property_pairs:
+                            if ':' not in pair:
+                                continue
+
+                            pid, vid = pair.split(':', 1)
+
+                            if pid in option_map and vid in option_map[pid]['values']:
+                                opt_name = option_map[pid]['name']
+                                val_info = option_map[pid]['values'][vid]
+                                val_name = val_info['name']
+
+                                option_values[opt_name] = val_name
+
+                                # Use first option's image as variant image
+                                if not variant_image and val_info.get('image'):
+                                    variant_image = val_info['image']
+
+                        if option_values:
+                            variant = {
+                                'sku_id': sku_id,
+                                'options': option_values,
+                                'price': price,
+                                'stock': stock,
+                            }
+
+                            if variant_image:
+                                variant['image'] = variant_image
+
+                            variants.append(variant)
+
+                    except Exception as e:
+                        logger.debug(f"Failed to parse variant {sku_id}: {str(e)}")
+                        continue
+
+                logger.info(f"✅ Parsed {len(variants)} variants from skuMap")
+
+            else:
+                logger.info("⚠️ No skuMap data found - product may have no variants")
 
         except Exception as e:
             logger.warning(f"⚠️ Failed to extract product variants: {str(e)}")

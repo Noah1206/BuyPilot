@@ -238,6 +238,112 @@ class TaobaoRapidAPIConnector(BaseConnector):
             logger.error(f"❌ Error fetching Item Details: {str(e)}")
             return None
 
+    def _parse_sku_variants(self, sku_base: List[Dict], options: List[Dict]) -> List[Dict]:
+        """
+        Parse SKU base data into structured variants with options mapping
+
+        Args:
+            sku_base: List of SKU data from RapidAPI (e.g., [{'properties': '1627207:28341;20509:28314', 'price': '29.90', 'quantity': 100}])
+            options: List of option definitions with pid/vid mappings
+
+        Returns:
+            List of variants with mapped option names and values
+
+        Example:
+            [{
+                'sku_id': '1627207:28341;20509:28314',
+                'options': {'颜色分类': '红色', '尺码': 'M'},
+                'price': 29.90,
+                'stock': 100,
+                'image': 'https://...'
+            }]
+        """
+        if not sku_base or not options:
+            return []
+
+        try:
+            # Build option lookup map: {pid: {vid: name, image}}
+            option_map = {}
+            for opt in options:
+                pid = opt.get('pid', '')
+                opt_name = opt.get('name', '')
+                option_map[pid] = {
+                    'name': opt_name,
+                    'values': {}
+                }
+
+                for val in opt.get('values', []):
+                    vid = val.get('vid', '')
+                    option_map[pid]['values'][vid] = {
+                        'name': val.get('name', ''),
+                        'image': val.get('image', '')
+                    }
+
+            variants = []
+
+            for sku in sku_base:
+                # Parse properties string (e.g., "1627207:28341;20509:28314")
+                properties_str = sku.get('properties', '')
+                if not properties_str:
+                    continue
+
+                # Parse price
+                try:
+                    price = float(sku.get('price', 0))
+                except (ValueError, TypeError):
+                    price = 0.0
+
+                # Parse stock
+                try:
+                    stock = int(sku.get('quantity', 0))
+                except (ValueError, TypeError):
+                    stock = 0
+
+                # Map properties to option names
+                option_values = {}
+                variant_image = None
+
+                # Split by semicolon: "1627207:28341;20509:28314" -> ["1627207:28341", "20509:28314"]
+                property_pairs = properties_str.split(';')
+
+                for pair in property_pairs:
+                    if ':' not in pair:
+                        continue
+
+                    pid, vid = pair.split(':', 1)
+
+                    if pid in option_map and vid in option_map[pid]['values']:
+                        opt_name = option_map[pid]['name']
+                        val_info = option_map[pid]['values'][vid]
+                        val_name = val_info['name']
+
+                        option_values[opt_name] = val_name
+
+                        # Use first option's image as variant image (usually color option)
+                        if not variant_image and val_info.get('image'):
+                            variant_image = val_info['image']
+
+                # Only add variant if we successfully mapped options
+                if option_values:
+                    variant = {
+                        'sku_id': properties_str,
+                        'options': option_values,
+                        'price': price,
+                        'stock': stock,
+                    }
+
+                    if variant_image:
+                        variant['image'] = variant_image
+
+                    variants.append(variant)
+
+            logger.info(f"✅ Parsed {len(variants)} variants from {len(sku_base)} SKUs")
+            return variants
+
+        except Exception as e:
+            logger.error(f"❌ Error parsing variants: {str(e)}")
+            return []
+
     def _get_item_sku_info(self, product_id: str) -> Optional[Dict[str, Any]]:
         """
         Get SKU information from RapidAPI (same endpoint, different response)
@@ -323,15 +429,20 @@ class TaobaoRapidAPIConnector(BaseConnector):
                 if option['values']:
                     options.append(option)
 
+            # Parse variants from sku_base
+            sku_base = skus.get('sku_base', [])
+            variants = self._parse_sku_variants(sku_base, options) if sku_base else []
+
             sku_info = {
                 'price': price,
                 'promotion_price': promotion_price if promotion_price > 0 else price,
                 'quantity': int(skus.get('quantity', 0)),
                 'options': options,
-                'sku_base': skus.get('sku_base', []),
+                'sku_base': sku_base,
+                'variants': variants,
             }
 
-            logger.info(f"✅ SKU Info: price=¥{price}, options={len(options)}")
+            logger.info(f"✅ SKU Info: price=¥{price}, options={len(options)}, variants={len(variants)}")
             return sku_info
 
         except Exception as e:
@@ -382,6 +493,7 @@ class TaobaoRapidAPIConnector(BaseConnector):
             product['num'] = sku_info.get('quantity', 0)
             product['options'] = sku_info.get('options', [])
             product['sku_base'] = sku_info.get('sku_base', [])
+            product['variants'] = sku_info.get('variants', [])
 
         return product
 
