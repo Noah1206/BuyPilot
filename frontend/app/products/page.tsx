@@ -250,6 +250,30 @@ export default function ProductsPage() {
     setSelectedProductForOptions(null)
   }
 
+  // Save edited variants
+  const saveEditedVariants = async (updatedVariants: ProductVariant[]) => {
+    if (!selectedProductForOptions) return
+
+    try {
+      const response = await updateProduct(selectedProductForOptions.id, {
+        data: {
+          ...selectedProductForOptions.data,
+          variants: updatedVariants
+        }
+      })
+
+      if (response.ok) {
+        toast('옵션이 성공적으로 저장되었습니다')
+        loadProducts()
+        closeOptionsModal()
+      } else {
+        toast(`저장 실패: ${response.error?.message || '알 수 없는 오류'}`, 'error')
+      }
+    } catch (err) {
+      toast('저장 실패: 네트워크 오류', 'error')
+    }
+  }
+
   // Process single item from queue
   const processQueueItem = async (item: ImportQueueItem) => {
     // Update status to processing
@@ -2175,6 +2199,22 @@ export default function ProductsPage() {
                           마진 {editData.margin}%
                         </div>
                       </div>
+
+                      {/* Options Edit Button */}
+                      {editingProduct?.data?.options && editingProduct.data.options.length > 0 && (
+                        <div className="pt-6 border-t border-slate-200">
+                          <button
+                            onClick={() => openOptionsModal(editingProduct)}
+                            className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-3"
+                          >
+                            <Layers size={20} />
+                            <span>상품 옵션 편집</span>
+                            <span className="px-2 py-1 bg-white/20 rounded-lg text-sm">
+                              {editingProduct.data.variants?.length || 0}개
+                            </span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2320,6 +2360,8 @@ export default function ProductsPage() {
           variants={selectedProductForOptions.data?.variants || []}
           basePrice={selectedProductForOptions.price}
           currency={selectedProductForOptions.currency}
+          editable={true}
+          onSave={saveEditedVariants}
         />
       )}
     </div>

@@ -4,6 +4,7 @@
 
 'use client'
 
+import React from 'react'
 import { X, Package } from 'lucide-react'
 
 // Product option value definition
@@ -38,6 +39,8 @@ interface ProductOptionsModalProps {
   variants: ProductVariant[]
   basePrice: number
   currency: string
+  onSave?: (updatedVariants: ProductVariant[]) => void
+  editable?: boolean
 }
 
 export default function ProductOptionsModal({
@@ -47,8 +50,41 @@ export default function ProductOptionsModal({
   options,
   variants,
   basePrice,
-  currency
+  currency,
+  onSave,
+  editable = false
 }: ProductOptionsModalProps) {
+  const [editedVariants, setEditedVariants] = React.useState<ProductVariant[]>(variants)
+  const [hasChanges, setHasChanges] = React.useState(false)
+
+  React.useEffect(() => {
+    setEditedVariants(variants)
+    setHasChanges(false)
+  }, [variants, isOpen])
+
+  const handlePriceChange = (sku_id: string, newPrice: number) => {
+    const updated = editedVariants.map(v =>
+      v.sku_id === sku_id ? { ...v, price: newPrice } : v
+    )
+    setEditedVariants(updated)
+    setHasChanges(true)
+  }
+
+  const handleStockChange = (sku_id: string, newStock: number) => {
+    const updated = editedVariants.map(v =>
+      v.sku_id === sku_id ? { ...v, stock: newStock } : v
+    )
+    setEditedVariants(updated)
+    setHasChanges(true)
+  }
+
+  const handleSave = () => {
+    if (onSave && hasChanges) {
+      onSave(editedVariants)
+      setHasChanges(false)
+    }
+  }
+
   if (!isOpen) return null
 
   const formatPrice = (price: number) => {
@@ -145,7 +181,7 @@ export default function ProductOptionsModal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {variants.map((variant, index) => {
+                      {editedVariants.map((variant, index) => {
                         // Get first option value's image as variant image
                         const firstOptionName = Object.keys(variant.options)[0]
                         const firstOptionValue = variant.options[firstOptionName]
@@ -179,9 +215,19 @@ export default function ProductOptionsModal({
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <span className="font-medium text-slate-900">
-                                {formatPrice(variant.price)}
-                              </span>
+                              {editable ? (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={variant.price}
+                                  onChange={(e) => handlePriceChange(variant.sku_id, parseFloat(e.target.value) || 0)}
+                                  className="w-24 px-2 py-1 text-right border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none font-medium text-slate-900"
+                                />
+                              ) : (
+                                <span className="font-medium text-slate-900">
+                                  {formatPrice(variant.price)}
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <span className="font-semibold text-orange-600">
@@ -189,13 +235,22 @@ export default function ProductOptionsModal({
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                variant.stock > 100 ? 'bg-green-100 text-green-700' :
-                                variant.stock > 10 ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-red-100 text-red-700'
-                              }`}>
-                                {variant.stock.toLocaleString()}
-                              </span>
+                              {editable ? (
+                                <input
+                                  type="number"
+                                  value={variant.stock}
+                                  onChange={(e) => handleStockChange(variant.sku_id, parseInt(e.target.value) || 0)}
+                                  className="w-24 px-2 py-1 text-right border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none font-medium text-slate-900"
+                                />
+                              ) : (
+                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                  variant.stock > 100 ? 'bg-green-100 text-green-700' :
+                                  variant.stock > 10 ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {variant.stock.toLocaleString()}
+                                </span>
+                              )}
                             </td>
                           </tr>
                         )
@@ -210,18 +265,18 @@ export default function ProductOptionsModal({
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
                     <div className="text-sm text-slate-600 mb-1">총 변형</div>
-                    <div className="text-2xl font-bold text-blue-600">{variants.length}</div>
+                    <div className="text-2xl font-bold text-blue-600">{editedVariants.length}</div>
                   </div>
                   <div>
                     <div className="text-sm text-slate-600 mb-1">가격 범위 (CNY)</div>
                     <div className="text-lg font-semibold text-slate-900">
-                      ¥{Math.min(...variants.map(v => v.price)).toFixed(2)} - ¥{Math.max(...variants.map(v => v.price)).toFixed(2)}
+                      ¥{Math.min(...editedVariants.map(v => v.price)).toFixed(2)} - ¥{Math.max(...editedVariants.map(v => v.price)).toFixed(2)}
                     </div>
                   </div>
                   <div>
                     <div className="text-sm text-slate-600 mb-1">총 재고</div>
                     <div className="text-2xl font-bold text-green-600">
-                      {variants.reduce((sum, v) => sum + v.stock, 0).toLocaleString()}
+                      {editedVariants.reduce((sum, v) => sum + v.stock, 0).toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -237,13 +292,34 @@ export default function ProductOptionsModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-lg font-medium text-slate-700 bg-white border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 transition-all"
-          >
-            닫기
-          </button>
+        <div className="p-6 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-3">
+          {editable && hasChanges && (
+            <span className="text-sm text-orange-600 font-medium">
+              ⚠️ 저장하지 않은 변경사항이 있습니다
+            </span>
+          )}
+          {!editable || !hasChanges ? <div /> : null}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 rounded-lg font-medium text-slate-700 bg-white border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 transition-all"
+            >
+              {editable && hasChanges ? '취소' : '닫기'}
+            </button>
+            {editable && (
+              <button
+                onClick={handleSave}
+                disabled={!hasChanges}
+                className={`px-6 py-2.5 rounded-lg font-semibold transition-all ${
+                  hasChanges
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                저장
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
