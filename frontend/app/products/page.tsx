@@ -58,6 +58,15 @@ interface Product {
 
 type EditMode = 'main-image' | 'detail-images' | 'pricing' | null
 
+// Queue item interface
+interface ImportQueueItem {
+  id: string
+  url: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  addedAt: Date
+  result?: string
+}
+
 export default function ProductsPage() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -68,6 +77,10 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const limit = 10
+
+  // Import queue state
+  const [importQueue, setImportQueue] = useState<ImportQueueItem[]>([])
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false)
 
   // Edit modal state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -237,29 +250,125 @@ export default function ProductsPage() {
     setSelectedProductForOptions(null)
   }
 
-  const handleImport = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  // Process single item from queue
+  const processQueueItem = async (item: ImportQueueItem) => {
+    // Update status to processing
+    setImportQueue(prev => prev.map(i =>
+      i.id === item.id ? { ...i, status: 'processing' as const } : i
+    ))
 
     try {
-      const response = await importProduct(url)
+      const response = await importProduct(item.url)
 
       if (response.ok && response.data) {
-        if (response.data.already_exists) {
-          toast('상품이 이미 등록되어 있습니다.', 'error')
-        } else {
-          toast('상품을 성공적으로 가져왔습니다!')
+        const result = response.data.already_exists
+          ? '이미 등록된 상품'
+          : '가져오기 완료'
+
+        // Update status to completed
+        setImportQueue(prev => prev.map(i =>
+          i.id === item.id ? { ...i, status: 'completed' as const, result } : i
+        ))
+
+        // Show toast only for first item or errors
+        if (!response.data.already_exists) {
+          toast(`상품 가져오기 완료: ${item.url.slice(0, 50)}...`)
         }
-        setUrl('')
+
         loadProducts()
       } else {
-        toast(response.error?.message || '상품 가져오기 실패', 'error')
+        // Update status to failed
+        setImportQueue(prev => prev.map(i =>
+          i.id === item.id ? {
+            ...i,
+            status: 'failed' as const,
+            result: response.error?.message || '가져오기 실패'
+          } : i
+        ))
+
+        toast(`실패: ${response.error?.message || '상품 가져오기 실패'}`, 'error')
       }
     } catch (err) {
-      toast('네트워크 오류가 발생했습니다.', 'error')
-    } finally {
-      setLoading(false)
+      // Update status to failed
+      setImportQueue(prev => prev.map(i =>
+        i.id === item.id ? {
+          ...i,
+          status: 'failed' as const,
+          result: '네트워크 오류'
+        } : i
+      ))
+
+      toast(`실패: 네트워크 오류`, 'error')
     }
+  }
+
+  // Process queue continuously
+  const processQueue = async () => {
+    if (isProcessingQueue) return
+
+    setIsProcessingQueue(true)
+
+    while (true) {
+      const pendingItem = importQueue.find(item => item.status === 'pending')
+
+      if (!pendingItem) {
+        break
+      }
+
+      await processQueueItem(pendingItem)
+
+      // Small delay between items
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+
+    setIsProcessingQueue(false)
+  }
+
+  // Watch queue and start processing
+  useEffect(() => {
+    const hasPending = importQueue.some(item => item.status === 'pending')
+    if (hasPending && !isProcessingQueue) {
+      processQueue()
+    }
+  }, [importQueue, isProcessingQueue])
+
+  // Add URL to import queue
+  const handleImport = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!url.trim()) {
+      toast('URL을 입력해주세요', 'error')
+      return
+    }
+
+    // Check if URL already in queue
+    const isDuplicate = importQueue.some(item =>
+      item.url === url && (item.status === 'pending' || item.status === 'processing')
+    )
+
+    if (isDuplicate) {
+      toast('이미 대기열에 있는 URL입니다', 'error')
+      return
+    }
+
+    // Add to queue
+    const newItem: ImportQueueItem = {
+      id: `${Date.now()}-${Math.random()}`,
+      url: url,
+      status: 'pending',
+      addedAt: new Date()
+    }
+
+    setImportQueue(prev => [...prev, newItem])
+    setUrl('') // Clear input immediately
+    toast(`대기열에 추가되었습니다 (${importQueue.filter(i => i.status === 'pending').length + 1}개 대기 중)`)
+  }
+
+  // Clear completed/failed items from queue
+  const clearCompletedQueue = () => {
+    setImportQueue(prev => prev.filter(item =>
+      item.status === 'pending' || item.status === 'processing'
+    ))
   }
 
   const handleDelete = async (productId: string) => {
@@ -1033,22 +1142,127 @@ export default function ProductsPage() {
             />
             <button
               type="submit"
-              disabled={loading || !url}
+              disabled={!url}
               className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium bg-orange-500 text-white shadow-md hover:shadow-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? (
-                <>
-                  <RefreshCw size={20} className="animate-spin" />
-                  <span>가져오는 중...</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={20} />
-                  <span>가져오기</span>
-                </>
-              )}
+              <Plus size={20} />
+              <span>대기열 추가</span>
             </button>
           </form>
+
+          {/* Import Queue Status */}
+          {importQueue.length > 0 && (
+            <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <RefreshCw
+                    size={16}
+                    className={`${isProcessingQueue ? 'animate-spin text-orange-500' : 'text-slate-500'}`}
+                  />
+                  <span className="text-sm font-semibold text-slate-900">
+                    가져오기 대기열 ({importQueue.length}개)
+                  </span>
+                </div>
+                <button
+                  onClick={clearCompletedQueue}
+                  className="text-xs px-3 py-1 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all"
+                >
+                  완료 항목 삭제
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {importQueue.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-3 p-2 rounded-lg border transition-all ${
+                      item.status === 'completed' ? 'bg-green-50 border-green-200' :
+                      item.status === 'failed' ? 'bg-red-50 border-red-200' :
+                      item.status === 'processing' ? 'bg-blue-50 border-blue-200' :
+                      'bg-white border-slate-200'
+                    }`}
+                  >
+                    {/* Status Icon */}
+                    <div className="flex-shrink-0">
+                      {item.status === 'pending' && (
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 border-t-orange-500 animate-spin" />
+                      )}
+                      {item.status === 'processing' && (
+                        <RefreshCw size={18} className="text-blue-500 animate-spin" />
+                      )}
+                      {item.status === 'completed' && (
+                        <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                          <Check size={14} className="text-white" strokeWidth={3} />
+                        </div>
+                      )}
+                      {item.status === 'failed' && (
+                        <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+                          <X size={14} className="text-white" strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* URL */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-slate-600 truncate">
+                        {item.url}
+                      </div>
+                      {item.result && (
+                        <div className={`text-xs font-medium mt-0.5 ${
+                          item.status === 'completed' ? 'text-green-700' :
+                          item.status === 'failed' ? 'text-red-700' :
+                          'text-slate-600'
+                        }`}>
+                          {item.result}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status Label */}
+                    <div className="flex-shrink-0">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                        item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        item.status === 'failed' ? 'bg-red-100 text-red-700' :
+                        item.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>
+                        {item.status === 'pending' ? '대기 중' :
+                         item.status === 'processing' ? '처리 중' :
+                         item.status === 'completed' ? '완료' :
+                         '실패'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Queue Summary */}
+              <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                <div className="flex gap-4">
+                  <span className="text-slate-600">
+                    대기: <span className="font-semibold text-slate-900">
+                      {importQueue.filter(i => i.status === 'pending').length}
+                    </span>
+                  </span>
+                  <span className="text-slate-600">
+                    처리 중: <span className="font-semibold text-blue-600">
+                      {importQueue.filter(i => i.status === 'processing').length}
+                    </span>
+                  </span>
+                  <span className="text-slate-600">
+                    완료: <span className="font-semibold text-green-600">
+                      {importQueue.filter(i => i.status === 'completed').length}
+                    </span>
+                  </span>
+                  <span className="text-slate-600">
+                    실패: <span className="font-semibold text-red-600">
+                      {importQueue.filter(i => i.status === 'failed').length}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Search & Actions */}
