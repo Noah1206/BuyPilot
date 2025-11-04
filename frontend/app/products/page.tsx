@@ -302,33 +302,23 @@ export default function ProductsPage() {
     }
   }
 
-  // Process queue continuously
-  const processQueue = async () => {
+  // Watch queue and auto-process pending items one at a time
+  useEffect(() => {
     if (isProcessingQueue) return
 
-    setIsProcessingQueue(true)
+    const pendingItem = importQueue.find(item => item.status === 'pending')
 
-    while (true) {
-      const pendingItem = importQueue.find(item => item.status === 'pending')
+    if (pendingItem) {
+      setIsProcessingQueue(true)
 
-      if (!pendingItem) {
-        break
+      // Process item and wait before allowing next
+      const process = async () => {
+        await processQueueItem(pendingItem)
+        await new Promise(resolve => setTimeout(resolve, 500))
+        setIsProcessingQueue(false)
       }
 
-      await processQueueItem(pendingItem)
-
-      // Small delay between items
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-
-    setIsProcessingQueue(false)
-  }
-
-  // Watch queue and start processing
-  useEffect(() => {
-    const hasPending = importQueue.some(item => item.status === 'pending')
-    if (hasPending && !isProcessingQueue) {
-      processQueue()
+      process()
     }
   }, [importQueue, isProcessingQueue])
 
