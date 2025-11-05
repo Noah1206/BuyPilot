@@ -272,6 +272,132 @@ function extractTaobaoProduct() {
       }
     });
 
+    // Extract variants (SKU combinations with price and stock)
+    const variants = [];
+    try {
+      // Try to find SKU data in page scripts
+      const scripts = document.querySelectorAll('script');
+      let skuData = null;
+
+      for (const script of scripts) {
+        const scriptText = script.textContent;
+
+        // Look for skuMap or skuBase data
+        if (scriptText.includes('skuMap') || scriptText.includes('skuBase')) {
+          // Try to extract SKU map
+          const skuMapMatch = scriptText.match(/skuMap\s*[:=]\s*(\{[^}]+\})/);
+          const skuBaseMatch = scriptText.match(/skuBase\s*[:=]\s*(\{[^}]+\})/);
+
+          if (skuMapMatch || skuBaseMatch) {
+            try {
+              skuData = JSON.parse(skuMapMatch ? skuMapMatch[1] : skuBaseMatch[1]);
+              break;
+            } catch (e) {
+              console.warn('Failed to parse SKU data:', e);
+            }
+          }
+        }
+
+        // Alternative: Look for valItemInfo.skuMap
+        if (scriptText.includes('valItemInfo')) {
+          const valItemMatch = scriptText.match(/valItemInfo\.skuMap\s*=\s*(\{[\s\S]*?\});/);
+          if (valItemMatch) {
+            try {
+              skuData = JSON.parse(valItemMatch[1]);
+              break;
+            } catch (e) {
+              console.warn('Failed to parse valItemInfo.skuMap:', e);
+            }
+          }
+        }
+      }
+
+      // If SKU data found, process it
+      if (skuData && Object.keys(skuData).length > 0) {
+        Object.entries(skuData).forEach(([skuId, skuInfo]) => {
+          // Build options object for this variant
+          const variantOptions = {};
+
+          // Try to map SKU properties to option names
+          if (skuInfo.prop) {
+            const props = skuInfo.prop.split(';');
+            props.forEach((prop, index) => {
+              if (options[index]) {
+                const [propId, valueId] = prop.split(':');
+                // Find the matching option value
+                const optionValue = options[index].values.find(v =>
+                  v.name || v.vid === valueId
+                );
+                if (optionValue) {
+                  variantOptions[options[index].name] = optionValue.name;
+                }
+              }
+            });
+          }
+
+          variants.push({
+            sku_id: skuId,
+            options: variantOptions,
+            price: parseFloat(skuInfo.price) || price, // Fallback to main price
+            stock: parseInt(skuInfo.stock) || 0,
+            image: skuInfo.image || null
+          });
+        });
+
+        console.log(`✅ Extracted ${variants.length} variants from SKU data`);
+      } else {
+        console.warn('⚠️  No SKU data found in page scripts');
+
+        // Fallback: If we have options but no variant data, create basic variants
+        if (options.length > 0) {
+          console.log('Creating basic variant structure from options...');
+
+          // For single option, create one variant per value
+          if (options.length === 1) {
+            options[0].values.forEach((value, index) => {
+              variants.push({
+                sku_id: `generated_${productId}_${index}`,
+                options: { [options[0].name]: value.name },
+                price: price,
+                stock: 0,
+                image: value.image || null
+              });
+            });
+          }
+          // For multiple options, create combinations (up to 50 variants to avoid overload)
+          else {
+            const createCombinations = (optIndex, currentCombo) => {
+              if (optIndex >= options.length) {
+                if (variants.length < 50) { // Limit to 50 variants
+                  variants.push({
+                    sku_id: `generated_${productId}_${variants.length}`,
+                    options: {...currentCombo},
+                    price: price,
+                    stock: 0,
+                    image: null
+                  });
+                }
+                return;
+              }
+
+              const currentOption = options[optIndex];
+              currentOption.values.forEach(value => {
+                createCombinations(optIndex + 1, {
+                  ...currentCombo,
+                  [currentOption.name]: value.name
+                });
+              });
+            };
+
+            createCombinations(0, {});
+            console.log(`✅ Generated ${variants.length} variant combinations`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error extracting variants:', error);
+    }
+
     // Extract weight information
     let weight = null;
 
@@ -356,6 +482,7 @@ function extractTaobaoProduct() {
       desc_imgs: descImages,           // 상세 페이지 이미지
       specifications: specifications,
       options: options,
+      variants: variants,               // SKU 조합 (가격, 재고 포함)
       weight: weight,                   // 상품 무게 (kg)
       extracted_at: new Date().toISOString(),
       extraction_method: 'chrome_extension'
@@ -366,6 +493,7 @@ function extractTaobaoProduct() {
     console.log(`   - Main images: ${images.length}`);
     console.log(`   - Description images: ${descImages.length}`);
     console.log(`   - Options: ${options.length}`);
+    console.log(`   - Variants: ${variants.length}`);
 
     // Alert if no description images found
     if (descImages.length === 0) {
@@ -381,6 +509,11 @@ function extractTaobaoProduct() {
   }
 }
 
+// Prevent multiple extractions
+let isExtracting = false;
+let lastExtractedUrl = null;
+let extractionTimeout = null;
+
 /**
  * Listen for messages from popup
  */
@@ -388,25 +521,70 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('📨 Message received:', request);
 
   if (request.action === 'extractProduct') {
-    const productData = extractTaobaoProduct();
-    sendResponse({ success: !!productData, data: productData });
+    try {
+      // Check if already extracting
+      if (isExtracting) {
+        console.log('⏳ Extraction already in progress, skipping...');
+        sendResponse({ success: false, data: null, message: 'Extraction in progress' });
+        return true;
+      }
+
+      isExtracting = true;
+      const productData = extractTaobaoProduct();
+      isExtracting = false;
+
+      sendResponse({ success: !!productData, data: productData });
+    } catch (error) {
+      isExtracting = false;
+      console.error('❌ Extraction error:', error);
+      sendResponse({ success: false, data: null, error: error.message });
+    }
   }
 
   return true; // Keep the message channel open for async response
 });
 
-// Store product data when page loads
+// Store product data when page loads (with debounce)
 window.addEventListener('load', () => {
-  console.log('📄 Page loaded, extracting product data...');
-  const productData = extractTaobaoProduct();
-
-  if (productData) {
-    // Store in chrome storage for popup to access
-    chrome.storage.local.set({
-      currentProduct: productData,
-      lastExtractedUrl: window.location.href
-    }, () => {
-      console.log('💾 Product data stored in chrome.storage');
-    });
+  // Skip if URL hasn't changed
+  if (lastExtractedUrl === window.location.href) {
+    console.log('ℹ️ URL unchanged, skipping extraction');
+    return;
   }
+
+  // Clear previous timeout
+  if (extractionTimeout) {
+    clearTimeout(extractionTimeout);
+  }
+
+  // Debounce extraction
+  extractionTimeout = setTimeout(() => {
+    console.log('📄 Page loaded, extracting product data...');
+
+    if (isExtracting) {
+      console.log('⏳ Extraction already in progress, skipping...');
+      return;
+    }
+
+    try {
+      isExtracting = true;
+      const productData = extractTaobaoProduct();
+      isExtracting = false;
+
+      if (productData) {
+        lastExtractedUrl = window.location.href;
+
+        // Store in chrome storage for popup to access
+        chrome.storage.local.set({
+          currentProduct: productData,
+          lastExtractedUrl: window.location.href
+        }, () => {
+          console.log('💾 Product data stored in chrome.storage');
+        });
+      }
+    } catch (error) {
+      isExtracting = false;
+      console.error('❌ Extraction error:', error);
+    }
+  }, 500); // Wait 500ms for page to stabilize
 });

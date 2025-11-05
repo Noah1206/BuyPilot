@@ -62,10 +62,15 @@ async function loadProductData() {
       return;
     }
 
-    // Request product data from content script
-    const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractProduct' });
+    // Request product data from content script with timeout
+    const response = await Promise.race([
+      chrome.tabs.sendMessage(tab.id, { action: 'extractProduct' }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+      )
+    ]);
 
-    if (response.success && response.data) {
+    if (response && response.success && response.data) {
       currentProduct = response.data;
       displayProduct(currentProduct);
       showStatus('상품 정보를 불러왔습니다', 'success');
@@ -77,7 +82,11 @@ async function loadProductData() {
 
   } catch (error) {
     console.error('Error loading product:', error);
-    showStatus('상품 정보를 불러오는데 실패했습니다', 'error');
+    if (error.message === 'Timeout') {
+      showStatus('페이지 로딩 중입니다. 잠시 후 새로고침 버튼을 눌러주세요.', 'error');
+    } else {
+      showStatus('상품 정보를 불러오는데 실패했습니다', 'error');
+    }
     importBtn.disabled = true;
   }
 }
