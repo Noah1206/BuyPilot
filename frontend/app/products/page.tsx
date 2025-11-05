@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore } from '@/lib/api'
 import Header from '@/components/Header'
 import CategorySelectionModal from '@/components/CategorySelectionModal'
-import ProductOptionsModal from '@/components/ProductOptionsModal'
 import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser, Edit, Check, Layers } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
@@ -56,7 +55,7 @@ interface Product {
   updated_at: string
 }
 
-type EditMode = 'main-image' | 'detail-images' | 'pricing' | null
+type EditMode = 'main-image' | 'detail-images' | 'pricing' | 'options' | null
 
 // Queue item interface
 interface ImportQueueItem {
@@ -120,10 +119,6 @@ export default function ProductsPage() {
   const [allCategories, setAllCategories] = useState<any[]>([])
   const [filteredCategories, setFilteredCategories] = useState<any[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
-
-  // Options modal state
-  const [showOptionsModal, setShowOptionsModal] = useState(false)
-  const [selectedProductForOptions, setSelectedProductForOptions] = useState<Product | null>(null)
 
   useEffect(() => {
     loadProducts()
@@ -274,57 +269,6 @@ export default function ProductsPage() {
     }))
 
     return { options, variants }
-  }
-
-  // Open options modal
-  const openOptionsModal = (product: Product) => {
-    const { options, variants } = transformProductData(product)
-    console.log('Opening options modal for product:', product)
-    console.log('Transformed options:', options)
-    console.log('Transformed variants:', variants)
-
-    // Create a product with transformed data
-    const productWithTransformedData = {
-      ...product,
-      data: {
-        ...product.data,
-        options,
-        variants
-      }
-    }
-
-    setSelectedProductForOptions(productWithTransformedData)
-    setShowOptionsModal(true)
-  }
-
-  // Close options modal
-  const closeOptionsModal = () => {
-    setShowOptionsModal(false)
-    setSelectedProductForOptions(null)
-  }
-
-  // Save edited variants
-  const saveEditedVariants = async (updatedVariants: ProductVariant[]) => {
-    if (!selectedProductForOptions) return
-
-    try {
-      const response = await updateProduct(selectedProductForOptions.id, {
-        data: {
-          ...selectedProductForOptions.data,
-          variants: updatedVariants
-        }
-      })
-
-      if (response.ok) {
-        toast('옵션이 성공적으로 저장되었습니다')
-        loadProducts()
-        closeOptionsModal()
-      } else {
-        toast(`저장 실패: ${response.error?.message || '알 수 없는 오류'}`, 'error')
-      }
-    } catch (err) {
-      toast('저장 실패: 네트워크 오류', 'error')
-    }
   }
 
   // Process single item from queue
@@ -644,6 +588,12 @@ export default function ProductsPage() {
           shipping_cost: editData.shippingCost,
           margin: editData.margin,
           final_price: editData.finalPrice  // Save frontend calculated final price
+        }
+      } else if (editMode === 'options') {
+        updateData.data = {
+          ...editingProduct.data,
+          options: editData.options,
+          variants: editData.variants
         }
       }
 
@@ -1555,7 +1505,17 @@ export default function ProductsPage() {
                       {/* Variants badge */}
                       {product.data?.variants && product.data.variants.length > 0 && (
                         <button
-                          onClick={() => openOptionsModal(product)}
+                          onClick={() => {
+                            openEditModal(product)
+                            setTimeout(() => {
+                              setEditMode('options')
+                              const { options, variants } = transformProductData(product)
+                              setEditData({
+                                options,
+                                variants
+                              })
+                            }, 0)
+                          }}
                           className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500 text-white flex items-center gap-1 hover:bg-blue-600 hover:scale-105 transition-all cursor-pointer"
                           title="옵션 보기"
                         >
@@ -1812,8 +1772,21 @@ export default function ProductsPage() {
                     대표 이미지
                   </button>
                   <button
-                    onClick={() => openOptionsModal(editingProduct)}
-                    className="px-5 py-2.5 font-medium text-sm rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2"
+                    onClick={() => {
+                      if (editMode !== 'options') {
+                        setEditMode('options')
+                        const { options, variants } = transformProductData(editingProduct)
+                        setEditData({
+                          options,
+                          variants
+                        })
+                      }
+                    }}
+                    className={`px-5 py-2.5 font-medium text-sm rounded-lg border transition-all flex items-center gap-2 ${
+                      editMode === 'options'
+                        ? 'text-white bg-orange-500 border-orange-500 shadow-md'
+                        : 'text-slate-700 border-slate-300 hover:bg-slate-50'
+                    }`}
                   >
                     <Layers size={16} />
                     옵션
@@ -2259,23 +2232,128 @@ export default function ProductsPage() {
                           마진 {editData.margin}%
                         </div>
                       </div>
-
-                      {/* Options Edit Button */}
-                      {editingProduct?.data?.options && editingProduct.data.options.length > 0 && (
-                        <div className="pt-6 border-t border-slate-200">
-                          <button
-                            onClick={() => openOptionsModal(editingProduct)}
-                            className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-3"
-                          >
-                            <Layers size={20} />
-                            <span>상품 옵션 편집</span>
-                            <span className="px-2 py-1 bg-white/20 rounded-lg text-sm">
-                              {editingProduct.data.variants?.length || 0}개
-                            </span>
-                          </button>
-                        </div>
-                      )}
                     </div>
+                  </div>
+                )}
+
+                {editMode === 'options' && (
+                  <div className="w-full max-w-4xl mx-auto p-6">
+                    {/* Variants List */}
+                    {editData.variants && editData.variants.length > 0 ? (
+                      <div className="space-y-4">
+                        {editData.variants.map((variant: any, index: number) => {
+                          const firstOptionName = Object.keys(variant.options)[0]
+                          const firstOptionValue = variant.options[firstOptionName]
+                          const variantImage = variant.image || editData.options?.find((opt: any) => opt.name === firstOptionName)?.values.find((val: any) => val.name === firstOptionValue)?.image
+
+                          // Get option label (e.g., "원호: 白色")
+                          const optionLabel = Object.entries(variant.options)
+                            .map(([name, value]) => `${name}: ${value}`)
+                            .join(', ')
+
+                          return (
+                            <div
+                              key={variant.sku_id || index}
+                              className="bg-white rounded-lg p-4 flex items-center gap-4 border-2 border-slate-200 hover:border-blue-300 transition-all"
+                            >
+                              {/* Checkbox */}
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                className="w-5 h-5 rounded border-slate-300 bg-white"
+                              />
+
+                              {/* Index */}
+                              <div className="text-slate-900 font-medium min-w-[2rem]">
+                                {String(index + 1).padStart(2, '0')}
+                              </div>
+
+                              {/* Image */}
+                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
+                                {variantImage ? (
+                                  <img
+                                    src={variantImage}
+                                    alt="Variant"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Package size={24} className="text-slate-400" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Vendor/Platform */}
+                              <div className="flex flex-col min-w-[60px]">
+                                <div className="text-xs text-slate-500">판매자</div>
+                                <div className="text-sm text-slate-900 font-medium">판매자</div>
+                              </div>
+
+                              {/* Price Input */}
+                              <div className="flex-1 min-w-[120px]">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={variant.price}
+                                  onChange={(e) => {
+                                    const newPrice = parseFloat(e.target.value) || 0
+                                    const updatedVariants = [...editData.variants]
+                                    updatedVariants[index] = { ...variant, price: newPrice }
+                                    setEditData({ ...editData, variants: updatedVariants })
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-slate-900 text-right focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                                />
+                              </div>
+
+                              {/* Option Label */}
+                              <div className="flex-1 min-w-[150px]">
+                                <div className="px-3 py-2 bg-slate-50 border-2 border-slate-200 rounded-lg">
+                                  <div className="text-xs text-slate-500 mb-1">옵션명</div>
+                                  <div className="text-sm text-slate-900 font-medium">{optionLabel}</div>
+                                </div>
+                              </div>
+
+                              {/* Option Name Input */}
+                              <div className="flex-1 min-w-[200px]">
+                                <input
+                                  type="text"
+                                  value={optionLabel}
+                                  readOnly
+                                  className="w-full px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                                  placeholder="원문: 中文版+韩通用电池铝框三层"
+                                />
+                              </div>
+
+                              {/* Stock Input */}
+                              <div className="min-w-[80px]">
+                                <input
+                                  type="number"
+                                  value={variant.stock}
+                                  onChange={(e) => {
+                                    const newStock = parseInt(e.target.value) || 0
+                                    const updatedVariants = [...editData.variants]
+                                    updatedVariants[index] = { ...variant, stock: newStock }
+                                    setEditData({ ...editData, variants: updatedVariants })
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-slate-900 text-right focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                                />
+                              </div>
+
+                              {/* Status Indicator */}
+                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500">
+                                <Check size={16} className="text-white" />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-2xl border-2 border-slate-200 p-12 text-center">
+                        <Package size={64} className="text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-600 font-medium">변형 정보가 없습니다</p>
+                        <p className="text-sm text-slate-500 mt-2">단일 옵션 상품이거나 데이터를 가져오지 못했습니다</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2410,20 +2488,6 @@ export default function ProductsPage() {
         />
       )}
 
-      {/* Product Options Modal */}
-      {showOptionsModal && selectedProductForOptions && (
-        <ProductOptionsModal
-          isOpen={showOptionsModal}
-          onClose={closeOptionsModal}
-          productTitle={selectedProductForOptions.title}
-          options={selectedProductForOptions.data?.options || []}
-          variants={selectedProductForOptions.data?.variants || []}
-          basePrice={selectedProductForOptions.price}
-          currency={selectedProductForOptions.currency}
-          editable={true}
-          onSave={saveEditedVariants}
-        />
-      )}
     </div>
   )
 }

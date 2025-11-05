@@ -340,6 +340,19 @@ function extractTaobaoProduct() {
     // If no options found via DOM, try to extract from page data objects
     if (options.length === 0) {
       console.log('⚠️  No options found in DOM, trying to extract from page data...');
+      console.log('🔍 Checking window objects...');
+      console.log('   - window.g_config exists:', typeof window.g_config !== 'undefined');
+      console.log('   - TB exists:', typeof TB !== 'undefined');
+
+      // Log what's available
+      if (typeof window.g_config !== 'undefined') {
+        console.log('✅ window.g_config found');
+        console.log('   - g_config keys:', Object.keys(window.g_config));
+        console.log('   - g_config.idata exists:', !!window.g_config.idata);
+        if (window.g_config.idata) {
+          console.log('   - idata keys:', Object.keys(window.g_config.idata));
+        }
+      }
 
       try {
         // Try to find data in window.g_config
@@ -394,6 +407,134 @@ function extractTaobaoProduct() {
         }
       } catch (error) {
         console.error('❌ Error extracting options from page data:', error);
+      }
+
+      // If still no options, try parsing from script tags
+      if (options.length === 0) {
+        console.log('🔍 Trying to extract from script tags...');
+        const scripts = document.querySelectorAll('script');
+
+        for (const script of scripts) {
+          const text = script.textContent;
+
+          // Look for JSON data in script tags
+          try {
+            // Pattern 1: Look for "skuProps" or "propertyMemoMap"
+            if (text.includes('"skuProps"') || text.includes('"propertyMemoMap"')) {
+              console.log('✅ Found skuProps/propertyMemoMap in script');
+
+              // Try to extract the JSON object
+              const jsonMatch = text.match(/(\{[^]*?"skuProps"[^]*?\})\s*;?\s*$/m) ||
+                               text.match(/(\{[^]*?"propertyMemoMap"[^]*?\})/);
+
+              if (jsonMatch) {
+                try {
+                  const data = JSON.parse(jsonMatch[1]);
+
+                  // Extract from skuProps
+                  if (data.skuProps) {
+                    console.log('✅ Parsing skuProps');
+                    data.skuProps.forEach((prop) => {
+                      const optionValues = (prop.value || []).map((val) => ({
+                        vid: val.valueId || val.vid,
+                        name: val.name || val.valueName,
+                        image: val.image ? (val.image.startsWith('//') ? 'https:' + val.image : val.image) : undefined
+                      }));
+
+                      if (optionValues.length > 0) {
+                        options.push({
+                          pid: prop.propId || prop.pid,
+                          name: prop.name || prop.propName,
+                          values: optionValues
+                        });
+                        console.log(`✅ Extracted option "${prop.name}" with ${optionValues.length} values from script`);
+                      }
+                    });
+                  }
+
+                  // Extract from propertyMemoMap
+                  if (data.propertyMemoMap && Object.keys(data.propertyMemoMap).length > 0) {
+                    console.log('✅ Parsing propertyMemoMap');
+                    Object.entries(data.propertyMemoMap).forEach(([propId, prop]) => {
+                      if (prop.values) {
+                        const optionValues = Object.values(prop.values).map((val) => ({
+                          vid: val.valueId,
+                          name: val.name,
+                          image: val.image ? (val.image.startsWith('//') ? 'https:' + val.image : val.image) : undefined
+                        }));
+
+                        options.push({
+                          pid: propId,
+                          name: prop.name,
+                          values: optionValues
+                        });
+                        console.log(`✅ Extracted option "${prop.name}" with ${optionValues.length} values from propertyMemoMap`);
+                      }
+                    });
+                  }
+
+                  if (options.length > 0) break;
+                } catch (e) {
+                  console.warn('Failed to parse JSON from script:', e);
+                }
+              }
+            }
+
+            // Pattern 2: Look for "propertyName":"颜色分类" pattern
+            if (options.length === 0 && text.includes('"propertyName"')) {
+              // Match pattern: {"valueName":"红色,蓝色","propertyName":"颜色分类"}
+              const propertyRegex = /\{"valueName":"([^"]+)","propertyName":"([^"]+)"\}/g;
+              let match;
+              const foundProps = new Map();
+
+              while ((match = propertyRegex.exec(text)) !== null) {
+                const valueName = match[1];
+                const propertyName = match[2];
+
+                // Only process SKU-related properties (销售属性), not product info (产品参数)
+                // Common SKU properties: 颜色分类, 尺码, 规格, 尺寸, 套餐, 款式, 型号 (if multiple options), etc.
+                const skuPropertyNames = ['颜色分类', '颜色', '尺码', '尺寸', '规格', '套餐', '款式'];
+                const isSkuProperty = skuPropertyNames.includes(propertyName);
+
+                if (propertyName && valueName) {
+                  console.log(`${isSkuProperty ? '✅ SKU' : 'ℹ️  Info'} property: ${propertyName} = ${valueName}`);
+
+                  // Only add SKU properties OR properties with multiple values (likely SKU options)
+                  const values = valueName.split(/[,，、]/).map((v, idx) => v.trim()).filter(v => v);
+                  const hasMultipleValues = values.length > 1;
+
+                  if ((isSkuProperty || hasMultipleValues) && !foundProps.has(propertyName)) {
+                    if (values.length > 0) {
+                      foundProps.set(propertyName, {
+                        name: propertyName,
+                        values: values.map((val, idx) => ({
+                          vid: `${propertyName}_${idx}`,
+                          name: val
+                        }))
+                      });
+                    }
+                  }
+                }
+              }
+
+              // Convert to options array
+              if (foundProps.size > 0) {
+                foundProps.forEach((prop, propName) => {
+                  options.push({
+                    pid: propName,
+                    name: prop.name,
+                    values: prop.values
+                  });
+                  console.log(`✅ Extracted option "${prop.name}" with ${prop.values.length} values from propertyName pattern`);
+                });
+
+                break;
+              }
+            }
+          } catch (error) {
+            // Continue to next script
+          }
+        }
       }
     }
 
