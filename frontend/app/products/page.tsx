@@ -885,6 +885,68 @@ export default function ProductsPage() {
     }
   }
 
+  const exportToExcel = () => {
+    if (products.length === 0) {
+      toast('내보낼 상품이 없습니다', 'error')
+      return
+    }
+
+    // Transform products data to Excel format
+    const excelData = products.map((product, index) => {
+      // Get category name from cache
+      const cachedCategories = categoryCache.get(product.id)
+      const categoryName = cachedCategories && cachedCategories.length > 0
+        ? cachedCategories[0].category_name
+        : '-'
+
+      // Calculate shipping fee (0 for free shipping)
+      const shippingFee = 0
+
+      // Calculate margin percentage
+      let marginPercent = 0
+      if (product.data?.calculated_final_price && product.price > 0) {
+        marginPercent = ((product.data.calculated_final_price - product.price) / product.price * 100)
+      } else if (product.data?.margin) {
+        marginPercent = product.data.margin
+      }
+
+      return {
+        '순위': index + 1,
+        '상품명': product.title || '-',
+        '카테고리': categoryName,
+        '배송비': shippingFee,
+        '마진율(%)': marginPercent.toFixed(2),
+        '상품 URL': product.source_url || '-'
+      }
+    })
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 8 },   // 순위
+      { wch: 50 },  // 상품명
+      { wch: 20 },  // 카테고리
+      { wch: 10 },  // 배송비
+      { wch: 12 },  // 마진율(%)
+      { wch: 60 }   // 상품 URL
+    ]
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, '상품목록')
+
+    // Generate filename with current date
+    const date = new Date()
+    const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
+    const filename = `대량수집_${dateStr}.xlsx`
+
+    // Download file
+    XLSX.writeFile(wb, filename)
+    toast(`${products.length}개 상품이 엑셀로 다운로드되었습니다!`)
+  }
+
   const handleCategoryConfirmed = async (categoryId: string) => {
     // This function is no longer used, but kept for backward compatibility
     setShowCategoryModal(false)
@@ -1354,8 +1416,7 @@ export default function ProductsPage() {
 
               <button
                 onClick={exportToExcel}
-                disabled={selectedProducts.size === 0}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm bg-green-500 text-white shadow-md hover:shadow-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm bg-green-500 text-white shadow-md hover:shadow-lg hover:bg-green-600 transition-all"
               >
                 <Download size={18} />
                 <span>엑셀 내보내기</span>
