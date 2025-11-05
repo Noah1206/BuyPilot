@@ -238,9 +238,62 @@ export default function ProductsPage() {
     setCategoryCache(newCache)
   }
 
+  // Transform Taobao props/skus to options/variants format
+  const transformProductData = (product: Product): { options: ProductOption[], variants: ProductVariant[] } => {
+    // Check if already in the correct format
+    if (product.data?.options && product.data?.variants) {
+      return {
+        options: product.data.options,
+        variants: product.data.variants
+      }
+    }
+
+    // Transform from Taobao format (props/skus)
+    const props = product.data?.props || []
+    const skus = product.data?.skus || []
+
+    // Convert props to options
+    const options: ProductOption[] = props.map((prop: any) => ({
+      pid: prop.pid,
+      name: prop.name,
+      values: (prop.values || []).map((val: any) => ({
+        vid: val.vid,
+        name: val.name,
+        image: val.image,
+        available: val.available !== false
+      }))
+    }))
+
+    // Convert skus to variants
+    const variants: ProductVariant[] = skus.map((sku: any) => ({
+      sku_id: sku.sku_id || sku.skuId || String(sku.id),
+      options: sku.properties || sku.props_name || {},
+      price: sku.price || sku.originalPrice || 0,
+      stock: sku.quantity || sku.stock || 0,
+      image: sku.image
+    }))
+
+    return { options, variants }
+  }
+
   // Open options modal
   const openOptionsModal = (product: Product) => {
-    setSelectedProductForOptions(product)
+    const { options, variants } = transformProductData(product)
+    console.log('Opening options modal for product:', product)
+    console.log('Transformed options:', options)
+    console.log('Transformed variants:', variants)
+
+    // Create a product with transformed data
+    const productWithTransformedData = {
+      ...product,
+      data: {
+        ...product.data,
+        options,
+        variants
+      }
+    }
+
+    setSelectedProductForOptions(productWithTransformedData)
     setShowOptionsModal(true)
   }
 
