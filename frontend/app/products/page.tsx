@@ -1759,6 +1759,13 @@ export default function ProductsPage() {
                     대표 이미지
                   </button>
                   <button
+                    onClick={() => openOptionsModal(editingProduct)}
+                    className="px-5 py-2.5 font-medium text-sm rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2"
+                  >
+                    <Layers size={16} />
+                    옵션
+                  </button>
+                  <button
                     onClick={() => {
                       if (editMode !== 'pricing') {
                         setEditMode('pricing')
