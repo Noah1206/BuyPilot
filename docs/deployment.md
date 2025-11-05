@@ -13,40 +13,81 @@ Complete deployment guide for Railway + Supabase infrastructure.
 
 ### 1. Create Supabase Project
 
-1. Go to [supabase.com](https://supabase.com)
+1. Go to [supabase.com](https://supabase.com) and sign up/login with GitHub
 2. Click "New Project"
 3. Fill in details:
-   - **Name**: buypilot-db
-   - **Database Password**: (generate strong password)
-   - **Region**: Choose closest to Railway region
+   - **Name**: `buypilot` or your preferred name
+   - **Database Password**: Generate strong password (save it!)
+   - **Region**: `Northeast Asia (Seoul)` for best performance in Korea
+   - **Pricing Plan**: `Free` (sufficient for starting)
 4. Wait for project creation (~2 minutes)
 
 ### 2. Get Database Connection String
 
 1. Go to **Project Settings** → **Database**
-2. Copy **Connection string** (URI format)
-3. Save for later:
-   ```
-   postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
-   ```
+2. Under **Connection string** section, copy the `URI` format
+3. Format: `postgresql://postgres.[PROJECT-ID]:[PASSWORD]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres`
+4. ⚠️ **Important**: Replace `[YOUR-PASSWORD]` with your actual password
+5. Save this URL for environment variables
 
 ### 3. Run Migrations
 
-1. Go to **SQL Editor** in Supabase
-2. Create new query
+#### Option A: Using Supabase SQL Editor (Recommended)
+1. Go to **SQL Editor** in Supabase dashboard
+2. Click **+ New query**
 3. Copy contents of `database/migrations/001_initial_schema.sql`
-4. Click **Run**
-5. Repeat for `002_indexes.sql`
+4. Click **Run** (or Ctrl/Cmd + Enter)
+5. Verify success message: "Success. No rows returned"
+6. Repeat for `002_indexes.sql` and any other migration files
+
+#### Option B: Using psql Command Line
+```bash
+# Install PostgreSQL client (if not installed)
+brew install postgresql@14  # macOS
+
+# Run migrations
+psql "postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres" \
+  -f database/migrations/001_initial_schema.sql
+```
 
 ### 4. Verify Tables
 
+#### Using Table Editor:
+1. Go to **Table Editor** in Supabase
+2. Verify these tables exist:
+   - ✅ `products`
+   - ✅ `orders`
+   - ✅ `buyer_info`
+   - ✅ `audit_log`
+
+#### Using SQL Query:
 ```sql
 -- Check tables
 SELECT table_name FROM information_schema.tables
 WHERE table_schema = 'public';
-
--- Should show: products, orders, buyer_info, audit_log
 ```
+
+### 5. Alternative: Railway PostgreSQL
+
+If you prefer Railway for integrated deployment:
+
+1. Go to [Railway.app](https://railway.app) and login with GitHub
+2. Create new project → **Deploy PostgreSQL**
+3. PostgreSQL instance created automatically
+4. Copy `DATABASE_URL` from Variables tab
+5. Run migrations using psql or Railway Data tab
+6. Free plan: $5 credit/month (sufficient for development)
+
+**Railway vs Supabase Comparison:**
+
+| Feature | Railway | Supabase |
+|---------|---------|----------|
+| Database | PostgreSQL | PostgreSQL |
+| Free Tier | $5 credit/month | 500MB DB free |
+| Backend Deploy | ✅ Integrated | ❌ Separate hosting |
+| Auto Backups | ✅ | ✅ |
+| SQL Editor | ✅ | ✅ |
+| Setup Complexity | Easy | Easy |
 
 ## 🚂 Backend Deployment (Railway)
 
@@ -335,21 +376,54 @@ Add Redis for:
 
 ## ✅ Deployment Checklist
 
-- [ ] Supabase project created
-- [ ] Database migrations run
+### Database Setup
+- [ ] Supabase (or Railway) project created
+- [ ] Database password saved securely
+- [ ] Connection string copied
+- [ ] All migrations run successfully
+- [ ] Tables verified (products, orders, buyer_info, audit_log)
+
+### Backend Deployment
 - [ ] Backend deployed to Railway
-- [ ] Backend environment variables set
-- [ ] Backend health check passes
-- [ ] Frontend deployed to Railway
-- [ ] Frontend environment variables set
+- [ ] Environment variables configured:
+  - [ ] `SUPABASE_DB_URL` or `DATABASE_URL`
+  - [ ] `JWT_SECRET` (strong random value)
+  - [ ] `OPENAI_API_KEY`
+  - [ ] `RAPIDAPI_KEY` (for Taobao API)
+  - [ ] `NAVER_CLIENT_ID` and `NAVER_CLIENT_SECRET`
+  - [ ] `ALLOWED_ORIGINS`
+  - [ ] `FLASK_ENV=production`
+  - [ ] `FLASK_DEBUG=False`
+- [ ] Backend health check passes: `/health`
+- [ ] Backend domain generated
+- [ ] API endpoints tested
+
+### Frontend Deployment
+- [ ] Frontend deployed to Railway or Vercel
+- [ ] `NEXT_PUBLIC_API_URL` set to backend URL
+- [ ] Frontend domain generated
 - [ ] Frontend can reach backend
-- [ ] Demo order creation works
-- [ ] Purchase action works
-- [ ] Forward action works
-- [ ] Logs are accessible
+
+### Integration Testing
+- [ ] Competitor analysis (keyword search) works
+- [ ] Taobao product matching works
+- [ ] Price calculation accurate
+- [ ] Excel export successful
+- [ ] Chrome extension connects to backend
+
+### Security & Monitoring
+- [ ] JWT_SECRET changed to production value
+- [ ] Production API keys configured (not sandbox)
+- [ ] SSL enabled (automatic on Railway)
+- [ ] CORS properly configured
+- [ ] Logs accessible
 - [ ] Monitoring enabled
-- [ ] Backups configured
+- [ ] Database backups configured
+
+### Post-Deployment
 - [ ] Team notified of URLs
+- [ ] Documentation updated
+- [ ] Performance benchmarks recorded
 
 ## 🎉 Success!
 
