@@ -337,41 +337,120 @@ function extractTaobaoProduct() {
 
     console.log(`📊 Total options extracted: ${options.length}`);
 
-    // Extract variants (SKU combinations with price and stock)
-    const variants = [];
-    try {
-      // Try to find SKU data in page scripts
-      const scripts = document.querySelectorAll('script');
-      let skuData = null;
+    // If no options found via DOM, try to extract from page data objects
+    if (options.length === 0) {
+      console.log('⚠️  No options found in DOM, trying to extract from page data...');
 
-      for (const script of scripts) {
-        const scriptText = script.textContent;
+      try {
+        // Try to find data in window.g_config
+        if (typeof window.g_config !== 'undefined' && window.g_config.idata) {
+          const idata = window.g_config.idata;
 
-        // Look for skuMap or skuBase data
-        if (scriptText.includes('skuMap') || scriptText.includes('skuBase')) {
-          // Try to extract SKU map
-          const skuMapMatch = scriptText.match(/skuMap\s*[:=]\s*(\{[^}]+\})/);
-          const skuBaseMatch = scriptText.match(/skuBase\s*[:=]\s*(\{[^}]+\})/);
+          // Extract from item.props (销售属性)
+          if (idata.item && idata.item.props) {
+            console.log('✅ Found item.props in g_config');
+            idata.item.props.forEach((prop, index) => {
+              if (prop.values && prop.values.length > 0) {
+                const optionValues = prop.values.map((val, valIndex) => ({
+                  vid: val.vid || `${prop.pid}_${valIndex}`,
+                  name: val.name,
+                  image: val.image ? (val.image.startsWith('//') ? 'https:' + val.image : val.image) : undefined
+                }));
 
-          if (skuMapMatch || skuBaseMatch) {
-            try {
-              skuData = JSON.parse(skuMapMatch ? skuMapMatch[1] : skuBaseMatch[1]);
-              break;
-            } catch (e) {
-              console.warn('Failed to parse SKU data:', e);
-            }
+                options.push({
+                  pid: prop.pid,
+                  name: prop.name,
+                  values: optionValues
+                });
+                console.log(`✅ Extracted option "${prop.name}" with ${optionValues.length} values from g_config`);
+              }
+            });
           }
         }
 
-        // Alternative: Look for valItemInfo.skuMap
-        if (scriptText.includes('valItemInfo')) {
-          const valItemMatch = scriptText.match(/valItemInfo\.skuMap\s*=\s*(\{[\s\S]*?\});/);
-          if (valItemMatch) {
-            try {
-              skuData = JSON.parse(valItemMatch[1]);
-              break;
-            } catch (e) {
-              console.warn('Failed to parse valItemInfo.skuMap:', e);
+        // Alternative: Try TB.detail.data.item
+        if (options.length === 0 && typeof TB !== 'undefined' && TB.detail && TB.detail.data && TB.detail.data.item) {
+          const item = TB.detail.data.item;
+          console.log('✅ Found TB.detail.data.item');
+
+          if (item.props) {
+            item.props.forEach((prop, index) => {
+              if (prop.values && prop.values.length > 0) {
+                const optionValues = prop.values.map((val, valIndex) => ({
+                  vid: val.vid || `${prop.pid}_${valIndex}`,
+                  name: val.name,
+                  image: val.image ? (val.image.startsWith('//') ? 'https:' + val.image : val.image) : undefined
+                }));
+
+                options.push({
+                  pid: prop.pid,
+                  name: prop.name,
+                  values: optionValues
+                });
+                console.log(`✅ Extracted option "${prop.name}" with ${optionValues.length} values from TB.detail`);
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error extracting options from page data:', error);
+      }
+    }
+
+    console.log(`📊 Final options count: ${options.length}`);
+
+    // Extract variants (SKU combinations with price and stock)
+    const variants = [];
+    try {
+      let skuData = null;
+
+      // First, try to get SKU data from window.g_config
+      if (typeof window.g_config !== 'undefined' && window.g_config.idata && window.g_config.idata.skuBase) {
+        skuData = window.g_config.idata.skuBase.skus;
+        console.log('✅ Found SKU data in g_config.idata.skuBase');
+      }
+
+      // Alternative: Try TB.detail.data.skuBase
+      if (!skuData && typeof TB !== 'undefined' && TB.detail && TB.detail.data && TB.detail.data.skuBase) {
+        skuData = TB.detail.data.skuBase.skus;
+        console.log('✅ Found SKU data in TB.detail.data.skuBase');
+      }
+
+      // Fallback: Try to find SKU data in page scripts
+      if (!skuData) {
+        const scripts = document.querySelectorAll('script');
+
+        for (const script of scripts) {
+          const scriptText = script.textContent;
+
+          // Look for skuMap or skuBase data
+          if (scriptText.includes('skuMap') || scriptText.includes('skuBase')) {
+            // Try to extract SKU map
+            const skuMapMatch = scriptText.match(/skuMap\s*[:=]\s*(\{[^}]+\})/);
+            const skuBaseMatch = scriptText.match(/skuBase\s*[:=]\s*(\{[^}]+\})/);
+
+            if (skuMapMatch || skuBaseMatch) {
+              try {
+                skuData = JSON.parse(skuMapMatch ? skuMapMatch[1] : skuBaseMatch[1]);
+                console.log('✅ Found SKU data in page scripts');
+                break;
+              } catch (e) {
+                console.warn('Failed to parse SKU data:', e);
+              }
+            }
+          }
+
+          // Alternative: Look for valItemInfo.skuMap
+          if (scriptText.includes('valItemInfo')) {
+            const valItemMatch = scriptText.match(/valItemInfo\.skuMap\s*=\s*(\{[\s\S]*?\});/);
+            if (valItemMatch) {
+              try {
+                skuData = JSON.parse(valItemMatch[1]);
+                console.log('✅ Found SKU data in valItemInfo');
+                break;
+              } catch (e) {
+                console.warn('Failed to parse valItemInfo.skuMap:', e);
+              }
             }
           }
         }
