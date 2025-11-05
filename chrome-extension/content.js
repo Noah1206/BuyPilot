@@ -239,38 +239,103 @@ function extractTaobaoProduct() {
       }
     });
 
-    // Extract options (SKU variants)
+    // Extract options (SKU variants) - Updated for new Taobao structure
     const options = [];
-    const optionGroups = document.querySelectorAll('.tb-sku-group, [class*="Sku--skuGroup"]');
+
+    // Try multiple selectors for option groups
+    const optionGroupSelectors = [
+      '.tb-sku-group',              // Classic Taobao
+      '[class*="Sku--skuGroup"]',   // New structure
+      '[class*="skuGroup"]',        // Variant
+      '[class*="sku-group"]',       // Lowercase variant
+      '.J_TSaleProp',               // Alternative classic
+      '[data-property-id]'          // Property-based
+    ];
+
+    let optionGroups = [];
+    for (const selector of optionGroupSelectors) {
+      optionGroups = document.querySelectorAll(selector);
+      if (optionGroups.length > 0) {
+        console.log(`✅ Found ${optionGroups.length} option groups with selector: ${selector}`);
+        break;
+      }
+    }
 
     optionGroups.forEach((group) => {
-      const optionName = group.querySelector('.tb-property-key, [class*="skuTitle"]')?.textContent.trim();
+      // Try multiple selectors for option name
+      let optionName = null;
+      const nameSelectors = [
+        '.tb-property-key',
+        '[class*="skuTitle"]',
+        '[class*="sku-title"]',
+        '.tb-sku-title',
+        'dt',
+        'label'
+      ];
+
+      for (const selector of nameSelectors) {
+        const nameEl = group.querySelector(selector);
+        if (nameEl && nameEl.textContent.trim()) {
+          optionName = nameEl.textContent.trim().replace(/[:：\s]+$/, ''); // Remove trailing colons and spaces
+          break;
+        }
+      }
+
       if (!optionName) return;
 
       const optionValues = [];
-      const valueElements = group.querySelectorAll('.tb-sku-item, [class*="skuItem"]');
 
-      valueElements.forEach((valueEl) => {
+      // Try multiple selectors for option values
+      const valueSelectors = [
+        '.tb-sku-item',
+        '[class*="skuItem"]',
+        '[class*="sku-item"]',
+        'li[data-value]',
+        'a[data-value]',
+        'span[data-value]'
+      ];
+
+      let valueElements = [];
+      for (const selector of valueSelectors) {
+        valueElements = group.querySelectorAll(selector);
+        if (valueElements.length > 0) {
+          break;
+        }
+      }
+
+      valueElements.forEach((valueEl, index) => {
         const valueName = valueEl.getAttribute('title') ||
+                         valueEl.getAttribute('data-value') ||
                          valueEl.querySelector('span')?.textContent.trim() ||
                          valueEl.textContent.trim();
-        const valueImage = valueEl.querySelector('img')?.src;
+
+        let valueImage = valueEl.querySelector('img')?.src ||
+                        valueEl.querySelector('img')?.getAttribute('data-src');
+
+        if (valueImage && valueImage.startsWith('//')) {
+          valueImage = 'https:' + valueImage;
+        }
 
         if (valueName) {
           optionValues.push({
+            vid: valueEl.getAttribute('data-value') || `${optionName}_${index}`,
             name: valueName,
-            image: valueImage && valueImage.startsWith('//') ? 'https:' + valueImage : valueImage
+            image: valueImage || undefined
           });
         }
       });
 
       if (optionValues.length > 0) {
         options.push({
+          pid: group.getAttribute('data-property-id') || optionName,
           name: optionName,
           values: optionValues
         });
+        console.log(`✅ Extracted option "${optionName}" with ${optionValues.length} values`);
       }
     });
+
+    console.log(`📊 Total options extracted: ${options.length}`);
 
     // Extract variants (SKU combinations with price and stock)
     const variants = [];
