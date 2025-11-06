@@ -5,7 +5,7 @@
 'use client'
 
 import React from 'react'
-import { X, Package } from 'lucide-react'
+import { X, Check, AlertCircle } from 'lucide-react'
 
 // Product option value definition
 interface ProductOptionValue {
@@ -49,17 +49,18 @@ export default function ProductOptionsModal({
   productTitle,
   options,
   variants,
-  basePrice,
-  currency,
   onSave,
   editable = false
 }: ProductOptionsModalProps) {
   const [editedVariants, setEditedVariants] = React.useState<ProductVariant[]>(variants)
   const [hasChanges, setHasChanges] = React.useState(false)
+  const [selectedVariants, setSelectedVariants] = React.useState<Set<string>>(new Set())
 
   React.useEffect(() => {
     setEditedVariants(variants)
     setHasChanges(false)
+    // Select all by default
+    setSelectedVariants(new Set(variants.map(v => v.sku_id)))
   }, [variants, isOpen])
 
   const handlePriceChange = (sku_id: string, newPrice: number) => {
@@ -70,12 +71,14 @@ export default function ProductOptionsModal({
     setHasChanges(true)
   }
 
-  const handleStockChange = (sku_id: string, newStock: number) => {
-    const updated = editedVariants.map(v =>
-      v.sku_id === sku_id ? { ...v, stock: newStock } : v
-    )
-    setEditedVariants(updated)
-    setHasChanges(true)
+  const toggleVariantSelection = (sku_id: string) => {
+    const newSelected = new Set(selectedVariants)
+    if (newSelected.has(sku_id)) {
+      newSelected.delete(sku_id)
+    } else {
+      newSelected.add(sku_id)
+    }
+    setSelectedVariants(newSelected)
   }
 
   const handleSave = () => {
@@ -87,13 +90,6 @@ export default function ProductOptionsModal({
 
   if (!isOpen) return null
 
-  const formatPrice = (price: number) => {
-    if (currency === 'CNY' || currency === 'cny') {
-      return `¥${price.toFixed(2)}`
-    }
-    return `₩${Math.round(price * 170).toLocaleString()}`
-  }
-
   const getOptionImage = (optionName: string, optionValue: string): string | undefined => {
     const option = options.find(opt => opt.name === optionName)
     if (!option) return undefined
@@ -102,224 +98,198 @@ export default function ProductOptionsModal({
     return value?.image
   }
 
+  // Check if variant has validation issues
+  const hasValidationIssue = (variant: ProductVariant) => {
+    const optionText = Object.entries(variant.options).map(([k, v]) => `${k}: ${v}`).join(' + ')
+    return optionText.length > 25
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-[#2a2a2a] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold text-slate-900 truncate">상품 옵션</h2>
-            <p className="text-sm text-slate-600 mt-1 truncate">{productTitle}</p>
+            <h2 className="text-xl font-bold text-white truncate">상품 옵션 편집</h2>
+            <p className="text-sm text-slate-400 mt-1 truncate">{productTitle}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/80 transition-all"
+            className="p-2 rounded-lg hover:bg-slate-700 transition-all"
           >
-            <X size={24} className="text-slate-600" />
+            <X size={20} className="text-slate-400" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Options Display */}
-          {options.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">옵션 종류</h3>
-              <div className="space-y-4">
-                {options.map((option) => (
-                  <div key={option.pid} className="bg-slate-50 rounded-xl p-4">
-                    <div className="font-medium text-slate-700 mb-3">{option.name}</div>
-                    <div className="flex flex-wrap gap-2">
-                      {option.values.map((value) => (
-                        <div
-                          key={value.vid}
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-white border-2 border-slate-200 rounded-lg hover:border-blue-400 transition-all"
-                        >
-                          {value.image && (
-                            <img
-                              src={value.image}
-                              alt={value.name}
-                              className="w-6 h-6 rounded object-cover border border-slate-200"
-                            />
-                          )}
-                          <span className="text-sm text-slate-900">{value.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* Top Info Bar */}
+        <div className="px-6 py-3 bg-[#1f1f1f] border-b border-slate-700 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-slate-400">
+              <AlertCircle size={16} />
+              <span>상품가격에 배대지 비용</span>
+              <input
+                type="number"
+                defaultValue={13000}
+                className="w-20 px-2 py-1 bg-[#2a2a2a] border border-slate-600 rounded text-white text-center"
+              />
+              <span>원</span>
+              <span className="text-red-400 ml-2">"13,000원"이 추가되었습니다.</span>
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Variants Table */}
+        {/* Content - Variants List */}
+        <div className="flex-1 overflow-y-auto p-6 bg-[#1a1a1a]">
           {variants.length > 0 ? (
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                변형 목록 ({variants.length}개)
-              </h3>
-              <div className="bg-white border-2 border-slate-200 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-100 border-b-2 border-slate-200">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          이미지
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          옵션
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          원가 (CNY)
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          한국 가격
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          재고
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {editedVariants.map((variant, index) => {
-                        // Get first option value's image as variant image
-                        const firstOptionName = Object.keys(variant.options)[0]
-                        const firstOptionValue = variant.options[firstOptionName]
-                        const variantImage = variant.image || getOptionImage(firstOptionName, firstOptionValue)
+            <div className="space-y-3">
+              {editedVariants.map((variant, index) => {
+                const firstOptionName = Object.keys(variant.options)[0]
+                const firstOptionValue = variant.options[firstOptionName]
+                const variantImage = variant.image || getOptionImage(firstOptionName, firstOptionValue)
+                const optionText = Object.entries(variant.options).map(([k, v]) => `${k}: ${v}`).join(' + ')
+                const isSelected = selectedVariants.has(variant.sku_id)
+                const hasIssue = hasValidationIssue(variant)
 
-                        return (
-                          <tr key={variant.sku_id} className="hover:bg-blue-50/50 transition-colors">
-                            <td className="px-4 py-3">
-                              {variantImage ? (
-                                <img
-                                  src={variantImage}
-                                  alt="Variant"
-                                  className="w-12 h-12 rounded-lg object-cover border border-slate-200"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
-                                  <Package size={20} className="text-slate-400" />
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-wrap gap-1">
-                                {Object.entries(variant.options).map(([optName, optValue]) => (
-                                  <span
-                                    key={optName}
-                                    className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded"
-                                  >
-                                    {optName}: {optValue}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              {editable ? (
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={variant.price}
-                                  onChange={(e) => handlePriceChange(variant.sku_id, parseFloat(e.target.value) || 0)}
-                                  className="w-24 px-2 py-1 text-right border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none font-medium text-slate-900"
-                                />
-                              ) : (
-                                <span className="font-medium text-slate-900">
-                                  {formatPrice(variant.price)}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className="font-semibold text-orange-600">
-                                ₩{Math.round(variant.price * 170).toLocaleString()}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              {editable ? (
-                                <input
-                                  type="number"
-                                  value={variant.stock}
-                                  onChange={(e) => handleStockChange(variant.sku_id, parseInt(e.target.value) || 0)}
-                                  className="w-24 px-2 py-1 text-right border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none font-medium text-slate-900"
-                                />
-                              ) : (
-                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                  variant.stock > 100 ? 'bg-green-100 text-green-700' :
-                                  variant.stock > 10 ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-red-100 text-red-700'
-                                }`}>
-                                  {variant.stock.toLocaleString()}
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                return (
+                  <div
+                    key={variant.sku_id}
+                    className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                      hasIssue
+                        ? 'border-red-500 bg-[#2a2a2a]'
+                        : 'border-slate-700 bg-[#2a2a2a] hover:border-slate-600'
+                    }`}
+                  >
+                    {/* Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleVariantSelection(variant.sku_id)}
+                      className="w-5 h-5 rounded border-slate-600 bg-slate-700 checked:bg-blue-500 cursor-pointer"
+                    />
 
-              {/* Summary */}
-              <div className="mt-4 p-4 bg-blue-50 rounded-xl">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className="text-sm text-slate-600 mb-1">총 변형</div>
-                    <div className="text-2xl font-bold text-blue-600">{editedVariants.length}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-slate-600 mb-1">가격 범위 (CNY)</div>
-                    <div className="text-lg font-semibold text-slate-900">
-                      ¥{Math.min(...editedVariants.map(v => v.price)).toFixed(2)} - ¥{Math.max(...editedVariants.map(v => v.price)).toFixed(2)}
+                    {/* Index */}
+                    <div className="w-8 text-center">
+                      <span className="text-slate-400 font-medium">{String(index + 1).padStart(2, '0')}</span>
+                    </div>
+
+                    {/* Image */}
+                    <div className="w-16 h-16 flex-shrink-0">
+                      {variantImage ? (
+                        <img
+                          src={variantImage}
+                          alt="Variant"
+                          className="w-full h-full rounded-lg object-cover border border-slate-600"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-lg bg-slate-800 flex items-center justify-center border border-slate-600">
+                          <span className="text-slate-600 text-xs">No Image</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Category Label */}
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded">
+                        {options.length > 0 ? '옵션명' : '편리카'}
+                      </span>
+                      <span className={`text-sm ${hasIssue ? 'text-red-400' : 'text-slate-300'}`}>
+                        {options.length > 0 ? (
+                          <span>
+                            원문: <span className={hasIssue ? 'text-red-400' : 'text-blue-400'}>{optionText}</span>
+                          </span>
+                        ) : (
+                          optionText
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Price Input */}
+                    <div className="flex-1 flex items-center gap-3">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={variant.price}
+                        onChange={(e) => handlePriceChange(variant.sku_id, parseFloat(e.target.value) || 0)}
+                        disabled={!editable}
+                        className="flex-1 px-4 py-2 bg-[#1a1a1a] border border-slate-600 rounded-lg text-white text-center focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+
+                    {/* Character Count & Status */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
+                        <span className={`text-sm font-medium ${
+                          optionText.length > 25 ? 'text-red-400' : 'text-slate-400'
+                        }`}>
+                          {optionText.length}
+                        </span>
+                        <span className="text-slate-600">/</span>
+                        <span className="text-slate-500 text-sm">25</span>
+                      </div>
+
+                      {hasIssue ? (
+                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                          <AlertCircle size={18} className="text-red-400" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                          <Check size={18} className="text-white" strokeWidth={3} />
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    <div className="text-sm text-slate-600 mb-1">총 재고</div>
-                    <div className="text-2xl font-bold text-green-600">
-                      {editedVariants.reduce((sum, v) => sum + v.stock, 0).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                )
+              })}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Package size={48} className="text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-600">변형 정보가 없습니다</p>
-              <p className="text-sm text-slate-500 mt-2">단일 옵션 상품이거나 데이터를 가져오지 못했습니다</p>
+            <div className="text-center py-16">
+              <div className="w-16 h-16 rounded-full bg-slate-800 mx-auto mb-4 flex items-center justify-center">
+                <AlertCircle size={32} className="text-slate-600" />
+              </div>
+              <p className="text-slate-400 text-lg">옵션 정보가 없습니다</p>
+              <p className="text-slate-600 text-sm mt-2">단일 옵션 상품이거나 데이터를 가져오지 못했습니다</p>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-3">
-          {editable && hasChanges && (
-            <span className="text-sm text-orange-600 font-medium">
-              ⚠️ 저장하지 않은 변경사항이 있습니다
-            </span>
-          )}
-          {!editable || !hasChanges ? <div /> : null}
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="px-6 py-2.5 rounded-lg font-medium text-slate-700 bg-white border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 transition-all"
-            >
-              {editable && hasChanges ? '취소' : '닫기'}
-            </button>
-            {editable && (
-              <button
-                onClick={handleSave}
-                disabled={!hasChanges}
-                className={`px-6 py-2.5 rounded-lg font-semibold transition-all ${
-                  hasChanges
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg'
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                저장
-              </button>
-            )}
+        {/* Bottom Info */}
+        {variants.length > 0 && (
+          <div className="px-6 py-3 bg-[#1f1f1f] border-t border-slate-700">
+            <div className="flex items-center justify-between text-sm">
+              <div className="text-slate-400">
+                <span className="text-red-400 font-medium">{editedVariants.filter(v => hasValidationIssue(v)).length}개</span>
+                의 옵션명 상품이 선택되었습니다.
+              </div>
+              {hasChanges && (
+                <span className="text-orange-400 text-xs">
+                  ⚠️ 저장하지 않은 변경사항이 있습니다
+                </span>
+              )}
+            </div>
           </div>
+        )}
+
+        {/* Footer */}
+        <div className="p-6 border-t border-slate-700 bg-[#2a2a2a] flex justify-end items-center gap-3">
+          <button
+            onClick={onClose}
+            className="px-6 py-2.5 rounded-lg font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 transition-all"
+          >
+            취소
+          </button>
+          {editable && (
+            <button
+              onClick={handleSave}
+              disabled={!hasChanges}
+              className={`px-6 py-2.5 rounded-lg font-semibold transition-all ${
+                hasChanges
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg'
+                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              저장
+            </button>
+          )}
         </div>
       </div>
     </div>
