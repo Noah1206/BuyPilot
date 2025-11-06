@@ -509,7 +509,9 @@ function extractTaobaoProduct() {
                         name: propertyName,
                         values: values.map((val, idx) => ({
                           vid: `${propertyName}_${idx}`,
-                          name: val
+                          name: val,
+                          // Use product images as option value images (one image per option value)
+                          image: images[idx] || images[0] || null
                         }))
                       });
                     }
