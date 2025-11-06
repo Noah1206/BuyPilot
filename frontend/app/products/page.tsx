@@ -264,11 +264,48 @@ export default function ProductsPage() {
 
   // Transform Taobao props/skus to options/variants format
   const transformProductData = async (product: Product): Promise<{ options: ProductOption[], variants: ProductVariant[] }> => {
-    // Check if already in the correct format
+    // Handle options/variants format (from Chrome Extension - needs translation)
     if (product.data?.options && product.data?.variants) {
+      const rawOptions = product.data.options
+      const rawVariants = product.data.variants
+
+      // Translate option names and values
+      const translatedOptions: ProductOption[] = await Promise.all(
+        rawOptions.map(async (option: any) => ({
+          pid: option.pid,
+          name: await translateText(option.name),
+          values: await Promise.all(
+            (option.values || []).map(async (val: any) => ({
+              vid: val.vid,
+              name: await translateText(val.name),
+              image: val.image,
+              available: val.available !== false
+            }))
+          )
+        }))
+      )
+
+      // Translate variant option names
+      const translatedVariants: ProductVariant[] = await Promise.all(
+        rawVariants.map(async (variant: any) => {
+          const translatedOptions: { [key: string]: string } = {}
+
+          for (const [optionName, optionValue] of Object.entries(variant.options || {})) {
+            const translatedName = await translateText(String(optionName))
+            const translatedValue = await translateText(String(optionValue))
+            translatedOptions[translatedName] = translatedValue
+          }
+
+          return {
+            ...variant,
+            options: translatedOptions
+          }
+        })
+      )
+
       return {
-        options: product.data.options,
-        variants: product.data.variants
+        options: translatedOptions,
+        variants: translatedVariants
       }
     }
 
