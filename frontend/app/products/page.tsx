@@ -746,40 +746,65 @@ export default function ProductsPage() {
   }
 
   const exportToExcel = () => {
-    if (selectedProducts.size === 0) {
-      toast('선택된 상품이 없습니다', 'error')
+    if (products.length === 0) {
+      toast('내보낼 상품이 없습니다', 'error')
       return
     }
 
-    const selectedProductsData = products.filter(p => selectedProducts.has(p.id))
+    // Transform products data to Excel format
+    const excelData = products.map((product, index) => {
+      // Get category name from cache
+      const cachedCategories = categoryCache.get(product.id)
+      const categoryName = cachedCategories && cachedCategories.length > 0
+        ? cachedCategories[0].category_name
+        : '-'
 
-    const excelData = selectedProductsData.map(product => {
-      const priceInfo = getFinalPrice(product)
+      // Calculate shipping fee (0 for free shipping)
+      const shippingFee = 0
+
+      // Calculate margin percentage
+      let marginPercent = 0
+      if (product.data?.calculated_final_price && product.price > 0) {
+        marginPercent = ((product.data.calculated_final_price - product.price) / product.price * 100)
+      } else if (product.data?.margin) {
+        marginPercent = product.data.margin
+      }
+
       return {
-        '상품명 (한글)': getProductTitle(product),
-        '상품명 (중문)': product.data?.title_cn || product.title,
-        '원가 (CNY)': getProductPrice(product),
-        '원가 (KRW)': priceInfo.costPrice,
-        '배송비 (KRW)': priceInfo.shippingCost,
-        '마진율 (%)': priceInfo.margin,
-        '최종 판매가 (KRW)': priceInfo.finalPrice,
-        '플랫폼': product.data?.platform || product.source,
-        '이미지 개수': product.data?.images?.length || 0,
-        '상세이미지 개수': product.data?.desc_imgs?.length || 0,
-        '옵션': product.data?.options?.map((opt: any) => `${opt.name}(${opt.values?.length || 0}개)`).join(', ') || '없음',
-        '소스 URL': product.source_url,
-        '등록일': new Date(product.created_at).toLocaleDateString('ko-KR')
+        '순위': index + 1,
+        '상품명': product.title || '-',
+        '카테고리': categoryName,
+        '배송비': shippingFee,
+        '마진율(%)': marginPercent.toFixed(2),
+        '상품 URL': product.source_url || '-'
       }
     })
 
-    const ws = XLSX.utils.json_to_sheet(excelData)
+    // Create workbook and worksheet
     const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 8 },   // 순위
+      { wch: 50 },  // 상품명
+      { wch: 20 },  // 카테고리
+      { wch: 10 },  // 배송비
+      { wch: 12 },  // 마진율(%)
+      { wch: 60 }   // 상품 URL
+    ]
+
+    // Add worksheet to workbook
     XLSX.utils.book_append_sheet(wb, ws, '상품목록')
 
-    const fileName = `상품목록_${new Date().toLocaleDateString('ko-KR').replace(/\./g, '-')}.xlsx`
-    XLSX.writeFile(wb, fileName)
+    // Generate filename with current date
+    const date = new Date()
+    const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
+    const filename = `대량수집_${dateStr}.xlsx`
 
-    toast(`${selectedProducts.size}개 상품을 엑셀로 내보냈습니다!`)
+    // Download file
+    XLSX.writeFile(wb, filename)
+    toast(`${products.length}개 상품이 엑셀로 다운로드되었습니다!`)
   }
 
   const deleteSelected = async () => {
@@ -883,68 +908,6 @@ export default function ProductsPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const exportToExcel = () => {
-    if (products.length === 0) {
-      toast('내보낼 상품이 없습니다', 'error')
-      return
-    }
-
-    // Transform products data to Excel format
-    const excelData = products.map((product, index) => {
-      // Get category name from cache
-      const cachedCategories = categoryCache.get(product.id)
-      const categoryName = cachedCategories && cachedCategories.length > 0
-        ? cachedCategories[0].category_name
-        : '-'
-
-      // Calculate shipping fee (0 for free shipping)
-      const shippingFee = 0
-
-      // Calculate margin percentage
-      let marginPercent = 0
-      if (product.data?.calculated_final_price && product.price > 0) {
-        marginPercent = ((product.data.calculated_final_price - product.price) / product.price * 100)
-      } else if (product.data?.margin) {
-        marginPercent = product.data.margin
-      }
-
-      return {
-        '순위': index + 1,
-        '상품명': product.title || '-',
-        '카테고리': categoryName,
-        '배송비': shippingFee,
-        '마진율(%)': marginPercent.toFixed(2),
-        '상품 URL': product.source_url || '-'
-      }
-    })
-
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new()
-    const ws = XLSX.utils.json_to_sheet(excelData)
-
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 8 },   // 순위
-      { wch: 50 },  // 상품명
-      { wch: 20 },  // 카테고리
-      { wch: 10 },  // 배송비
-      { wch: 12 },  // 마진율(%)
-      { wch: 60 }   // 상품 URL
-    ]
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, '상품목록')
-
-    // Generate filename with current date
-    const date = new Date()
-    const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
-    const filename = `대량수집_${dateStr}.xlsx`
-
-    // Download file
-    XLSX.writeFile(wb, filename)
-    toast(`${products.length}개 상품이 엑셀로 다운로드되었습니다!`)
   }
 
   const handleCategoryConfirmed = async (categoryId: string) => {
