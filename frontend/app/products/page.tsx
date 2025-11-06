@@ -1527,23 +1527,6 @@ export default function ProductsPage() {
                       </div>
 
                       {/* Variants badge */}
-                      {product.data?.variants && product.data.variants.length > 0 && (
-                        <button
-                          onClick={() => {
-                            openEditModal(product, 'options')
-                            const { options, variants } = transformProductData(product)
-                            setEditData({
-                              options,
-                              variants
-                            })
-                          }}
-                          className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500 text-white flex items-center gap-1 hover:bg-blue-600 hover:scale-105 transition-all cursor-pointer"
-                          title="옵션 보기"
-                        >
-                          <Layers size={10} strokeWidth={2.5} />
-                          <span>{product.data.variants.length}</span>
-                        </button>
-                      )}
                     </div>
 
                     {/* Product info */}
@@ -1701,6 +1684,23 @@ export default function ProductsPage() {
                       <DollarSign size={14} />
                       <span>가격</span>
                     </button>
+
+                    {product.data?.variants && product.data.variants.length > 0 && (
+                      <button
+                        onClick={() => {
+                          openEditModal(product, 'options')
+                          const { options, variants } = transformProductData(product)
+                          setEditData({
+                            options,
+                            variants
+                          })
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-blue-500 hover:text-blue-600 transition-all"
+                      >
+                        <Layers size={14} />
+                        <span>옵션</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => handleDelete(product.id)}
