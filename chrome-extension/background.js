@@ -98,7 +98,64 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Response already sent synchronously, no need for return true
     return false;
   }
+
+  if (request.action === 'translate') {
+    // Handle translation request
+    const { text, from, to } = request;
+
+    console.log(`🌐 Translating: "${text}" from ${from} to ${to}`);
+
+    // Use Google Translate API
+    translateText(text, from, to)
+      .then(translatedText => {
+        console.log(`✅ Translation result: "${translatedText}"`);
+        sendResponse({
+          success: true,
+          translatedText: translatedText
+        });
+      })
+      .catch(error => {
+        console.error('❌ Translation error:', error);
+        sendResponse({
+          success: false,
+          translatedText: text, // Fallback to original
+          error: error.message
+        });
+      });
+
+    // Return true to indicate async response
+    return true;
+  }
 });
+
+/**
+ * Translate text using Google Translate API
+ */
+async function translateText(text, from, to) {
+  try {
+    // Use Google Translate's free API endpoint
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Translation API returned ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Extract translated text from response
+    // Response format: [[[translated, original, null, null, 3]], null, from, ...]
+    if (data && data[0] && data[0][0] && data[0][0][0]) {
+      return data[0][0][0];
+    }
+
+    throw new Error('Invalid translation response format');
+  } catch (error) {
+    console.error('Translation API error:', error);
+    // Fallback to original text
+    return text;
+  }
+}
 
 /**
  * Process import queue
