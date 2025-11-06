@@ -6,27 +6,9 @@
 console.log('🚀 BuyPilot Extension: Content script loaded');
 
 /**
- * Translate Chinese text to Korean using background script
- */
-async function translateText(text) {
-  try {
-    const response = await chrome.runtime.sendMessage({
-      action: 'translate',
-      text: text,
-      from: 'zh-CN',
-      to: 'ko'
-    });
-    return response.translatedText || text;
-  } catch (error) {
-    console.warn('Translation failed:', error);
-    return text;
-  }
-}
-
-/**
  * Extract product data from Taobao page
  */
-async function extractTaobaoProduct() {
+function extractTaobaoProduct() {
   console.log('📦 Extracting Taobao product data...');
 
   try {
@@ -670,22 +652,6 @@ async function extractTaobaoProduct() {
     }
 
     console.log(`📊 Final options count: ${options.length}`);
-
-    // Translate option names and values to Korean
-    console.log('🌐 Translating options to Korean...');
-    for (const option of options) {
-      // Translate option name
-      const translatedName = await translateText(option.name);
-      option.name_ko = translatedName;
-      console.log(`  ✅ Translated option "${option.name}" → "${translatedName}"`);
-
-      // Translate option values
-      for (const value of option.values) {
-        const translatedValue = await translateText(value.name);
-        value.name_ko = translatedValue;
-        console.log(`    ✅ Translated value "${value.name}" → "${translatedValue}"`);
-      }
-    }
 
     // Extract variants (SKU combinations with price and stock)
     const variants = [];

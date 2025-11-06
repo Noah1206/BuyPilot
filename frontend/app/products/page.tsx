@@ -11,6 +11,43 @@ import CategorySelectionModal from '@/components/CategorySelectionModal'
 import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser, Edit, Check, Layers } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
+// Translation cache to avoid redundant API calls
+const translationCache = new Map<string, string>()
+
+/**
+ * Translate Chinese text to Korean using Google Translate API
+ */
+async function translateText(text: string): Promise<string> {
+  // Check cache first
+  if (translationCache.has(text)) {
+    return translationCache.get(text)!
+  }
+
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=ko&dt=t&q=${encodeURIComponent(text)}`
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      console.warn('Translation API failed:', response.status)
+      return text
+    }
+
+    const data = await response.json()
+
+    // Extract translated text from response
+    if (data && data[0] && data[0][0] && data[0][0][0]) {
+      const translated = data[0][0][0]
+      translationCache.set(text, translated)
+      return translated
+    }
+
+    return text
+  } catch (error) {
+    console.warn('Translation error:', error)
+    return text
+  }
+}
+
 // Product option value definition
 interface ProductOptionValue {
   vid: string
@@ -234,7 +271,7 @@ export default function ProductsPage() {
   }
 
   // Transform Taobao props/skus to options/variants format
-  const transformProductData = (product: Product): { options: ProductOption[], variants: ProductVariant[] } => {
+  const transformProductData = async (product: Product): Promise<{ options: ProductOption[], variants: ProductVariant[] }> => {
     // Check if already in the correct format
     if (product.data?.options && product.data?.variants) {
       return {
@@ -247,17 +284,21 @@ export default function ProductsPage() {
     const props = product.data?.props || []
     const skus = product.data?.skus || []
 
-    // Convert props to options (use Korean translation if available)
-    const options: ProductOption[] = props.map((prop: any) => ({
-      pid: prop.pid,
-      name: prop.name_ko || prop.name,  // Use Korean name if available
-      values: (prop.values || []).map((val: any) => ({
-        vid: val.vid,
-        name: val.name_ko || val.name,  // Use Korean name if available
-        image: val.image,
-        available: val.available !== false
+    // Convert props to options and translate to Korean
+    const options: ProductOption[] = await Promise.all(
+      props.map(async (prop: any) => ({
+        pid: prop.pid,
+        name: await translateText(prop.name),
+        values: await Promise.all(
+          (prop.values || []).map(async (val: any) => ({
+            vid: val.vid,
+            name: await translateText(val.name),
+            image: val.image,
+            available: val.available !== false
+          }))
+        )
       }))
-    }))
+    )
 
     // Convert skus to variants
     const variants: ProductVariant[] = skus.map((sku: any) => {
@@ -1710,9 +1751,9 @@ export default function ProductsPage() {
 
                     {product.data?.variants && product.data.variants.length > 0 && (
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           openEditModal(product, 'options')
-                          const { options, variants } = transformProductData(product)
+                          const { options, variants } = await transformProductData(product)
                           setEditData({
                             options,
                             variants
@@ -1816,10 +1857,10 @@ export default function ProductsPage() {
                     대표 이미지
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (editMode !== 'options') {
                         setEditMode('options')
-                        const { options, variants } = transformProductData(editingProduct)
+                        const { options, variants } = await transformProductData(editingProduct)
                         setEditData({
                           options,
                           variants
