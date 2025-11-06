@@ -145,6 +145,10 @@ export default function ProductsPage() {
   // Category editing state
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [categorySearchQuery, setCategorySearchQuery] = useState<string>('')
+
+  // Option name editing state
+  const [editingOptionKey, setEditingOptionKey] = useState<string | null>(null) // format: "productId-optionIdx"
+  const [editingOptionValue, setEditingOptionValue] = useState<string>('')
   const [allCategories, setAllCategories] = useState<any[]>([])
   const [filteredCategories, setFilteredCategories] = useState<any[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
@@ -696,6 +700,45 @@ export default function ProductsPage() {
         toast('저장되었습니다!')
         loadProducts()
         closeEditModal()
+      } else {
+        toast('저장 실패', 'error')
+      }
+    } catch (err) {
+      toast('저장 중 오류가 발생했습니다', 'error')
+    }
+  }
+
+  // Handle option name save
+  const handleSaveOptionName = async (product: Product, optionIdx: number, newName: string) => {
+    if (!newName.trim() || !product.data?.options) return
+
+    try {
+      const updatedOptions = [...product.data.options]
+      const oldName = updatedOptions[optionIdx].name
+      updatedOptions[optionIdx] = { ...updatedOptions[optionIdx], name: newName }
+
+      // Update variants to use new option name
+      const updatedVariants = product.data.variants?.map((variant: any) => {
+        const newOptions = { ...variant.options }
+        if (oldName in newOptions) {
+          newOptions[newName] = newOptions[oldName]
+          delete newOptions[oldName]
+        }
+        return { ...variant, options: newOptions }
+      })
+
+      const response = await updateProduct(product.id, {
+        data: {
+          ...product.data,
+          options: updatedOptions,
+          variants: updatedVariants
+        }
+      })
+
+      if (response.ok) {
+        toast('옵션명이 저장되었습니다!')
+        loadProducts()
+        setEditingOptionKey(null)
       } else {
         toast('저장 실패', 'error')
       }
@@ -1717,18 +1760,66 @@ export default function ProductsPage() {
 
                       {/* Options */}
                       {product.data?.options && product.data.options.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {product.data.options.slice(0, 3).map((option: any, idx: number) => (
-                            <div key={idx} className="px-2 py-0.5 bg-slate-50 rounded border border-slate-200">
-                              <span className="font-medium text-xs text-slate-900">{option.name}</span>
-                              <span className="font-medium text-xs text-orange-500 ml-1">({option.values?.length || 0})</span>
-                            </div>
-                          ))}
-                          {product.data.options.length > 3 && (
-                            <div className="px-2 py-0.5 bg-slate-50 rounded border border-slate-200">
-                              <span className="text-xs text-slate-600">+{product.data.options.length - 3}개</span>
-                            </div>
-                          )}
+                        <div className="flex flex-wrap gap-3 mb-3">
+                          {product.data.options.map((option: any, idx: number) => {
+                            const optionKey = `${product.id}-${idx}`
+                            const isEditing = editingOptionKey === optionKey
+
+                            return (
+                              <div key={idx} className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 rounded-lg px-4 py-3 border-2 border-blue-200 hover:border-blue-400 transition-all group cursor-pointer shadow-sm hover:shadow-md">
+                                {isEditing ? (
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      defaultValue={option.name}
+                                      autoFocus
+                                      onBlur={(e) => {
+                                        handleSaveOptionName(product, idx, e.target.value)
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          handleSaveOptionName(product, idx, e.currentTarget.value)
+                                        } else if (e.key === 'Escape') {
+                                          setEditingOptionKey(null)
+                                        }
+                                      }}
+                                      className="bg-white border-2 border-blue-500 rounded-md px-3 py-1.5 text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[200px]"
+                                    />
+                                    <button
+                                      onClick={() => setEditingOptionKey(null)}
+                                      className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+                                    >
+                                      <X size={20} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span
+                                      className="font-bold text-base text-slate-900"
+                                      onClick={() => {
+                                        setEditingOptionKey(optionKey)
+                                        setEditingOptionValue(option.name)
+                                      }}
+                                    >
+                                      {option.name}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        setEditingOptionKey(optionKey)
+                                        setEditingOptionValue(option.name)
+                                      }}
+                                      className="opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-700 transition-all p-1 hover:bg-blue-200 rounded"
+                                    >
+                                      <Edit size={16} />
+                                    </button>
+                                    <span className="font-bold text-sm text-orange-600 bg-orange-100 px-2.5 py-0.5 rounded-full">
+                                      {option.values?.length || 0}개
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
 
