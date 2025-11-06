@@ -355,3 +355,13 @@ export async function getSmartStoreOrders(params?: {
   const query = searchParams.toString()
   return apiFetch(`/api/v1/smartstore/orders${query ? `?${query}` : ''}`)
 }
+
+/**
+ * Translate text from Chinese to Korean
+ */
+export async function translateText(text: string): Promise<ApiResponse<{ translated: string }>> {
+  return apiFetch('/api/v1/translate', {
+    method: 'POST',
+    body: JSON.stringify({ text, from: 'zh-CN', to: 'ko' }),
+  })
+}

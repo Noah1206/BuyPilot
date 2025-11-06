@@ -5,7 +5,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore } from '@/lib/api'
+import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore, translateText as apiTranslateText } from '@/lib/api'
 import Header from '@/components/Header'
 import CategorySelectionModal from '@/components/CategorySelectionModal'
 import { Plus, Search, RefreshCw, Trash2, ExternalLink, Image as ImageIcon, FileText, DollarSign, X, Save, ChevronLeft, ChevronRight, Package, ZoomIn, ZoomOut, Settings, Sparkles, CheckSquare, Square, Download, Upload, Eraser, Edit, Check, Layers } from 'lucide-react'
@@ -15,7 +15,7 @@ import * as XLSX from 'xlsx'
 const translationCache = new Map<string, string>()
 
 /**
- * Translate Chinese text to Korean using Google Translate API
+ * Translate Chinese text to Korean using backend API
  */
 async function translateText(text: string): Promise<string> {
   // Check cache first
@@ -24,23 +24,15 @@ async function translateText(text: string): Promise<string> {
   }
 
   try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=ko&dt=t&q=${encodeURIComponent(text)}`
-    const response = await fetch(url)
+    const response = await apiTranslateText(text)
 
-    if (!response.ok) {
-      console.warn('Translation API failed:', response.status)
-      return text
-    }
-
-    const data = await response.json()
-
-    // Extract translated text from response
-    if (data && data[0] && data[0][0] && data[0][0][0]) {
-      const translated = data[0][0][0]
+    if (response.ok && response.data?.translated) {
+      const translated = response.data.translated
       translationCache.set(text, translated)
       return translated
     }
 
+    console.warn('Translation API failed:', response.error)
     return text
   } catch (error) {
     console.warn('Translation error:', error)
