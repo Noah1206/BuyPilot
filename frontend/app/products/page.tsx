@@ -1530,15 +1530,12 @@ export default function ProductsPage() {
                       {product.data?.variants && product.data.variants.length > 0 && (
                         <button
                           onClick={() => {
-                            openEditModal(product)
-                            setTimeout(() => {
-                              setEditMode('options')
-                              const { options, variants } = transformProductData(product)
-                              setEditData({
-                                options,
-                                variants
-                              })
-                            }, 0)
+                            openEditModal(product, 'options')
+                            const { options, variants } = transformProductData(product)
+                            setEditData({
+                              options,
+                              variants
+                            })
                           }}
                           className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500 text-white flex items-center gap-1 hover:bg-blue-600 hover:scale-105 transition-all cursor-pointer"
                           title="옵션 보기"
