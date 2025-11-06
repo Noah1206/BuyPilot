@@ -200,16 +200,17 @@ export default function ProductOptionsModal({
         </div>
 
         {/* Option Names Editor */}
-        <div className="px-8 py-4 bg-slate-900/30 border-b border-slate-800">
-          <div className="flex items-center gap-2 mb-3">
-            <Package size={16} className="text-slate-400" />
-            <span className="text-sm font-semibold text-slate-300">옵션명 편집</span>
+        <div className="px-8 py-6 bg-slate-900/30 border-b border-slate-800">
+          <div className="flex items-center gap-3 mb-5">
+            <Package size={20} className="text-blue-400" />
+            <span className="text-lg font-bold text-white">옵션명 편집</span>
+            <span className="text-sm text-slate-400">(클릭하여 수정)</span>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-4">
             {editedOptions.map((option) => (
-              <div key={option.pid} className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700 group hover:border-blue-500/50 transition-all">
+              <div key={option.pid} className="flex items-center gap-3 bg-slate-800/70 rounded-xl px-5 py-4 border-2 border-slate-700 group hover:border-blue-500 transition-all cursor-pointer shadow-lg hover:shadow-blue-500/20">
                 {editingOptionName === option.name ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <input
                       type="text"
                       defaultValue={option.name}
@@ -222,27 +223,29 @@ export default function ProductOptionsModal({
                           setEditingOptionName(null)
                         }
                       }}
-                      className="bg-slate-900 border border-blue-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[120px]"
+                      className="bg-slate-900 border-2 border-blue-500 rounded-lg px-4 py-2 text-base text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[180px]"
                     />
                     <button
                       onClick={() => setEditingOptionName(null)}
-                      className="text-slate-400 hover:text-white transition-colors"
+                      className="text-slate-400 hover:text-white transition-colors p-2"
                     >
-                      <X size={14} />
+                      <X size={18} />
                     </button>
                   </div>
                 ) : (
                   <>
-                    <span className="text-sm text-white font-medium">{option.name}</span>
+                    <span className="text-base text-white font-semibold">{option.name}</span>
                     <button
                       onClick={() => setEditingOptionName(option.name)}
-                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-400 transition-all"
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-400 transition-all p-2 hover:bg-slate-700/50 rounded-lg"
                     >
-                      <Edit2 size={14} />
+                      <Edit2 size={18} />
                     </button>
                   </>
                 )}
-                <span className="text-xs text-slate-500 ml-1">({option.values.length})</span>
+                <span className="text-sm text-slate-400 font-medium ml-2 bg-slate-900/60 px-3 py-1 rounded-full">
+                  {option.values.length}개
+                </span>
               </div>
             ))}
           </div>
