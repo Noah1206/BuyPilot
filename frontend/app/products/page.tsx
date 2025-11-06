@@ -260,13 +260,36 @@ export default function ProductsPage() {
     }))
 
     // Convert skus to variants
-    const variants: ProductVariant[] = skus.map((sku: any) => ({
-      sku_id: sku.sku_id || sku.skuId || String(sku.id),
-      options: sku.properties || sku.props_name || {},
-      price: sku.price || sku.originalPrice || 0,
-      stock: sku.quantity || sku.stock || 0,
-      image: sku.image
-    }))
+    const variants: ProductVariant[] = skus.map((sku: any) => {
+      const variantOptions = sku.properties || sku.props_name || {}
+
+      // Try to find image from variant's option values
+      let variantImage = sku.image
+
+      if (!variantImage) {
+        // Loop through each option in the variant
+        for (const [optionName, optionValue] of Object.entries(variantOptions)) {
+          // Find the corresponding option in options array
+          const option = options.find(opt => opt.name === optionName)
+          if (option) {
+            // Find the value that matches
+            const value = option.values.find(val => val.name === optionValue)
+            if (value?.image) {
+              variantImage = value.image
+              break
+            }
+          }
+        }
+      }
+
+      return {
+        sku_id: sku.sku_id || sku.skuId || String(sku.id),
+        options: variantOptions,
+        price: sku.price || sku.originalPrice || 0,
+        stock: sku.quantity || sku.stock || 0,
+        image: variantImage
+      }
+    })
 
     return { options, variants }
   }

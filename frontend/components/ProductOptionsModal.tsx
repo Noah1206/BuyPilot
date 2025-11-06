@@ -209,7 +209,7 @@ export default function ProductOptionsModal({
           {variants.length > 0 ? (
             <div className="space-y-2">
               {editedVariants.map((variant, index) => {
-                // Try to get variant image from multiple sources
+                // Enhanced image search logic
                 let variantImage = variant.image
 
                 // If no direct variant image, try to find image from option values
@@ -223,6 +223,14 @@ export default function ProductOptionsModal({
                     }
                   }
                 }
+
+                // Debug: Log image search results
+                console.log('Variant:', variant.sku_id, {
+                  directImage: variant.image,
+                  foundImage: variantImage,
+                  options: variant.options,
+                  allOptions: options
+                })
 
                 const optionText = Object.entries(variant.options).map(([k, v]) => `${k}: ${v}`).join(' + ')
                 const isSelected = selectedVariants.has(variant.sku_id)
