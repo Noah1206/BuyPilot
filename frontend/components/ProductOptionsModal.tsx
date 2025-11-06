@@ -5,7 +5,7 @@
 'use client'
 
 import React from 'react'
-import { X, Check, AlertCircle, Package2 } from 'lucide-react'
+import { X, Check, AlertCircle, Package2, Package, Edit2 } from 'lucide-react'
 
 // Product option value definition
 interface ProductOptionValue {
@@ -37,7 +37,7 @@ interface ProductOptionsModalProps {
   productTitle: string
   options: ProductOption[]
   variants: ProductVariant[]
-  onSave?: (updatedVariants: ProductVariant[]) => void
+  onSave?: (updatedVariants: ProductVariant[], updatedOptions?: ProductOption[]) => void
   editable?: boolean
 }
 
@@ -51,16 +51,20 @@ export default function ProductOptionsModal({
   editable = false
 }: ProductOptionsModalProps) {
   const [editedVariants, setEditedVariants] = React.useState<ProductVariant[]>(variants)
+  const [editedOptions, setEditedOptions] = React.useState<ProductOption[]>(options)
   const [hasChanges, setHasChanges] = React.useState(false)
   const [selectedVariants, setSelectedVariants] = React.useState<Set<string>>(new Set())
   const [shippingCost, setShippingCost] = React.useState(13000)
+  const [editingOptionName, setEditingOptionName] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     setEditedVariants(variants)
+    setEditedOptions(options)
     setHasChanges(false)
+    setEditingOptionName(null)
     // Select all by default
     setSelectedVariants(new Set(variants.map(v => v.sku_id)))
-  }, [variants, isOpen])
+  }, [variants, options, isOpen])
 
   const handlePriceChange = (sku_id: string, newPrice: number) => {
     const updated = editedVariants.map(v =>
@@ -88,9 +92,32 @@ export default function ProductOptionsModal({
     }
   }
 
+  const handleOptionNameChange = (oldName: string, newName: string) => {
+    if (oldName === newName || !newName.trim()) return
+
+    // Update options
+    const updatedOptions = editedOptions.map(opt =>
+      opt.name === oldName ? { ...opt, name: newName } : opt
+    )
+    setEditedOptions(updatedOptions)
+
+    // Update variants to use new option name
+    const updatedVariants = editedVariants.map(variant => {
+      const newOptions = { ...variant.options }
+      if (oldName in newOptions) {
+        newOptions[newName] = newOptions[oldName]
+        delete newOptions[oldName]
+      }
+      return { ...variant, options: newOptions }
+    })
+    setEditedVariants(updatedVariants)
+    setHasChanges(true)
+    setEditingOptionName(null)
+  }
+
   const handleSave = () => {
     if (onSave && hasChanges) {
-      onSave(editedVariants)
+      onSave(editedVariants, editedOptions)
       setHasChanges(false)
     }
   }
@@ -98,7 +125,7 @@ export default function ProductOptionsModal({
   if (!isOpen) return null
 
   const getOptionImage = (optionName: string, optionValue: string): string | undefined => {
-    const option = options.find(opt => opt.name === optionName)
+    const option = editedOptions.find(opt => opt.name === optionName)
     if (!option) return undefined
 
     const value = option.values.find(val => val.name === optionValue)
@@ -169,6 +196,55 @@ export default function ProductOptionsModal({
                 </>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Option Names Editor */}
+        <div className="px-8 py-4 bg-slate-900/30 border-b border-slate-800">
+          <div className="flex items-center gap-2 mb-3">
+            <Package size={16} className="text-slate-400" />
+            <span className="text-sm font-semibold text-slate-300">옵션명 편집</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {editedOptions.map((option) => (
+              <div key={option.pid} className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700 group hover:border-blue-500/50 transition-all">
+                {editingOptionName === option.name ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      defaultValue={option.name}
+                      autoFocus
+                      onBlur={(e) => handleOptionNameChange(option.name, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleOptionNameChange(option.name, e.currentTarget.value)
+                        } else if (e.key === 'Escape') {
+                          setEditingOptionName(null)
+                        }
+                      }}
+                      className="bg-slate-900 border border-blue-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[120px]"
+                    />
+                    <button
+                      onClick={() => setEditingOptionName(null)}
+                      className="text-slate-400 hover:text-white transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-sm text-white font-medium">{option.name}</span>
+                    <button
+                      onClick={() => setEditingOptionName(option.name)}
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-400 transition-all"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  </>
+                )}
+                <span className="text-xs text-slate-500 ml-1">({option.values.length})</span>
+              </div>
+            ))}
           </div>
         </div>
 
