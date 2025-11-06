@@ -5,7 +5,7 @@
 'use client'
 
 import React from 'react'
-import { X, Check, AlertCircle } from 'lucide-react'
+import { X, Check, AlertCircle, Package2 } from 'lucide-react'
 
 // Product option value definition
 interface ProductOptionValue {
@@ -37,8 +37,6 @@ interface ProductOptionsModalProps {
   productTitle: string
   options: ProductOption[]
   variants: ProductVariant[]
-  basePrice: number
-  currency: string
   onSave?: (updatedVariants: ProductVariant[]) => void
   editable?: boolean
 }
@@ -55,6 +53,7 @@ export default function ProductOptionsModal({
   const [editedVariants, setEditedVariants] = React.useState<ProductVariant[]>(variants)
   const [hasChanges, setHasChanges] = React.useState(false)
   const [selectedVariants, setSelectedVariants] = React.useState<Set<string>>(new Set())
+  const [shippingCost, setShippingCost] = React.useState(13000)
 
   React.useEffect(() => {
     setEditedVariants(variants)
@@ -81,6 +80,14 @@ export default function ProductOptionsModal({
     setSelectedVariants(newSelected)
   }
 
+  const toggleSelectAll = () => {
+    if (selectedVariants.size === editedVariants.length) {
+      setSelectedVariants(new Set())
+    } else {
+      setSelectedVariants(new Set(editedVariants.map(v => v.sku_id)))
+    }
+  }
+
   const handleSave = () => {
     if (onSave && hasChanges) {
       onSave(editedVariants)
@@ -104,44 +111,103 @@ export default function ProductOptionsModal({
     return optionText.length > 25
   }
 
+  const selectedCount = selectedVariants.size
+  const issueCount = editedVariants.filter(v => hasValidationIssue(v)).length
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="bg-[#2a2a2a] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col border border-slate-800">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-white truncate">상품 옵션 편집</h2>
-            <p className="text-sm text-slate-400 mt-1 truncate">{productTitle}</p>
+        <div className="flex items-center justify-between px-8 py-5 border-b border-slate-800 bg-gradient-to-r from-slate-900/50 to-slate-800/30">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <Package2 size={24} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-bold text-white tracking-tight">상품 옵션 관리</h2>
+              <p className="text-sm text-slate-400 mt-0.5 truncate">{productTitle}</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-700 transition-all"
+            className="p-2.5 rounded-xl hover:bg-slate-800 transition-all group"
           >
-            <X size={20} className="text-slate-400" />
+            <X size={22} className="text-slate-400 group-hover:text-white transition-colors" />
           </button>
         </div>
 
-        {/* Top Info Bar */}
-        <div className="px-6 py-3 bg-[#1f1f1f] border-b border-slate-700 flex items-center justify-between text-sm">
+        {/* Info Bar */}
+        <div className="px-8 py-4 bg-gradient-to-r from-slate-900/80 to-slate-800/50 border-b border-slate-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                <span className="text-slate-300 text-sm font-medium">배대지 비용</span>
+                <div className="flex items-center gap-2 bg-slate-900/80 rounded-lg px-3 py-1.5 border border-slate-700">
+                  <input
+                    type="number"
+                    value={shippingCost}
+                    onChange={(e) => setShippingCost(parseInt(e.target.value) || 0)}
+                    className="w-24 bg-transparent border-none text-white text-sm font-semibold focus:outline-none text-center"
+                  />
+                  <span className="text-slate-400 text-sm">원</span>
+                </div>
+              </div>
+              <div className="h-6 w-px bg-slate-700"></div>
+              <div className="text-sm">
+                <span className="text-slate-400">총 </span>
+                <span className="text-blue-400 font-bold">{variants.length}</span>
+                <span className="text-slate-400"> 개 옵션</span>
+              </div>
+              {issueCount > 0 && (
+                <>
+                  <div className="h-6 w-px bg-slate-700"></div>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <AlertCircle size={14} className="text-red-400" />
+                    <span className="text-red-400 text-sm font-medium">{issueCount}개 주의 필요</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Table Header */}
+        <div className="px-8 py-3 bg-slate-900/50 border-b border-slate-800">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 text-slate-400">
-              <AlertCircle size={16} />
-              <span>상품가격에 배대지 비용</span>
+            <div className="w-10 flex items-center justify-center">
               <input
-                type="number"
-                defaultValue={13000}
-                className="w-20 px-2 py-1 bg-[#2a2a2a] border border-slate-600 rounded text-white text-center"
+                type="checkbox"
+                checked={selectedVariants.size === editedVariants.length && editedVariants.length > 0}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-800 checked:bg-blue-500 cursor-pointer"
               />
-              <span>원</span>
-              <span className="text-red-400 ml-2">"13,000원"이 추가되었습니다.</span>
+            </div>
+            <div className="w-12 text-center">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">No.</span>
+            </div>
+            <div className="w-24">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">이미지</span>
+            </div>
+            <div className="flex-1 min-w-[300px]">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">옵션 정보</span>
+            </div>
+            <div className="w-48">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">가격 (CNY)</span>
+            </div>
+            <div className="w-32 text-center">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">글자수</span>
+            </div>
+            <div className="w-16 text-center">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">상태</span>
             </div>
           </div>
         </div>
 
         {/* Content - Variants List */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#1a1a1a]">
+        <div className="flex-1 overflow-y-auto px-8 py-4 bg-[#0a0a0a]">
           {variants.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {editedVariants.map((variant, index) => {
                 // Try to get variant image from multiple sources
                 let variantImage = variant.image
@@ -165,87 +231,95 @@ export default function ProductOptionsModal({
                 return (
                   <div
                     key={variant.sku_id}
-                    className={`flex items-center gap-6 p-5 rounded-lg border-2 transition-all ${
+                    className={`flex items-center gap-6 p-4 rounded-xl transition-all group ${
                       hasIssue
-                        ? 'border-red-500 bg-[#2a2a2a]'
-                        : 'border-slate-700 bg-[#2a2a2a] hover:border-slate-600'
+                        ? 'bg-gradient-to-r from-red-950/30 to-red-900/20 border-2 border-red-500/50 shadow-lg shadow-red-500/10'
+                        : isSelected
+                        ? 'bg-gradient-to-r from-slate-900/90 to-slate-800/50 border-2 border-blue-500/30 hover:border-blue-500/50'
+                        : 'bg-slate-900/30 border-2 border-slate-800/50 hover:border-slate-700/80'
                     }`}
                   >
                     {/* Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleVariantSelection(variant.sku_id)}
-                      className="w-5 h-5 rounded border-slate-600 bg-slate-700 checked:bg-blue-500 cursor-pointer flex-shrink-0"
-                    />
+                    <div className="w-10 flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleVariantSelection(variant.sku_id)}
+                        className="w-5 h-5 rounded-md border-2 border-slate-600 bg-slate-800 checked:bg-blue-500 checked:border-blue-500 cursor-pointer transition-all"
+                      />
+                    </div>
 
                     {/* Index */}
-                    <div className="w-10 text-center flex-shrink-0">
-                      <span className="text-slate-400 font-medium text-base">{String(index + 1).padStart(2, '0')}</span>
+                    <div className="w-12 text-center">
+                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700">
+                        <span className="text-slate-300 font-bold text-sm">{String(index + 1).padStart(2, '0')}</span>
+                      </div>
                     </div>
 
                     {/* Image */}
-                    <div className="w-20 h-20 flex-shrink-0">
+                    <div className="w-24 flex-shrink-0">
                       {variantImage ? (
-                        <img
-                          src={variantImage}
-                          alt="Variant"
-                          className="w-full h-full rounded-lg object-cover border border-slate-600"
-                        />
+                        <div className="relative group/img">
+                          <img
+                            src={variantImage}
+                            alt="Variant"
+                            className="w-20 h-20 rounded-xl object-cover border-2 border-slate-700 group-hover/img:border-blue-500 transition-all shadow-lg"
+                          />
+                          <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity"></div>
+                        </div>
                       ) : (
-                        <div className="w-full h-full rounded-lg bg-slate-800 flex items-center justify-center border border-slate-600">
-                          <span className="text-slate-600 text-xs">No Image</span>
+                        <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border-2 border-slate-700 border-dashed">
+                          <Package2 size={24} className="text-slate-600" />
                         </div>
                       )}
                     </div>
 
-                    {/* Category Label */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="px-3 py-1.5 bg-slate-700 text-slate-300 text-sm rounded whitespace-nowrap flex-shrink-0">
-                        {options.length > 0 ? '옵션명' : '편리카'}
-                      </span>
-                      <span className={`text-sm ${hasIssue ? 'text-red-400' : 'text-slate-300'}`}>
-                        {options.length > 0 ? (
-                          <span>
-                            원문: <span className={hasIssue ? 'text-red-400' : 'text-blue-400'}>{optionText}</span>
-                          </span>
-                        ) : (
-                          optionText
-                        )}
-                      </span>
+                    {/* Option Info */}
+                    <div className="flex-1 min-w-[300px]">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="px-3 py-1 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border border-blue-500/30 text-blue-300 text-xs font-semibold rounded-lg">
+                          옵션
+                        </span>
+                      </div>
+                      <div className={`text-sm font-medium leading-relaxed ${hasIssue ? 'text-red-400' : 'text-slate-200'}`}>
+                        {optionText}
+                      </div>
                     </div>
 
                     {/* Price Input */}
-                    <div className="flex-1 flex items-center gap-4 min-w-[200px]">
+                    <div className="w-48">
                       <input
                         type="number"
                         step="0.01"
                         value={variant.price}
                         onChange={(e) => handlePriceChange(variant.sku_id, parseFloat(e.target.value) || 0)}
                         disabled={!editable}
-                        className="flex-1 px-5 py-3 bg-[#1a1a1a] border-2 border-slate-600 rounded-lg text-white text-center text-base font-medium focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full px-4 py-3 bg-slate-950/80 border-2 border-slate-700 rounded-xl text-white text-center text-base font-bold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner"
                       />
                     </div>
 
-                    {/* Character Count & Status */}
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-lg">
-                        <span className={`text-base font-semibold ${
-                          optionText.length > 25 ? 'text-red-400' : 'text-slate-400'
+                    {/* Character Count */}
+                    <div className="w-32">
+                      <div className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900/80 border border-slate-700 rounded-xl">
+                        <span className={`text-lg font-bold ${
+                          optionText.length > 25 ? 'text-red-400' : 'text-blue-400'
                         }`}>
                           {optionText.length}
                         </span>
-                        <span className="text-slate-600">/</span>
-                        <span className="text-slate-500 text-base">25</span>
+                        <span className="text-slate-600 font-medium">/</span>
+                        <span className="text-slate-500 font-medium">25</span>
                       </div>
+                    </div>
 
+                    {/* Status Icon */}
+                    <div className="w-16 flex items-center justify-center">
                       {hasIssue ? (
-                        <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                          <AlertCircle size={20} className="text-red-400" />
+                        <div className="w-12 h-12 rounded-xl bg-red-500/20 border-2 border-red-500/50 flex items-center justify-center shadow-lg shadow-red-500/20">
+                          <AlertCircle size={24} className="text-red-400" />
                         </div>
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                          <Check size={20} className="text-white" strokeWidth={3} />
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                          <Check size={24} className="text-white" strokeWidth={3} />
                         </div>
                       )}
                     </div>
@@ -254,54 +328,59 @@ export default function ProductOptionsModal({
               })}
             </div>
           ) : (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-full bg-slate-800 mx-auto mb-4 flex items-center justify-center">
-                <AlertCircle size={32} className="text-slate-600" />
+            <div className="text-center py-24">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 mx-auto mb-6 flex items-center justify-center border-2 border-slate-700">
+                <Package2 size={48} className="text-slate-600" />
               </div>
-              <p className="text-slate-400 text-lg">옵션 정보가 없습니다</p>
-              <p className="text-slate-600 text-sm mt-2">단일 옵션 상품이거나 데이터를 가져오지 못했습니다</p>
+              <p className="text-slate-400 text-xl font-medium mb-2">옵션 정보가 없습니다</p>
+              <p className="text-slate-600 text-sm">단일 옵션 상품이거나 데이터를 가져오지 못했습니다</p>
             </div>
           )}
         </div>
 
-        {/* Bottom Info */}
-        {variants.length > 0 && (
-          <div className="px-6 py-3 bg-[#1f1f1f] border-t border-slate-700">
-            <div className="flex items-center justify-between text-sm">
-              <div className="text-slate-400">
-                <span className="text-red-400 font-medium">{editedVariants.filter(v => hasValidationIssue(v)).length}개</span>
-                의 옵션명 상품이 선택되었습니다.
+        {/* Bottom Info & Actions */}
+        <div className="px-8 py-5 border-t border-slate-800 bg-gradient-to-r from-slate-900/90 to-slate-800/60">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                <span className="text-slate-400 text-sm">
+                  <span className="text-blue-400 font-bold">{selectedCount}</span>개 선택됨
+                </span>
               </div>
               {hasChanges && (
-                <span className="text-orange-400 text-xs">
-                  ⚠️ 저장하지 않은 변경사항이 있습니다
-                </span>
+                <>
+                  <div className="h-6 w-px bg-slate-700"></div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                    <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></div>
+                    <span className="text-orange-400 text-sm font-medium">저장하지 않은 변경사항</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onClose}
+                className="px-6 py-3 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border-2 border-slate-700 hover:border-slate-600 transition-all"
+              >
+                취소
+              </button>
+              {editable && (
+                <button
+                  onClick={handleSave}
+                  disabled={!hasChanges}
+                  className={`px-8 py-3 rounded-xl font-bold transition-all ${
+                    hasChanges
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50'
+                      : 'bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-700'
+                  }`}
+                >
+                  {hasChanges ? '변경사항 저장' : '저장'}
+                </button>
               )}
             </div>
           </div>
-        )}
-
-        {/* Footer */}
-        <div className="p-6 border-t border-slate-700 bg-[#2a2a2a] flex justify-end items-center gap-3">
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-lg font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 transition-all"
-          >
-            취소
-          </button>
-          {editable && (
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges}
-              className={`px-6 py-2.5 rounded-lg font-semibold transition-all ${
-                hasChanges
-                  ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg'
-                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              }`}
-            >
-              저장
-            </button>
-          )}
         </div>
       </div>
     </div>
