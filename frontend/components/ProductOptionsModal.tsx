@@ -141,11 +141,23 @@ export default function ProductOptionsModal({
         {/* Content - Variants List */}
         <div className="flex-1 overflow-y-auto p-6 bg-[#1a1a1a]">
           {variants.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {editedVariants.map((variant, index) => {
-                const firstOptionName = Object.keys(variant.options)[0]
-                const firstOptionValue = variant.options[firstOptionName]
-                const variantImage = variant.image || getOptionImage(firstOptionName, firstOptionValue)
+                // Try to get variant image from multiple sources
+                let variantImage = variant.image
+
+                // If no direct variant image, try to find image from option values
+                if (!variantImage) {
+                  // Try each option to find one with an image
+                  for (const [optionName, optionValue] of Object.entries(variant.options)) {
+                    const img = getOptionImage(optionName, optionValue)
+                    if (img) {
+                      variantImage = img
+                      break
+                    }
+                  }
+                }
+
                 const optionText = Object.entries(variant.options).map(([k, v]) => `${k}: ${v}`).join(' + ')
                 const isSelected = selectedVariants.has(variant.sku_id)
                 const hasIssue = hasValidationIssue(variant)
@@ -153,7 +165,7 @@ export default function ProductOptionsModal({
                 return (
                   <div
                     key={variant.sku_id}
-                    className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                    className={`flex items-center gap-6 p-5 rounded-lg border-2 transition-all ${
                       hasIssue
                         ? 'border-red-500 bg-[#2a2a2a]'
                         : 'border-slate-700 bg-[#2a2a2a] hover:border-slate-600'
@@ -164,16 +176,16 @@ export default function ProductOptionsModal({
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleVariantSelection(variant.sku_id)}
-                      className="w-5 h-5 rounded border-slate-600 bg-slate-700 checked:bg-blue-500 cursor-pointer"
+                      className="w-5 h-5 rounded border-slate-600 bg-slate-700 checked:bg-blue-500 cursor-pointer flex-shrink-0"
                     />
 
                     {/* Index */}
-                    <div className="w-8 text-center">
-                      <span className="text-slate-400 font-medium">{String(index + 1).padStart(2, '0')}</span>
+                    <div className="w-10 text-center flex-shrink-0">
+                      <span className="text-slate-400 font-medium text-base">{String(index + 1).padStart(2, '0')}</span>
                     </div>
 
                     {/* Image */}
-                    <div className="w-16 h-16 flex-shrink-0">
+                    <div className="w-20 h-20 flex-shrink-0">
                       {variantImage ? (
                         <img
                           src={variantImage}
@@ -188,8 +200,8 @@ export default function ProductOptionsModal({
                     </div>
 
                     {/* Category Label */}
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="px-3 py-1.5 bg-slate-700 text-slate-300 text-sm rounded whitespace-nowrap flex-shrink-0">
                         {options.length > 0 ? '옵션명' : '편리카'}
                       </span>
                       <span className={`text-sm ${hasIssue ? 'text-red-400' : 'text-slate-300'}`}>
@@ -204,36 +216,36 @@ export default function ProductOptionsModal({
                     </div>
 
                     {/* Price Input */}
-                    <div className="flex-1 flex items-center gap-3">
+                    <div className="flex-1 flex items-center gap-4 min-w-[200px]">
                       <input
                         type="number"
                         step="0.01"
                         value={variant.price}
                         onChange={(e) => handlePriceChange(variant.sku_id, parseFloat(e.target.value) || 0)}
                         disabled={!editable}
-                        className="flex-1 px-4 py-2 bg-[#1a1a1a] border border-slate-600 rounded-lg text-white text-center focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-5 py-3 bg-[#1a1a1a] border-2 border-slate-600 rounded-lg text-white text-center text-base font-medium focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
                     {/* Character Count & Status */}
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
-                        <span className={`text-sm font-medium ${
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-lg">
+                        <span className={`text-base font-semibold ${
                           optionText.length > 25 ? 'text-red-400' : 'text-slate-400'
                         }`}>
                           {optionText.length}
                         </span>
                         <span className="text-slate-600">/</span>
-                        <span className="text-slate-500 text-sm">25</span>
+                        <span className="text-slate-500 text-base">25</span>
                       </div>
 
                       {hasIssue ? (
-                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                          <AlertCircle size={18} className="text-red-400" />
+                        <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                          <AlertCircle size={20} className="text-red-400" />
                         </div>
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                          <Check size={18} className="text-white" strokeWidth={3} />
+                        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                          <Check size={20} className="text-white" strokeWidth={3} />
                         </div>
                       )}
                     </div>
