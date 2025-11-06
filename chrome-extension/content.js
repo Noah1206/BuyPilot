@@ -246,6 +246,7 @@ function extractTaobaoProduct() {
     const optionGroupSelectors = [
       '.tb-sku-group',              // Classic Taobao
       '[class*="Sku--skuGroup"]',   // New structure
+      '[class*="skuWrapper"]',      // New Taobao 2024 structure
       '[class*="skuGroup"]',        // Variant
       '[class*="sku-group"]',       // Lowercase variant
       '.J_TSaleProp',               // Alternative classic
@@ -309,11 +310,18 @@ function extractTaobaoProduct() {
                          valueEl.querySelector('span')?.textContent.trim() ||
                          valueEl.textContent.trim();
 
-        let valueImage = valueEl.querySelector('img')?.src ||
-                        valueEl.querySelector('img')?.getAttribute('data-src');
+        // Enhanced image extraction for new Taobao structure
+        const imgEl = valueEl.querySelector('img') || valueEl.querySelector('[class*="valueItemImg"]');
+        let valueImage = imgEl?.src ||
+                        imgEl?.getAttribute('data-src') ||
+                        imgEl?.getAttribute('src') ||
+                        valueEl.querySelector('[class*="valueItemImg"]')?.src;
 
-        if (valueImage && valueImage.startsWith('//')) {
-          valueImage = 'https:' + valueImage;
+        if (valueImage) {
+          if (valueImage.startsWith('//')) {
+            valueImage = 'https:' + valueImage;
+          }
+          console.log(`✅ Found image for option value "${valueName}": ${valueImage.substring(0, 100)}...`);
         }
 
         if (valueName) {
