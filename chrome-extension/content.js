@@ -253,12 +253,66 @@ function extractTaobaoProduct() {
       '[data-property-id]'          // Property-based
     ];
 
+    console.log('🔍 Starting DOM option group search...');
     let optionGroups = [];
     for (const selector of optionGroupSelectors) {
+      console.log(`  Trying selector: ${selector}`);
       optionGroups = document.querySelectorAll(selector);
+      console.log(`  → Found ${optionGroups.length} elements`);
       if (optionGroups.length > 0) {
         console.log(`✅ Found ${optionGroups.length} option groups with selector: ${selector}`);
         break;
+      }
+    }
+
+    // Additional debug: Check if skuWrapper exists at all
+    const anySkuWrapper = document.querySelector('[class*="skuWrapper"]');
+    console.log(`🔍 Direct skuWrapper check:`, anySkuWrapper ? 'EXISTS' : 'NOT FOUND');
+    if (anySkuWrapper) {
+      console.log(`  Class name: ${anySkuWrapper.className}`);
+      console.log(`  Parent: ${anySkuWrapper.parentElement?.className || 'none'}`);
+      console.log(`  Children count: ${anySkuWrapper.children.length}`);
+    }
+
+    // Check for valueItemImg too
+    const anyValueImg = document.querySelector('[class*="valueItemImg"]');
+    console.log(`🔍 Direct valueItemImg check:`, anyValueImg ? 'EXISTS' : 'NOT FOUND');
+    if (anyValueImg) {
+      console.log(`  Class name: ${anyValueImg.className}`);
+      console.log(`  Src: ${anyValueImg.src || anyValueImg.getAttribute('src')}`);
+    }
+
+    // NEW APPROACH: If skuWrapper exists but wasn't found as optionGroup,
+    // it might BE the container for option items, not the group itself
+    if (optionGroups.length === 0 && anySkuWrapper) {
+      console.log('🔄 Trying alternative approach: skuWrapper as option items container');
+
+      // Look for the parent that contains all skuWrappers
+      const allSkuWrappers = document.querySelectorAll('[class*="skuWrapper"]');
+      console.log(`  Found ${allSkuWrappers.length} skuWrapper elements`);
+
+      // Try to find a common parent or structure
+      if (allSkuWrappers.length > 0) {
+        // Check if there's a parent element containing these wrappers
+        const firstWrapper = allSkuWrappers[0];
+        const parent = firstWrapper.parentElement;
+        console.log(`  First wrapper parent: ${parent?.className || 'none'}`);
+
+        // Try to find option title/name near the skuWrapper
+        const possibleTitleSelectors = [
+          '[class*="skuTitle"]',
+          '[class*="title"]',
+          '[class*="label"]',
+          'h3', 'h4', 'h5'
+        ];
+
+        for (const titleSel of possibleTitleSelectors) {
+          const titleEl = parent?.querySelector(titleSel);
+          if (titleEl) {
+            console.log(`  Found potential title with ${titleSel}: ${titleEl.textContent?.trim()}`);
+            break;
+          }
+        }
       }
     }
 
