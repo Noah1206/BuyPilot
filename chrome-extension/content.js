@@ -6,9 +6,27 @@
 console.log('🚀 BuyPilot Extension: Content script loaded');
 
 /**
+ * Translate Chinese text to Korean using background script
+ */
+async function translateText(text) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'translate',
+      text: text,
+      from: 'zh-CN',
+      to: 'ko'
+    });
+    return response.translatedText || text;
+  } catch (error) {
+    console.warn('Translation failed:', error);
+    return text;
+  }
+}
+
+/**
  * Extract product data from Taobao page
  */
-function extractTaobaoProduct() {
+async function extractTaobaoProduct() {
   console.log('📦 Extracting Taobao product data...');
 
   try {
@@ -255,71 +273,30 @@ function extractTaobaoProduct() {
 
     console.log('🔍 Starting DOM option group search...');
     let optionGroups = [];
-    for (const selector of optionGroupSelectors) {
-      console.log(`  Trying selector: ${selector}`);
-      optionGroups = document.querySelectorAll(selector);
-      console.log(`  → Found ${optionGroups.length} elements`);
-      if (optionGroups.length > 0) {
-        console.log(`✅ Found ${optionGroups.length} option groups with selector: ${selector}`);
-        break;
-      }
-    }
 
-    // Additional debug: Check if skuWrapper exists at all
-    const anySkuWrapper = document.querySelector('[class*="skuWrapper"]');
-    console.log(`🔍 Direct skuWrapper check:`, anySkuWrapper ? 'EXISTS' : 'NOT FOUND');
-    if (anySkuWrapper) {
-      console.log(`  Class name: ${anySkuWrapper.className}`);
-      console.log(`  Parent: ${anySkuWrapper.parentElement?.className || 'none'}`);
-      console.log(`  Children count: ${anySkuWrapper.children.length}`);
-    }
-
-    // Check for valueItemImg too
-    const anyValueImg = document.querySelector('[class*="valueItemImg"]');
-    console.log(`🔍 Direct valueItemImg check:`, anyValueImg ? 'EXISTS' : 'NOT FOUND');
-    if (anyValueImg) {
-      console.log(`  Class name: ${anyValueImg.className}`);
-      console.log(`  Src: ${anyValueImg.src || anyValueImg.getAttribute('src')}`);
-    }
-
-    // NEW APPROACH: If skuWrapper exists but wasn't found as optionGroup,
-    // it might BE the container for option items, not the group itself
-    if (optionGroups.length === 0 && anySkuWrapper) {
-      console.log('🔄 Trying alternative approach: skuWrapper as option items container');
-
-      // Look for the parent that contains all skuWrappers
-      const allSkuWrappers = document.querySelectorAll('[class*="skuWrapper"]');
-      console.log(`  Found ${allSkuWrappers.length} skuWrapper elements`);
-
-      // Try to find a common parent or structure
-      if (allSkuWrappers.length > 0) {
-        // Check if there's a parent element containing these wrappers
-        const firstWrapper = allSkuWrappers[0];
-        const parent = firstWrapper.parentElement;
-        console.log(`  First wrapper parent: ${parent?.className || 'none'}`);
-
-        // Try to find option title/name near the skuWrapper
-        const possibleTitleSelectors = [
-          '[class*="skuTitle"]',
-          '[class*="title"]',
-          '[class*="label"]',
-          'h3', 'h4', 'h5'
-        ];
-
-        for (const titleSel of possibleTitleSelectors) {
-          const titleEl = parent?.querySelector(titleSel);
-          if (titleEl) {
-            console.log(`  Found potential title with ${titleSel}: ${titleEl.textContent?.trim()}`);
-            break;
-          }
+    // NEW APPROACH: Look for skuItem directly (the actual option groups)
+    const newTaobaoItems = document.querySelectorAll('[class*="skuItem"]');
+    if (newTaobaoItems.length > 0) {
+      console.log(`✅ Found ${newTaobaoItems.length} option groups with [class*="skuItem"]`);
+      optionGroups = newTaobaoItems;
+    } else {
+      // Fallback to old selectors
+      for (const selector of optionGroupSelectors) {
+        console.log(`  Trying selector: ${selector}`);
+        optionGroups = document.querySelectorAll(selector);
+        console.log(`  → Found ${optionGroups.length} elements`);
+        if (optionGroups.length > 0) {
+          console.log(`✅ Found ${optionGroups.length} option groups with selector: ${selector}`);
+          break;
         }
       }
     }
 
     optionGroups.forEach((group) => {
-      // Try multiple selectors for option name
+      // Try multiple selectors for option name (updated for new Taobao structure)
       let optionName = null;
       const nameSelectors = [
+        '[class*="ItemLabel"]',          // NEW: 2024 Taobao structure
         '.tb-property-key',
         '[class*="skuTitle"]',
         '[class*="sku-title"]',
@@ -332,19 +309,22 @@ function extractTaobaoProduct() {
         const nameEl = group.querySelector(selector);
         if (nameEl && nameEl.textContent.trim()) {
           optionName = nameEl.textContent.trim().replace(/[:：\s]+$/, ''); // Remove trailing colons and spaces
+          console.log(`✅ Found option name: "${optionName}" with selector: ${selector}`);
           break;
         }
       }
 
-      if (!optionName) return;
+      if (!optionName) {
+        console.log(`⚠️  No option name found in group, skipping...`);
+        return;
+      }
 
       const optionValues = [];
 
-      // Try multiple selectors for option values
+      // Try multiple selectors for option values (updated for new Taobao structure)
       const valueSelectors = [
+        '[class*="valueItem"][data-vid]',  // NEW: 2024 Taobao structure - only items with data-vid
         '.tb-sku-item',
-        '[class*="skuItem"]',
-        '[class*="sku-item"]',
         'li[data-value]',
         'a[data-value]',
         'span[data-value]'
@@ -354,22 +334,36 @@ function extractTaobaoProduct() {
       for (const selector of valueSelectors) {
         valueElements = group.querySelectorAll(selector);
         if (valueElements.length > 0) {
+          console.log(`✅ Found ${valueElements.length} value elements with selector: ${selector}`);
           break;
         }
       }
 
       valueElements.forEach((valueEl, index) => {
-        const valueName = valueEl.getAttribute('title') ||
-                         valueEl.getAttribute('data-value') ||
-                         valueEl.querySelector('span')?.textContent.trim() ||
-                         valueEl.textContent.trim();
+        // For new Taobao structure, text content is directly in the valueItem
+        // Get the direct text content, not nested elements
+        let valueName = valueEl.getAttribute('title') || valueEl.getAttribute('data-value');
+
+        // If no title/data-value, get text but exclude nested elements
+        if (!valueName) {
+          // Clone the element and remove all child elements to get only direct text
+          const clone = valueEl.cloneNode(true);
+          const nestedElements = clone.querySelectorAll('[class*="valueItem"]');
+          nestedElements.forEach(el => el.remove());
+          valueName = clone.textContent.trim();
+        }
+
+        // Skip if no name (likely a nested wrapper element)
+        if (!valueName) {
+          console.log(`⚠️  Skipping valueItem without name (likely wrapper)`);
+          return;
+        }
 
         // Enhanced image extraction for new Taobao structure
-        const imgEl = valueEl.querySelector('img') || valueEl.querySelector('[class*="valueItemImg"]');
+        const imgEl = valueEl.querySelector('img[class*="valueItemImg"]');
         let valueImage = imgEl?.src ||
                         imgEl?.getAttribute('data-src') ||
-                        imgEl?.getAttribute('src') ||
-                        valueEl.querySelector('[class*="valueItemImg"]')?.src;
+                        imgEl?.getAttribute('src');
 
         if (valueImage) {
           if (valueImage.startsWith('//')) {
@@ -378,13 +372,11 @@ function extractTaobaoProduct() {
           console.log(`✅ Found image for option value "${valueName}": ${valueImage.substring(0, 100)}...`);
         }
 
-        if (valueName) {
-          optionValues.push({
-            vid: valueEl.getAttribute('data-value') || `${optionName}_${index}`,
-            name: valueName,
-            image: valueImage || undefined
-          });
-        }
+        optionValues.push({
+          vid: valueEl.getAttribute('data-vid') || valueEl.getAttribute('data-value') || `${optionName}_${index}`,
+          name: valueName,
+          image: valueImage || undefined
+        });
       });
 
       if (optionValues.length > 0) {
@@ -678,6 +670,22 @@ function extractTaobaoProduct() {
     }
 
     console.log(`📊 Final options count: ${options.length}`);
+
+    // Translate option names and values to Korean
+    console.log('🌐 Translating options to Korean...');
+    for (const option of options) {
+      // Translate option name
+      const translatedName = await translateText(option.name);
+      option.name_ko = translatedName;
+      console.log(`  ✅ Translated option "${option.name}" → "${translatedName}"`);
+
+      // Translate option values
+      for (const value of option.values) {
+        const translatedValue = await translateText(value.name);
+        value.name_ko = translatedValue;
+        console.log(`    ✅ Translated value "${value.name}" → "${translatedValue}"`);
+      }
+    }
 
     // Extract variants (SKU combinations with price and stock)
     const variants = [];

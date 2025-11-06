@@ -247,13 +247,13 @@ export default function ProductsPage() {
     const props = product.data?.props || []
     const skus = product.data?.skus || []
 
-    // Convert props to options
+    // Convert props to options (use Korean translation if available)
     const options: ProductOption[] = props.map((prop: any) => ({
       pid: prop.pid,
-      name: prop.name,
+      name: prop.name_ko || prop.name,  // Use Korean name if available
       values: (prop.values || []).map((val: any) => ({
         vid: val.vid,
-        name: val.name,
+        name: val.name_ko || val.name,  // Use Korean name if available
         image: val.image,
         available: val.available !== false
       }))
