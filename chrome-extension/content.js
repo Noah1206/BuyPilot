@@ -651,15 +651,18 @@ function extractTaobaoProduct() {
           }
           // For multiple options, create combinations (up to 50 variants to avoid overload)
           else {
-            const createCombinations = (optIndex, currentCombo) => {
+            const createCombinations = (optIndex, currentCombo, comboImages = []) => {
               if (optIndex >= options.length) {
                 if (variants.length < 50) { // Limit to 50 variants
+                  // Use first available image from the combination
+                  const variantImage = comboImages.find(img => img) || null;
+
                   variants.push({
                     sku_id: `generated_${productId}_${variants.length}`,
                     options: {...currentCombo},
                     price: price,
                     stock: 0,
-                    image: null
+                    image: variantImage
                   });
                 }
                 return;
@@ -670,11 +673,11 @@ function extractTaobaoProduct() {
                 createCombinations(optIndex + 1, {
                   ...currentCombo,
                   [currentOption.name]: value.name
-                });
+                }, [...comboImages, value.image]);
               });
             };
 
-            createCombinations(0, {});
+            createCombinations(0, {}, []);
             console.log(`✅ Generated ${variants.length} variant combinations`);
           }
         }
