@@ -480,7 +480,82 @@ function extractTaobaoProduct() {
               }
             }
 
-            // Pattern 2: Look for "propertyName":"颜色分类" pattern
+            // Pattern 2: Look for propImg (option images with URLs)
+            if (options.length === 0 && text.includes('"propImg"')) {
+              console.log('🔍 Found propImg in script, extracting option images...');
+
+              // Try to find JSON object containing propImg
+              const propImgMatch = text.match(/"propImg"\s*:\s*\{[^}]+\}/);
+              if (propImgMatch) {
+                try {
+                  const propImgJson = propImgMatch[0].replace(/"propImg"\s*:\s*/, '');
+                  const propImgData = JSON.parse(propImgJson);
+
+                  // Store image URLs by property value ID
+                  const imagesByVid = {};
+                  Object.entries(propImgData).forEach(([vid, imgUrl]) => {
+                    imagesByVid[vid] = imgUrl.startsWith('//') ? 'https:' + imgUrl : imgUrl;
+                  });
+
+                  console.log(`✅ Found ${Object.keys(imagesByVid).length} option images in propImg`);
+
+                  // Store for later use when we extract option values
+                  window.__buypilot_propImg = imagesByVid;
+                } catch (e) {
+                  console.warn('Failed to parse propImg:', e);
+                }
+              }
+            }
+
+            // Pattern 3: Look for complete option data structure with images
+            if (options.length === 0 && (text.includes('"skucore"') || text.includes('"propertyValueDisplayName"'))) {
+              console.log('🔍 Found detailed SKU structure, trying to extract...');
+
+              // Try to find skucore or property value data
+              const skuMatch = text.match(/"skucore"\s*:\s*\{[^]+?"propertyValueDisplayName[^]+?\}/);
+              if (skuMatch) {
+                try {
+                  // Extract property value mappings
+                  const pvMatches = [...skuMatch[0].matchAll(/"(\d+)"\s*:\s*\{\s*"propertyValueId"\s*:\s*\d+\s*,\s*"propertyValueDisplayName"\s*:\s*"([^"]+)"[^}]*\}/g)];
+
+                  if (pvMatches.length > 0) {
+                    const valueIdToName = {};
+                    pvMatches.forEach(m => {
+                      valueIdToName[m[1]] = m[2];
+                    });
+
+                    console.log(`✅ Found ${pvMatches.length} property values with IDs`);
+
+                    // Get images from propImg if available
+                    const propImgData = window.__buypilot_propImg || {};
+
+                    // Group by property name (we'll infer from the structure)
+                    const propMatch = text.match(/"propertyName"\s*:\s*"([^"]+)"/);
+                    if (propMatch) {
+                      const propertyName = propMatch[1];
+                      const values = Object.entries(valueIdToName).map(([vid, name]) => ({
+                        vid: vid,
+                        name: name,
+                        image: propImgData[vid] || images[0] || null
+                      }));
+
+                      if (values.length > 0) {
+                        options.push({
+                          pid: propertyName,
+                          name: propertyName,
+                          values: values
+                        });
+                        console.log(`✅ Extracted option "${propertyName}" with ${values.length} values and images from skucore`);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Failed to parse skucore:', e);
+                }
+              }
+            }
+
+            // Pattern 4: Look for "propertyName":"颜色分类" pattern
             if (options.length === 0 && text.includes('"propertyName"')) {
               // Match pattern: {"valueName":"红色,蓝色","propertyName":"颜色分类"}
               const propertyRegex = /\{"valueName":"([^"]+)","propertyName":"([^"]+)"\}/g;
