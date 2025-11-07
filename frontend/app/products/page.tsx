@@ -2518,14 +2518,31 @@ export default function ProductsPage() {
                                 </div>
                               </div>
 
-                              {/* Option Name Input */}
+                              {/* Option Name Input - Editable */}
                               <div className="flex-1 min-w-[200px]">
                                 <input
                                   type="text"
                                   value={optionLabel}
-                                  readOnly
+                                  onChange={(e) => {
+                                    const newOptionText = e.target.value
+                                    // Parse "key: value, key: value" format
+                                    const newOptions: { [key: string]: string } = {}
+                                    const parts = newOptionText.split(',').map(p => p.trim())
+
+                                    parts.forEach(part => {
+                                      const [key, value] = part.split(':').map(s => s.trim())
+                                      if (key && value) {
+                                        newOptions[key] = value
+                                      }
+                                    })
+
+                                    // Update variant with new options
+                                    const updatedVariants = [...editData.variants]
+                                    updatedVariants[index] = { ...variant, options: newOptions }
+                                    setEditData({ ...editData, variants: updatedVariants })
+                                  }}
                                   className="w-full px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-                                  placeholder="원문: 中文版+韩通用电池铝框三层"
+                                  placeholder="옵션명: 값, 옵션명: 값"
                                 />
                               </div>
 
