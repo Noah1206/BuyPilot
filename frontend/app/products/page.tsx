@@ -2459,22 +2459,15 @@ export default function ProductsPage() {
                           return (
                             <div
                               key={variant.sku_id || index}
-                              className="bg-white rounded-lg p-4 flex items-center gap-4 border-2 border-slate-200 hover:border-blue-300 transition-all"
+                              className="bg-white rounded-xl p-6 flex items-center gap-6 border-2 border-slate-200 hover:border-blue-300 transition-all"
                             >
-                              {/* Checkbox */}
-                              <input
-                                type="checkbox"
-                                checked={true}
-                                className="w-5 h-5 rounded border-slate-300 bg-white"
-                              />
-
                               {/* Index */}
-                              <div className="text-slate-900 font-medium min-w-[2rem]">
+                              <div className="text-slate-900 font-bold text-lg min-w-[3rem]">
                                 {String(index + 1).padStart(2, '0')}
                               </div>
 
                               {/* Image */}
-                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
+                              <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 border-2 border-slate-200">
                                 {variantImage ? (
                                   <img
                                     src={variantImage}
@@ -2483,19 +2476,20 @@ export default function ProductsPage() {
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">
-                                    <Package size={24} className="text-slate-400" />
+                                    <Package size={32} className="text-slate-400" />
                                   </div>
                                 )}
                               </div>
 
                               {/* Vendor/Platform */}
-                              <div className="flex flex-col min-w-[60px]">
-                                <div className="text-xs text-slate-500">판매자</div>
-                                <div className="text-sm text-slate-900 font-medium">판매자</div>
+                              <div className="flex flex-col min-w-[80px]">
+                                <div className="text-sm text-slate-500 mb-1">판매자</div>
+                                <div className="text-base text-slate-900 font-medium">판매자</div>
                               </div>
 
                               {/* Price Input */}
-                              <div className="flex-1 min-w-[120px]">
+                              <div className="flex-1 min-w-[140px]">
+                                <div className="text-sm text-slate-500 mb-2">가격 (CNY)</div>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -2506,20 +2500,13 @@ export default function ProductsPage() {
                                     updatedVariants[index] = { ...variant, price: newPrice }
                                     setEditData({ ...editData, variants: updatedVariants })
                                   }}
-                                  className="w-full px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-slate-900 text-right focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                                  className="w-full px-4 py-3 text-base bg-white border-2 border-slate-300 rounded-lg text-slate-900 text-right focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                                 />
                               </div>
 
-                              {/* Option Label */}
-                              <div className="flex-1 min-w-[150px]">
-                                <div className="px-3 py-2 bg-slate-50 border-2 border-slate-200 rounded-lg">
-                                  <div className="text-xs text-slate-500 mb-1">옵션명</div>
-                                  <div className="text-sm text-slate-900 font-medium">{optionLabel}</div>
-                                </div>
-                              </div>
-
-                              {/* Option Name Input - Editable */}
-                              <div className="flex-1 min-w-[200px]">
+                              {/* Option Name Input - Editable (Larger) */}
+                              <div className="flex-1 min-w-[400px]">
+                                <div className="text-sm text-slate-500 mb-2">번역된 총 옵션명</div>
                                 <input
                                   type="text"
                                   value={optionLabel}
@@ -2541,13 +2528,14 @@ export default function ProductsPage() {
                                     updatedVariants[index] = { ...variant, options: newOptions }
                                     setEditData({ ...editData, variants: updatedVariants })
                                   }}
-                                  className="w-full px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                                  className="w-full px-4 py-3 text-base bg-white border-2 border-slate-300 rounded-lg text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                                   placeholder="옵션명: 값, 옵션명: 값"
                                 />
                               </div>
 
                               {/* Stock Input */}
-                              <div className="min-w-[80px]">
+                              <div className="min-w-[100px]">
+                                <div className="text-sm text-slate-500 mb-2">재고</div>
                                 <input
                                   type="number"
                                   value={variant.stock}
@@ -2557,13 +2545,13 @@ export default function ProductsPage() {
                                     updatedVariants[index] = { ...variant, stock: newStock }
                                     setEditData({ ...editData, variants: updatedVariants })
                                   }}
-                                  className="w-full px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-slate-900 text-right focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                                  className="w-full px-4 py-3 text-base bg-white border-2 border-slate-300 rounded-lg text-slate-900 text-right focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                                 />
                               </div>
 
                               {/* Status Indicator */}
-                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500">
-                                <Check size={16} className="text-white" />
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500">
+                                <Check size={20} className="text-white" />
                               </div>
                             </div>
                           )
