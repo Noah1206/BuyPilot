@@ -712,6 +712,8 @@ function extractTaobaoProduct() {
 
       // If SKU data found, process it
       if (skuData && Object.keys(skuData).length > 0) {
+        console.log('📊 Processing SKU data:', Object.keys(skuData).length, 'variants found');
+
         Object.entries(skuData).forEach(([skuId, skuInfo]) => {
           // Build options object for this variant
           const variantOptions = {};
@@ -733,16 +735,28 @@ function extractTaobaoProduct() {
             });
           }
 
+          // Extract stock - try multiple fields
+          let stockValue = 0;
+          if (skuInfo.stock !== undefined && skuInfo.stock !== null) {
+            stockValue = parseInt(skuInfo.stock);
+          } else if (skuInfo.quantity !== undefined && skuInfo.quantity !== null) {
+            stockValue = parseInt(skuInfo.quantity);
+          } else if (skuInfo.stockQuantity !== undefined && skuInfo.stockQuantity !== null) {
+            stockValue = parseInt(skuInfo.stockQuantity);
+          }
+
+          console.log(`📦 SKU ${skuId}: price=${skuInfo.price}, stock=${stockValue}, original_stock_field=${skuInfo.stock}`);
+
           variants.push({
             sku_id: skuId,
             options: variantOptions,
             price: parseFloat(skuInfo.price) || price, // Fallback to main price
-            stock: parseInt(skuInfo.stock) || 0,
+            stock: stockValue,
             image: skuInfo.image || null
           });
         });
 
-        console.log(`✅ Extracted ${variants.length} variants from SKU data`);
+        console.log(`✅ Extracted ${variants.length} variants from SKU data with stock information`);
       } else {
         console.warn('⚠️  No SKU data found in page scripts');
 
