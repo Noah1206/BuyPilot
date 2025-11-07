@@ -237,7 +237,7 @@ export default function ProductOptionsModal({
           </div>
           <div className="flex flex-wrap gap-4">
             {editedOptions.map((option) => (
-              <div key={option.pid} className="flex items-center gap-3 bg-slate-800/70 rounded-xl px-5 py-4 border-2 border-slate-700 group hover:border-blue-500 transition-all cursor-pointer shadow-lg hover:shadow-blue-500/20">
+              <div key={option.pid} className="flex items-center gap-3 bg-slate-800/70 rounded-xl px-5 py-4 border-2 border-slate-700 group hover:border-blue-500 transition-all shadow-lg hover:shadow-blue-500/20">
                 {editingOptionName === option.name ? (
                   <div className="flex items-center gap-3">
                     <input
@@ -252,10 +252,14 @@ export default function ProductOptionsModal({
                           setEditingOptionName(null)
                         }
                       }}
+                      onClick={(e) => e.stopPropagation()}
                       className="bg-slate-900 border-2 border-blue-500 rounded-lg px-4 py-2 text-base text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[180px]"
                     />
                     <button
-                      onClick={() => setEditingOptionName(null)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingOptionName(null)
+                      }}
                       className="text-slate-400 hover:text-white transition-colors p-2"
                     >
                       <X size={18} />
@@ -263,9 +267,17 @@ export default function ProductOptionsModal({
                   </div>
                 ) : (
                   <>
-                    <span className="text-base text-white font-semibold">{option.name}</span>
-                    <button
+                    <span
                       onClick={() => setEditingOptionName(option.name)}
+                      className="text-base text-white font-semibold cursor-pointer hover:text-blue-300 transition-colors"
+                    >
+                      {option.name}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingOptionName(option.name)
+                      }}
                       className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-400 transition-all p-2 hover:bg-slate-700/50 rounded-lg"
                     >
                       <Edit2 size={18} />
@@ -411,11 +423,15 @@ export default function ProductOptionsModal({
                                 setEditingVariantOption(null)
                               }
                             }}
+                            onClick={(e) => e.stopPropagation()}
                             className="flex-1 bg-slate-950/90 border-2 border-blue-500 rounded-lg px-4 py-2.5 text-base text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                             placeholder="옵션명: 값 + 옵션명: 값"
                           />
                           <button
-                            onClick={() => setEditingVariantOption(null)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditingVariantOption(null)
+                            }}
                             className="text-slate-400 hover:text-white transition-colors p-2"
                           >
                             <X size={20} />
@@ -423,7 +439,10 @@ export default function ProductOptionsModal({
                         </div>
                       ) : (
                         <div
-                          onClick={() => setEditingVariantOption(variant.sku_id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingVariantOption(variant.sku_id)
+                          }}
                           className={`text-sm font-medium leading-relaxed cursor-pointer hover:bg-slate-800/50 px-3 py-2 rounded-lg transition-all group/edit ${hasIssue ? 'text-red-400' : 'text-slate-200'}`}
                         >
                           <div className="flex items-center gap-2">
