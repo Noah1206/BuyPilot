@@ -56,12 +56,14 @@ export default function ProductOptionsModal({
   const [selectedVariants, setSelectedVariants] = React.useState<Set<string>>(new Set())
   const [shippingCost, setShippingCost] = React.useState(13000)
   const [editingOptionName, setEditingOptionName] = React.useState<string | null>(null)
+  const [editingVariantOption, setEditingVariantOption] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     setEditedVariants(variants)
     setEditedOptions(options)
     setHasChanges(false)
     setEditingOptionName(null)
+    setEditingVariantOption(null)
     // Select all by default
     setSelectedVariants(new Set(variants.map(v => v.sku_id)))
   }, [variants, options, isOpen])
@@ -113,6 +115,33 @@ export default function ProductOptionsModal({
     setEditedVariants(updatedVariants)
     setHasChanges(true)
     setEditingOptionName(null)
+  }
+
+  const handleVariantOptionTextChange = (sku_id: string, newOptionText: string) => {
+    if (!newOptionText.trim()) return
+
+    const updatedVariants = editedVariants.map(variant => {
+      if (variant.sku_id === sku_id) {
+        // Parse the new option text to extract key-value pairs
+        // Expected format: "key1: value1 + key2: value2"
+        const newOptions: { [key: string]: string } = {}
+        const parts = newOptionText.split('+').map(p => p.trim())
+
+        parts.forEach(part => {
+          const [key, value] = part.split(':').map(s => s.trim())
+          if (key && value) {
+            newOptions[key] = value
+          }
+        })
+
+        return { ...variant, options: newOptions }
+      }
+      return variant
+    })
+
+    setEditedVariants(updatedVariants)
+    setHasChanges(true)
+    setEditingVariantOption(null)
   }
 
   const handleSave = () => {
@@ -368,9 +397,41 @@ export default function ProductOptionsModal({
                           옵션
                         </span>
                       </div>
-                      <div className={`text-sm font-medium leading-relaxed ${hasIssue ? 'text-red-400' : 'text-slate-200'}`}>
-                        {optionText}
-                      </div>
+                      {editingVariantOption === variant.sku_id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            defaultValue={optionText}
+                            autoFocus
+                            onBlur={(e) => handleVariantOptionTextChange(variant.sku_id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleVariantOptionTextChange(variant.sku_id, e.currentTarget.value)
+                              } else if (e.key === 'Escape') {
+                                setEditingVariantOption(null)
+                              }
+                            }}
+                            className="flex-1 bg-slate-950/90 border-2 border-blue-500 rounded-lg px-4 py-2.5 text-base text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                            placeholder="옵션명: 값 + 옵션명: 값"
+                          />
+                          <button
+                            onClick={() => setEditingVariantOption(null)}
+                            className="text-slate-400 hover:text-white transition-colors p-2"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => setEditingVariantOption(variant.sku_id)}
+                          className={`text-sm font-medium leading-relaxed cursor-pointer hover:bg-slate-800/50 px-3 py-2 rounded-lg transition-all group/edit ${hasIssue ? 'text-red-400' : 'text-slate-200'}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{optionText}</span>
+                            <Edit2 size={14} className="opacity-0 group-hover/edit:opacity-100 text-blue-400 transition-opacity" />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Price Input */}
