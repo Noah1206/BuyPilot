@@ -76,6 +76,14 @@ export default function ProductOptionsModal({
     setHasChanges(true)
   }
 
+  const handleStockChange = (sku_id: string, newStock: number) => {
+    const updated = editedVariants.map(v =>
+      v.sku_id === sku_id ? { ...v, stock: newStock } : v
+    )
+    setEditedVariants(updated)
+    setHasChanges(true)
+  }
+
   const toggleVariantSelection = (sku_id: string) => {
     const newSelected = new Set(selectedVariants)
     if (newSelected.has(sku_id)) {
@@ -298,13 +306,16 @@ export default function ProductOptionsModal({
             <div className="w-24">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">이미지</span>
             </div>
-            <div className="flex-1 min-w-[300px]">
+            <div className="flex-1 min-w-[220px]">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">옵션 정보</span>
             </div>
-            <div className="w-48">
+            <div className="w-36">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">가격 (CNY)</span>
             </div>
-            <div className="w-32 text-center">
+            <div className="w-28">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">재고</span>
+            </div>
+            <div className="w-24 text-center">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">글자수</span>
             </div>
             <div className="w-16 text-center">
@@ -332,14 +343,6 @@ export default function ProductOptionsModal({
                     }
                   }
                 }
-
-                // Debug: Log image search results
-                console.log('Variant:', variant.sku_id, {
-                  directImage: variant.image,
-                  foundImage: variantImage,
-                  options: variant.options,
-                  allOptions: options
-                })
 
                 const optionText = Object.entries(variant.options).map(([k, v]) => `${k}: ${v}`).join(' + ')
                 const isSelected = selectedVariants.has(variant.sku_id)
@@ -392,7 +395,7 @@ export default function ProductOptionsModal({
                     </div>
 
                     {/* Option Info - List Style */}
-                    <div className="flex-1 min-w-[300px]">
+                    <div className="flex-1 min-w-[220px]">
                       <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-4 py-3 border border-slate-700 hover:border-blue-500/50 transition-all">
                         <span className="px-2 py-1 bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs font-semibold rounded">
                           옵션
@@ -437,27 +440,43 @@ export default function ProductOptionsModal({
                     </div>
 
                     {/* Price Input */}
-                    <div className="w-48">
+                    <div className="w-36">
                       <input
                         type="number"
                         step="0.01"
                         value={variant.price}
                         onChange={(e) => handlePriceChange(variant.sku_id, parseFloat(e.target.value) || 0)}
                         disabled={!editable}
-                        className="w-full px-4 py-3 bg-slate-950/80 border-2 border-slate-700 rounded-xl text-white text-center text-base font-bold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner"
+                        className="w-full px-3 py-3 bg-slate-950/80 border-2 border-slate-700 rounded-xl text-white text-center text-base font-bold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner"
+                      />
+                    </div>
+
+                    {/* Stock Input */}
+                    <div className="w-28">
+                      <input
+                        type="number"
+                        min="0"
+                        value={variant.stock || 0}
+                        onChange={(e) => handleStockChange(variant.sku_id, parseInt(e.target.value) || 0)}
+                        disabled={!editable}
+                        className={`w-full px-3 py-3 bg-slate-950/80 border-2 rounded-xl text-center text-base font-bold focus:ring-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner ${
+                          (variant.stock || 0) === 0
+                            ? 'border-yellow-500/50 text-yellow-400 focus:border-yellow-500 focus:ring-yellow-500/20'
+                            : 'border-slate-700 text-white focus:border-blue-500 focus:ring-blue-500/20'
+                        }`}
                       />
                     </div>
 
                     {/* Character Count */}
-                    <div className="w-32">
-                      <div className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900/80 border border-slate-700 rounded-xl">
-                        <span className={`text-lg font-bold ${
+                    <div className="w-24">
+                      <div className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-900/80 border border-slate-700 rounded-xl">
+                        <span className={`text-base font-bold ${
                           optionText.length > 25 ? 'text-red-400' : 'text-blue-400'
                         }`}>
                           {optionText.length}
                         </span>
-                        <span className="text-slate-600 font-medium">/</span>
-                        <span className="text-slate-500 font-medium">25</span>
+                        <span className="text-slate-600 font-medium text-sm">/</span>
+                        <span className="text-slate-500 font-medium text-sm">25</span>
                       </div>
                     </div>
 
