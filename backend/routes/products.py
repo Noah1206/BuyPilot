@@ -359,6 +359,189 @@ def get_products():
         }), 500
 
 
+@bp.route('/products/import-from-extension', methods=['POST'])
+def import_from_extension():
+    """
+    Import product from Chrome Extension
+    Extension sends already-extracted product data from Taobao page
+
+    Body: {
+        source: 'taobao',
+        taobao_item_id: string,
+        source_url: string,
+        title: string,
+        price: number,
+        images: string[],
+        options: array,
+        ...
+    }
+    Returns: {ok: bool, data: {product_id, ...}}
+    """
+    try:
+        data = request.get_json(force=True)
+
+        logger.info(f"📦 Extension import request: {data.get('taobao_item_id')}")
+
+        # Validate required fields
+        required = ['taobao_item_id', 'source_url', 'title']
+        missing = [f for f in required if not data.get(f)]
+        if missing:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': f'Missing required fields: {", ".join(missing)}',
+                    'details': {}
+                }
+            }), 400
+
+        product_id = data.get('taobao_item_id')
+
+        # Check if product already exists
+        with get_db() as db:
+            existing = db.query(Product).filter(
+                Product.data['taobao_item_id'].astext == product_id
+            ).first()
+
+            if existing:
+                logger.warning(f"⚠️ Product {product_id} already exists")
+                return jsonify({
+                    'ok': True,
+                    'data': {
+                        'product_id': str(existing.id),
+                        'already_exists': True,
+                        'message': 'Product already imported',
+                        'product': existing.to_dict()
+                    }
+                }), 200
+
+        # Translate to Korean (optional - continue if fails)
+        logger.info("🌐 Translating to Korean...")
+        try:
+            translator = get_translator()
+            data = translator.translate_product(data)
+            logger.info("✅ Translation completed")
+        except Exception as e:
+            logger.warning(f"⚠️ Translation failed (continuing without translation): {str(e)}")
+            data['translated'] = False
+            data['translation_error'] = str(e)
+
+        # Download main product images (대표 이미지)
+        logger.info("📷 Downloading main product images...")
+        image_service = get_image_service()
+
+        downloaded_images = []
+        if data.get('images'):
+            downloaded_images = image_service.download_images(
+                data['images'],
+                optimize=True,
+                max_images=10  # Increased from 5 to 10
+            )
+
+        main_image_path = downloaded_images[0] if downloaded_images else None
+        main_image_url = image_service.get_public_url(main_image_path) if main_image_path else data.get('pic_url', '')
+
+        logger.info(f"✅ Downloaded {len(downloaded_images)} main images")
+
+        # Download description/detail images (상세페이지 이미지)
+        downloaded_desc_images = []
+        if data.get('desc_imgs'):
+            logger.info(f"📷 Downloading {len(data['desc_imgs'])} description images...")
+            try:
+                downloaded_desc_images = image_service.download_images(
+                    data['desc_imgs'],
+                    optimize=True,
+                    max_images=20  # Allow more detail images
+                )
+                logger.info(f"✅ Downloaded {len(downloaded_desc_images)} description images")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to download description images: {str(e)}")
+
+        # Download option images
+        if data.get('options'):
+            logger.info("🎨 Downloading option images...")
+            option_images_downloaded = 0
+            for option in data['options']:
+                for value in option.get('values', []):
+                    if value.get('image') and not value['image'].startswith('/static/') and 'railway.app' not in value['image']:
+                        try:
+                            local_path = image_service.download_image(value['image'], optimize=True, max_size=(200, 200))
+                            if local_path:
+                                value['image'] = image_service.get_public_url(local_path)
+                                option_images_downloaded += 1
+                        except Exception as e:
+                            logger.warning(f"⚠️ Option image download failed: {str(e)}")
+
+            if option_images_downloaded > 0:
+                logger.info(f"✅ Downloaded {option_images_downloaded} option images")
+
+        # Create product in database
+        with get_db() as db:
+            product = Product(
+                source=data.get('source', 'taobao'),
+                source_url=data.get('source_url'),
+                supplier_id=data.get('seller_nick', ''),
+                title=data.get('title', ''),
+                price=data.get('price', 0),
+                currency=data.get('currency', 'CNY'),
+                stock=data.get('stock', 0),
+                image_url=main_image_url,
+                score=data.get('score', 0),
+                data={
+                    'taobao_item_id': data.get('taobao_item_id', ''),
+                    'title_cn': data.get('title_cn', data.get('title', '')),
+                    'desc_cn': data.get('desc_cn', data.get('desc', '')),
+                    'title_kr': data.get('title_kr', ''),
+                    'desc_kr': data.get('desc_kr', ''),
+                    'seller_nick': data.get('seller_nick', ''),
+                    'pic_url': data.get('pic_url', ''),
+                    'images': data.get('images', []),
+                    'downloaded_images': [image_service.get_public_url(img) for img in downloaded_images],
+                    'desc_imgs': data.get('desc_imgs', []),  # Original URLs
+                    'downloaded_desc_imgs': [image_service.get_public_url(img) for img in downloaded_desc_images],  # Downloaded URLs
+                    'location': data.get('location', ''),
+                    'specifications': data.get('specifications', []),
+                    'options': data.get('options', []),
+                    'variants': data.get('variants', []),
+                    'weight': data.get('weight'),  # Product weight in kg (extracted from Taobao page)
+                    'translated': data.get('translated', False),
+                    'translation_provider': data.get('translation_provider', ''),
+                    'imported_at': datetime.utcnow().isoformat(),
+                    'import_method': 'chrome_extension',
+                    'platform': 'Taobao'
+                }
+            )
+
+            db.add(product)
+            db.commit()
+
+            logger.info(f"✅ Product imported from extension: {product.id}")
+
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'product_id': str(product.id),
+                    'message': 'Product imported successfully from Chrome Extension',
+                    'features': {
+                        'method': 'chrome_extension',
+                        'translated': data.get('translated', False),
+                        'images_downloaded': len(downloaded_images)
+                    },
+                    'product': product.to_dict()
+                }
+            }), 201
+
+    except Exception as e:
+        logger.error(f"❌ Error importing from extension: {str(e)}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'INTERNAL_ERROR',
+                'message': 'Failed to import product from extension',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
 @bp.route('/products/<product_id>', methods=['GET'])
 def get_product(product_id):
     """Get single product by ID"""
@@ -547,189 +730,6 @@ def delete_product(product_id):
             }
         }), 500
 
-
-@bp.route('/products/import-from-extension', methods=['POST'])
-def import_from_extension():
-    """
-    Import product from Chrome Extension
-    Extension sends already-extracted product data from Taobao page
-
-    Body: {
-        source: 'taobao',
-        taobao_item_id: string,
-        source_url: string,
-        title: string,
-        price: number,
-        images: string[],
-        options: array,
-        ...
-    }
-    Returns: {ok: bool, data: {product_id, ...}}
-    """
-    try:
-        data = request.get_json(force=True)
-
-        logger.info(f"📦 Extension import request: {data.get('taobao_item_id')}")
-
-        # Validate required fields
-        required = ['taobao_item_id', 'source_url', 'title']
-        missing = [f for f in required if not data.get(f)]
-        if missing:
-            return jsonify({
-                'ok': False,
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': f'Missing required fields: {", ".join(missing)}',
-                    'details': {}
-                }
-            }), 400
-
-        product_id = data.get('taobao_item_id')
-
-        # Check if product already exists
-        with get_db() as db:
-            existing = db.query(Product).filter(
-                Product.data['taobao_item_id'].astext == product_id
-            ).first()
-
-            if existing:
-                logger.warning(f"⚠️ Product {product_id} already exists")
-                return jsonify({
-                    'ok': True,
-                    'data': {
-                        'product_id': str(existing.id),
-                        'already_exists': True,
-                        'message': 'Product already imported',
-                        'product': existing.to_dict()
-                    }
-                }), 200
-
-        # Translate to Korean (optional - continue if fails)
-        logger.info("🌐 Translating to Korean...")
-        try:
-            translator = get_translator()
-            data = translator.translate_product(data)
-            logger.info("✅ Translation completed")
-        except Exception as e:
-            logger.warning(f"⚠️ Translation failed (continuing without translation): {str(e)}")
-            data['translated'] = False
-            data['translation_error'] = str(e)
-
-        # Download main product images (대표 이미지)
-        logger.info("📷 Downloading main product images...")
-        image_service = get_image_service()
-
-        downloaded_images = []
-        if data.get('images'):
-            downloaded_images = image_service.download_images(
-                data['images'],
-                optimize=True,
-                max_images=10  # Increased from 5 to 10
-            )
-
-        main_image_path = downloaded_images[0] if downloaded_images else None
-        main_image_url = image_service.get_public_url(main_image_path) if main_image_path else data.get('pic_url', '')
-
-        logger.info(f"✅ Downloaded {len(downloaded_images)} main images")
-
-        # Download description/detail images (상세페이지 이미지)
-        downloaded_desc_images = []
-        if data.get('desc_imgs'):
-            logger.info(f"📷 Downloading {len(data['desc_imgs'])} description images...")
-            try:
-                downloaded_desc_images = image_service.download_images(
-                    data['desc_imgs'],
-                    optimize=True,
-                    max_images=20  # Allow more detail images
-                )
-                logger.info(f"✅ Downloaded {len(downloaded_desc_images)} description images")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to download description images: {str(e)}")
-
-        # Download option images
-        if data.get('options'):
-            logger.info("🎨 Downloading option images...")
-            option_images_downloaded = 0
-            for option in data['options']:
-                for value in option.get('values', []):
-                    if value.get('image') and not value['image'].startswith('/static/') and 'railway.app' not in value['image']:
-                        try:
-                            local_path = image_service.download_image(value['image'], optimize=True, max_size=(200, 200))
-                            if local_path:
-                                value['image'] = image_service.get_public_url(local_path)
-                                option_images_downloaded += 1
-                        except Exception as e:
-                            logger.warning(f"⚠️ Option image download failed: {str(e)}")
-
-            if option_images_downloaded > 0:
-                logger.info(f"✅ Downloaded {option_images_downloaded} option images")
-
-        # Create product in database
-        with get_db() as db:
-            product = Product(
-                source=data.get('source', 'taobao'),
-                source_url=data.get('source_url'),
-                supplier_id=data.get('seller_nick', ''),
-                title=data.get('title', ''),
-                price=data.get('price', 0),
-                currency=data.get('currency', 'CNY'),
-                stock=data.get('stock', 0),
-                image_url=main_image_url,
-                score=data.get('score', 0),
-                data={
-                    'taobao_item_id': data.get('taobao_item_id', ''),
-                    'title_cn': data.get('title_cn', data.get('title', '')),
-                    'desc_cn': data.get('desc_cn', data.get('desc', '')),
-                    'title_kr': data.get('title_kr', ''),
-                    'desc_kr': data.get('desc_kr', ''),
-                    'seller_nick': data.get('seller_nick', ''),
-                    'pic_url': data.get('pic_url', ''),
-                    'images': data.get('images', []),
-                    'downloaded_images': [image_service.get_public_url(img) for img in downloaded_images],
-                    'desc_imgs': data.get('desc_imgs', []),  # Original URLs
-                    'downloaded_desc_imgs': [image_service.get_public_url(img) for img in downloaded_desc_images],  # Downloaded URLs
-                    'location': data.get('location', ''),
-                    'specifications': data.get('specifications', []),
-                    'options': data.get('options', []),
-                    'variants': data.get('variants', []),
-                    'weight': data.get('weight'),  # Product weight in kg (extracted from Taobao page)
-                    'translated': data.get('translated', False),
-                    'translation_provider': data.get('translation_provider', ''),
-                    'imported_at': datetime.utcnow().isoformat(),
-                    'import_method': 'chrome_extension',
-                    'platform': 'Taobao'
-                }
-            )
-
-            db.add(product)
-            db.commit()
-
-            logger.info(f"✅ Product imported from extension: {product.id}")
-
-            return jsonify({
-                'ok': True,
-                'data': {
-                    'product_id': str(product.id),
-                    'message': 'Product imported successfully from Chrome Extension',
-                    'features': {
-                        'method': 'chrome_extension',
-                        'translated': data.get('translated', False),
-                        'images_downloaded': len(downloaded_images)
-                    },
-                    'product': product.to_dict()
-                }
-            }), 201
-
-    except Exception as e:
-        logger.error(f"❌ Error importing from extension: {str(e)}", exc_info=True)
-        return jsonify({
-            'ok': False,
-            'error': {
-                'code': 'INTERNAL_ERROR',
-                'message': 'Failed to import product from extension',
-                'details': {'error': str(e)}
-            }
-        }), 500
 
 
 @bp.route('/products/<product_id>/upload-image', methods=['POST'])
