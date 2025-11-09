@@ -236,58 +236,6 @@ export default function ProductOptionsModal({
           </div>
         </div>
 
-        {/* Option Names Editor - List Style */}
-        <div className="px-8 py-6 bg-slate-900/30 border-b border-slate-800">
-          <div className="flex items-center gap-3 mb-4">
-            <Package size={20} className="text-blue-400" />
-            <span className="text-lg font-bold text-white">옵션명 편집</span>
-          </div>
-          <div className="space-y-2">
-            {editedOptions.map((option, idx) => (
-              <div key={option.pid} className="flex items-center gap-4 bg-slate-800/50 rounded-lg px-4 py-3 border border-slate-700 hover:border-blue-500/50 transition-all">
-                <span className="text-slate-500 font-bold text-sm w-8">{idx + 1}</span>
-                {editingOptionName === option.name ? (
-                  <input
-                    type="text"
-                    defaultValue={option.name}
-                    autoFocus
-                    onBlur={(e) => {
-                      if (e.target.value.trim()) {
-                        handleOptionNameChange(option.name, e.target.value)
-                      } else {
-                        setEditingOptionName(null)
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                        handleOptionNameChange(option.name, e.currentTarget.value)
-                      } else if (e.key === 'Escape') {
-                        setEditingOptionName(null)
-                      }
-                    }}
-                    className="flex-1 bg-slate-900/80 border-2 border-blue-500 rounded-md px-3 py-2 text-sm text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  />
-                ) : (
-                  <div
-                    className="flex-1 text-sm text-white font-medium cursor-pointer hover:text-blue-300 transition-colors py-2"
-                    onClick={() => setEditingOptionName(option.name)}
-                  >
-                    {option.name}
-                  </div>
-                )}
-                <span className="text-xs text-slate-400 bg-slate-900/60 px-2 py-1 rounded">
-                  {option.values.length}개 값
-                </span>
-                <button
-                  onClick={() => setEditingOptionName(option.name)}
-                  className="text-slate-400 hover:text-blue-400 transition-colors p-1.5 hover:bg-slate-700/50 rounded"
-                >
-                  <Edit2 size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Table Header */}
         <div className="px-8 py-3 bg-slate-900/50 border-b border-slate-800">
