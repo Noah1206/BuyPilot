@@ -140,8 +140,9 @@ class ImageService:
             # Process image if optimization is enabled
             if optimize:
                 try:
-                    # Open image
-                    img = Image.open(BytesIO(response.content))
+                    # Open image with memory limit
+                    img_data = BytesIO(response.content)
+                    img = Image.open(img_data)
 
                     # Convert RGBA to RGB if saving as JPEG
                     if file_ext == 'jpg' and img.mode in ('RGBA', 'LA', 'P'):
@@ -160,6 +161,11 @@ class ImageService:
                         save_kwargs['quality'] = 85
 
                     img.save(filepath, **save_kwargs)
+
+                    # Close image to free memory immediately
+                    img.close()
+                    img_data.close()
+
                     logger.info(f"✅ Image optimized and saved: {filename}")
 
                 except Exception as opt_error:
@@ -233,16 +239,16 @@ class ImageService:
         urls: List[str],
         optimize: bool = True,
         max_images: int = 10,
-        max_workers: int = 5
+        max_workers: int = 2
     ) -> List[str]:
         """
-        Download multiple images in parallel (5-10x faster than sequential)
+        Download multiple images in parallel (memory-optimized for Railway)
 
         Args:
             urls: List of image URLs
             optimize: Whether to optimize images
             max_images: Maximum number of images to download
-            max_workers: Number of parallel download threads (default: 5)
+            max_workers: Number of parallel download threads (default: 2, reduced for memory)
 
         Returns:
             List of local file paths (excludes failed downloads)
