@@ -435,7 +435,8 @@ def import_from_extension():
             downloaded_images = image_service.download_images(
                 data['images'],
                 optimize=True,
-                max_images=10  # Increased from 5 to 10
+                max_images=5,  # Reduced to 5 for faster import
+                max_workers=3  # Increased workers for faster parallel download
             )
 
         main_image_path = downloaded_images[0] if downloaded_images else None
@@ -443,29 +444,35 @@ def import_from_extension():
 
         logger.info(f"✅ Downloaded {len(downloaded_images)} main images")
 
-        # Download description/detail images (상세페이지 이미지)
+        # Download description/detail images (상세페이지 이미지) - Skip to speed up import
         downloaded_desc_images = []
         if data.get('desc_imgs'):
-            logger.info(f"📷 Downloading {len(data['desc_imgs'])} description images...")
-            try:
-                downloaded_desc_images = image_service.download_images(
-                    data['desc_imgs'],
-                    optimize=True,
-                    max_images=20  # Allow more detail images
-                )
-                logger.info(f"✅ Downloaded {len(downloaded_desc_images)} description images")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to download description images: {str(e)}")
+            logger.info(f"⏩ Skipping {len(data['desc_imgs'])} description images for faster import")
+            # Store original URLs without downloading (can download later if needed)
+            # downloaded_desc_images = image_service.download_images(
+            #     data['desc_imgs'],
+            #     optimize=True,
+            #     max_images=10,
+            #     max_workers=3
+            # )
 
-        # Download option images
+        # Download option images - Limited for faster import
         if data.get('options'):
-            logger.info("🎨 Downloading option images...")
+            logger.info("🎨 Downloading option images (limited)...")
             option_images_downloaded = 0
+            max_option_images = 5  # Limit to first 5 option images
+
             for option in data['options']:
+                if option_images_downloaded >= max_option_images:
+                    break
+
                 for value in option.get('values', []):
+                    if option_images_downloaded >= max_option_images:
+                        break
+
                     if value.get('image') and not value['image'].startswith('/static/') and 'railway.app' not in value['image']:
                         try:
-                            local_path = image_service.download_image(value['image'], optimize=True, max_size=(200, 200))
+                            local_path = image_service.download_image(value['image'], optimize=True, max_size=(150, 150))
                             if local_path:
                                 value['image'] = image_service.get_public_url(local_path)
                                 option_images_downloaded += 1
@@ -473,7 +480,7 @@ def import_from_extension():
                             logger.warning(f"⚠️ Option image download failed: {str(e)}")
 
             if option_images_downloaded > 0:
-                logger.info(f"✅ Downloaded {option_images_downloaded} option images")
+                logger.info(f"✅ Downloaded {option_images_downloaded}/{max_option_images} option images")
 
         # Create product in database
         with get_db() as db:
