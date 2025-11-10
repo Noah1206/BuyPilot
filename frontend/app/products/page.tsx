@@ -1953,6 +1953,15 @@ export default function ProductsPage() {
           <div className="bg-white border-b border-slate-200 shadow-sm">
             <div className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center gap-3">
+                {/* Close button (X) */}
+                <button
+                  onClick={closeEditModal}
+                  className="p-2 hover:bg-red-50 rounded-lg transition-all group"
+                  title="닫기 (ESC)"
+                >
+                  <X size={20} className="text-slate-500 group-hover:text-red-500" />
+                </button>
+                <div className="w-px h-6 bg-slate-300"></div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
