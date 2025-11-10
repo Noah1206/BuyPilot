@@ -409,6 +409,7 @@ class NaverCommerceAPI:
         brand: str = "",
         manufacturer: str = "",
         options: List[Dict] = None,
+        variants: List[Dict] = None,
         **kwargs
     ) -> Dict:
         """
@@ -509,7 +510,7 @@ class NaverCommerceAPI:
         if options and len(options) > 0:
             product_data["originProduct"]["optionInfo"] = {
                 "simpleOption": False,
-                "optionCombinations": self._build_option_combinations(options),
+                "optionCombinations": self._build_option_combinations(options, variants),
                 "standardOptions": self._build_standard_options(options)
             }
 

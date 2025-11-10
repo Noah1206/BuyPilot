@@ -735,17 +735,26 @@ function extractTaobaoProduct() {
             });
           }
 
-          // Extract stock - try multiple fields
-          let stockValue = 0;
+          // Extract stock - try multiple fields with better fallback
+          let stockValue = 999; // Default to 999 if no stock info available
           if (skuInfo.stock !== undefined && skuInfo.stock !== null) {
             stockValue = parseInt(skuInfo.stock);
           } else if (skuInfo.quantity !== undefined && skuInfo.quantity !== null) {
             stockValue = parseInt(skuInfo.quantity);
           } else if (skuInfo.stockQuantity !== undefined && skuInfo.stockQuantity !== null) {
             stockValue = parseInt(skuInfo.stockQuantity);
+          } else if (skuInfo.sellable !== undefined && skuInfo.sellable !== null) {
+            stockValue = parseInt(skuInfo.sellable);
+          } else if (skuInfo.canBookCount !== undefined && skuInfo.canBookCount !== null) {
+            stockValue = parseInt(skuInfo.canBookCount);
           }
 
-          console.log(`📦 SKU ${skuId}: price=${skuInfo.price}, stock=${stockValue}, original_stock_field=${skuInfo.stock}`);
+          // Validate stock is a positive number
+          if (isNaN(stockValue) || stockValue < 0) {
+            stockValue = 999;
+          }
+
+          console.log(`📦 SKU ${skuId}: price=${skuInfo.price}, stock=${stockValue}, skuInfo=`, skuInfo);
 
           variants.push({
             sku_id: skuId,
@@ -771,7 +780,7 @@ function extractTaobaoProduct() {
                 sku_id: `generated_${productId}_${index}`,
                 options: { [options[0].name]: value.name },
                 price: price,
-                stock: 0,
+                stock: 999, // Default to 999 when no SKU data available
                 image: value.image || null
               });
             });
@@ -788,7 +797,7 @@ function extractTaobaoProduct() {
                     sku_id: `generated_${productId}_${variants.length}`,
                     options: {...currentCombo},
                     price: price,
-                    stock: 0,
+                    stock: 999, // Default to 999 when no SKU data available
                     image: variantImage
                   });
                 }
