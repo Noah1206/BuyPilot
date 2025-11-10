@@ -191,41 +191,84 @@ Korean translation:"""
             return chinese_desc  # Return original text instead of None
 
     def _translate_options_parallel(self, options):
-        """Helper function to translate options in parallel"""
+        """Helper function to translate options in batch (memory-optimized)"""
         if not options:
             return options
 
-        logger.info(f"🔄 Translating {len(options)} option groups in parallel...")
+        logger.info(f"🔄 Translating {len(options)} option groups in batch mode...")
 
         try:
-            for option in options:
-                # Translate option name (e.g., "颜色" → "색상")
+            # Collect all text to translate in one batch
+            all_texts = []
+            text_map = {}  # Map to track which text belongs to which option/value
+
+            for opt_idx, option in enumerate(options):
+                # Collect option name
                 if option.get('name'):
-                    try:
-                        korean_option_name = self.translate_product_title(option['name'])
-                        if korean_option_name:
-                            option['name_cn'] = option['name']
-                            option['name'] = korean_option_name
-                    except Exception as e:
-                        logger.warning(f"⚠️ Option name translation failed: {str(e)}")
+                    key = f"opt_{opt_idx}_name"
+                    all_texts.append(option['name'])
+                    text_map[key] = (opt_idx, 'name', None)
 
-                # Translate option values (e.g., "黑色" → "블랙")
+                # Collect option values
                 if option.get('values'):
-                    for value in option['values']:
+                    for val_idx, value in enumerate(option['values']):
                         if value.get('name'):
-                            try:
-                                korean_value_name = self.translate_product_title(value['name'])
-                                if korean_value_name:
-                                    value['name_cn'] = value['name']
-                                    value['name'] = korean_value_name
-                            except Exception as e:
-                                logger.warning(f"⚠️ Option value translation failed: {str(e)}")
+                            key = f"opt_{opt_idx}_val_{val_idx}"
+                            all_texts.append(value['name'])
+                            text_map[key] = (opt_idx, 'value', val_idx)
 
-            logger.info("✅ Options translation completed")
+            # Skip if nothing to translate
+            if not all_texts:
+                return options
+
+            logger.info(f"📦 Batch translating {len(all_texts)} items at once...")
+
+            # Translate all texts in one API call
+            batch_prompt = f"""You are a professional translator specializing in e-commerce.
+Translate the following Chinese product option names and values to Korean.
+
+Requirements:
+- Natural Korean that appeals to consumers
+- Keep it concise and clear
+- Return ONLY the Korean translations, one per line, in the same order
+- No explanations, no numbering
+
+Chinese texts:
+{chr(10).join(f'{i+1}. {text}' for i, text in enumerate(all_texts))}
+
+Korean translations (one per line):"""
+
+            response = self.client.generate_content(batch_prompt)
+
+            if not response or not response.parts:
+                logger.warning("⚠️ Batch translation failed, keeping original text")
+                return options
+
+            # Parse translated results
+            korean_lines = [line.strip() for line in response.text.strip().split('\n') if line.strip()]
+
+            # Remove numbering if present (e.g., "1. 색상" → "색상")
+            korean_lines = [line.split('. ', 1)[-1] if '. ' in line else line for line in korean_lines]
+
+            # Apply translations back to options
+            for i, (key, (opt_idx, field_type, val_idx)) in enumerate(text_map.items()):
+                if i < len(korean_lines):
+                    korean_text = korean_lines[i]
+
+                    if field_type == 'name':
+                        # Option name
+                        options[opt_idx]['name_cn'] = options[opt_idx]['name']
+                        options[opt_idx]['name'] = korean_text
+                    elif field_type == 'value':
+                        # Option value
+                        options[opt_idx]['values'][val_idx]['name_cn'] = options[opt_idx]['values'][val_idx]['name']
+                        options[opt_idx]['values'][val_idx]['name'] = korean_text
+
+            logger.info(f"✅ Batch translation completed: {len(korean_lines)}/{len(all_texts)} items")
             return options
 
         except Exception as e:
-            logger.error(f"❌ Options translation failed: {str(e)}")
+            logger.error(f"❌ Batch options translation failed: {str(e)}")
             return options
 
     def translate_product(self, product_data: Dict) -> Dict:
