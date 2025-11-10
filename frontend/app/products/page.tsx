@@ -186,6 +186,18 @@ export default function ProductsPage() {
     setFilteredCategories(filtered)
   }, [categorySearchQuery, allCategories])
 
+  // ESC key handler to close edit modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && editingProduct && editMode) {
+        closeEditModal()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [editingProduct, editMode])
+
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
     setShowToast({ message, type })
     setTimeout(() => setShowToast(null), 3000)
