@@ -280,44 +280,28 @@ export default function ProductsPage() {
 
   // Transform Taobao props/skus to options/variants format
   const transformProductData = async (product: Product): Promise<{ options: ProductOption[], variants: ProductVariant[] }> => {
-    // Handle options/variants format (from Chrome Extension - needs translation)
+    // Handle options/variants format (from Chrome Extension - already translated by backend)
     if (product.data?.options && product.data?.variants) {
       const rawOptions = product.data.options
       const rawVariants = product.data.variants
 
-      // Translate option names and values
-      const translatedOptions: ProductOption[] = await Promise.all(
-        rawOptions.map(async (option: any) => ({
-          pid: option.pid,
-          name: await translateText(option.name),
-          values: await Promise.all(
-            (option.values || []).map(async (val: any) => ({
-              vid: val.vid,
-              name: await translateText(val.name),
-              image: val.image,
-              available: val.available !== false
-            }))
-          )
+      // Options are already translated by backend, just return as-is
+      const translatedOptions: ProductOption[] = rawOptions.map((option: any) => ({
+        pid: option.pid,
+        name: option.name, // Already translated by backend
+        values: (option.values || []).map((val: any) => ({
+          vid: val.vid,
+          name: val.name, // Already translated by backend
+          image: val.image,
+          available: val.available !== false
         }))
-      )
+      }))
 
-      // Translate variant option names
-      const translatedVariants: ProductVariant[] = await Promise.all(
-        rawVariants.map(async (variant: any) => {
-          const translatedOptions: { [key: string]: string } = {}
-
-          for (const [optionName, optionValue] of Object.entries(variant.options || {})) {
-            const translatedName = await translateText(String(optionName))
-            const translatedValue = await translateText(String(optionValue))
-            translatedOptions[translatedName] = translatedValue
-          }
-
-          return {
-            ...variant,
-            options: translatedOptions
-          }
-        })
-      )
+      // Variants are already translated by backend, just return as-is
+      const translatedVariants: ProductVariant[] = rawVariants.map((variant: any) => ({
+        ...variant,
+        options: variant.options // Already translated by backend
+      }))
 
       return {
         options: translatedOptions,
@@ -2199,7 +2183,9 @@ export default function ProductsPage() {
 
               {/* Canvas area */}
               <div className={`flex-1 flex p-8 overflow-auto ${
-                editMode === 'detail-images' ? 'items-start justify-start' : 'items-center justify-center'
+                editMode === 'detail-images' ? 'items-start justify-start' :
+                editMode === 'options' ? 'items-start justify-center' :
+                'items-center justify-center'
               }`}>
                 {editMode === 'main-image' && (
                   <div className="bg-white rounded-2xl shadow-xl border border-slate-200 relative" style={{ maxWidth: `${zoom}%` }}>
