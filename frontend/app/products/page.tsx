@@ -787,6 +787,22 @@ export default function ProductsPage() {
   }
 
   const getShippingRatesFromLocalStorage = (): Array<{ weight: number; cost: number }> => {
+    // Check if running in browser (not SSR)
+    if (typeof window === 'undefined') {
+      return [
+        { weight: 0.5, cost: 5600 },
+        { weight: 1.0, cost: 6400 },
+        { weight: 1.5, cost: 7200 },
+        { weight: 2.0, cost: 8000 },
+        { weight: 2.5, cost: 8800 },
+        { weight: 3.0, cost: 9600 },
+        { weight: 3.5, cost: 10400 },
+        { weight: 4.0, cost: 11200 },
+        { weight: 4.5, cost: 12000 },
+        { weight: 5.0, cost: 12800 },
+      ]
+    }
+
     try {
       const saved = localStorage.getItem('shippingRates')
       if (saved) {
@@ -813,6 +829,10 @@ export default function ProductsPage() {
   const calculateShippingCost = (weight: number | undefined): number => {
     // 무게 정보가 없으면 기본 배송비 사용
     if (!weight || weight <= 0) {
+      // Check if running in browser (not SSR)
+      if (typeof window === 'undefined') {
+        return 8000
+      }
       const defaultCost = localStorage.getItem('defaultShippingCost')
       return defaultCost ? parseInt(defaultCost) : 8000 // 기본값 8000원
     }
