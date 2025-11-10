@@ -236,26 +236,45 @@ async function handleProductImport(productData) {
 
     console.log(`📡 Sending to backend: ${apiUrl}`);
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(productData)
-    });
+    // Create AbortController for timeout (5 minutes to match server)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 seconds = 5 minutes
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId); // Clear timeout if request completes
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+      }
+
+      const result = await response.json();
+
+      // Clear storage after successful import (both currentProduct and pendingImport)
+      await chrome.storage.local.remove(['currentProduct', 'pendingImport']);
+      console.log('🗑️  Cleared product from storage after successful import');
+
+      return result;
+
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      // Handle abort error specifically
+      if (fetchError.name === 'AbortError') {
+        throw new Error('요청 시간이 초과되었습니다 (5분). 서버가 응답하지 않습니다.');
+      }
+
+      throw fetchError;
     }
-
-    const result = await response.json();
-
-    // Clear storage after successful import (both currentProduct and pendingImport)
-    await chrome.storage.local.remove(['currentProduct', 'pendingImport']);
-    console.log('🗑️  Cleared product from storage after successful import');
-
-    return result;
 
   } catch (error) {
     console.error('❌ Import error:', error);
