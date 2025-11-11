@@ -1723,12 +1723,16 @@ export default function ProductsPage() {
                         </div>
                       ) : (
                         <div className="flex items-start gap-2 mb-1.5 group">
-                          <h3 className="flex-1 text-base font-semibold text-slate-900 line-clamp-2">
+                          <h3
+                            className="flex-1 text-base font-semibold text-slate-900 line-clamp-2 cursor-pointer hover:text-orange-500 transition-colors"
+                            onClick={() => startEditingTitle(product.id, title)}
+                            title="클릭하여 상품명 편집"
+                          >
                             {title}
                           </h3>
                           <button
                             onClick={() => startEditingTitle(product.id, title)}
-                            className="p-1 rounded hover:bg-orange-50 transition-all"
+                            className="p-1 rounded hover:bg-orange-50 transition-all flex-shrink-0"
                             title="상품명 편집"
                           >
                             <Edit size={16} className="text-orange-500 hover:text-orange-600" />
