@@ -1728,10 +1728,10 @@ export default function ProductsPage() {
                           </h3>
                           <button
                             onClick={() => startEditingTitle(product.id, title)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100"
+                            className="p-1 rounded hover:bg-orange-50 transition-all"
                             title="상품명 편집"
                           >
-                            <Edit size={14} className="text-slate-500" />
+                            <Edit size={16} className="text-orange-500 hover:text-orange-600" />
                           </button>
                         </div>
                       )}

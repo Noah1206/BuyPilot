@@ -658,6 +658,13 @@ function extractTaobaoProduct() {
     try {
       let skuData = null;
 
+      // Debug: Log available global variables
+      console.log('🔍 Checking global variables for SKU data...');
+      console.log('   window.g_config:', typeof window.g_config !== 'undefined' ? 'exists' : 'not found');
+      console.log('   window.TB:', typeof window.TB !== 'undefined' ? 'exists' : 'not found');
+      console.log('   window.__INITIAL_DATA__:', typeof window.__INITIAL_DATA__ !== 'undefined' ? 'exists' : 'not found');
+      console.log('   window.RunParams:', typeof window.RunParams !== 'undefined' ? 'exists' : 'not found');
+
       // First, try to get SKU data from window.g_config
       if (typeof window.g_config !== 'undefined' && window.g_config.idata && window.g_config.idata.skuBase) {
         skuData = window.g_config.idata.skuBase.skus;
@@ -665,31 +672,66 @@ function extractTaobaoProduct() {
       }
 
       // Alternative: Try TB.detail.data.skuBase
-      if (!skuData && typeof TB !== 'undefined' && TB.detail && TB.detail.data && TB.detail.data.skuBase) {
-        skuData = TB.detail.data.skuBase.skus;
+      if (!skuData && typeof window.TB !== 'undefined' && window.TB.detail && window.TB.detail.data && window.TB.detail.data.skuBase) {
+        skuData = window.TB.detail.data.skuBase.skus;
         console.log('✅ Found SKU data in TB.detail.data.skuBase');
+      }
+
+      // Try __INITIAL_DATA__
+      if (!skuData && typeof window.__INITIAL_DATA__ !== 'undefined') {
+        console.log('🔍 Checking __INITIAL_DATA__:', window.__INITIAL_DATA__);
+        if (window.__INITIAL_DATA__.skuBase) {
+          skuData = window.__INITIAL_DATA__.skuBase.skus;
+          console.log('✅ Found SKU data in __INITIAL_DATA__.skuBase');
+        }
+      }
+
+      // Try RunParams
+      if (!skuData && typeof window.RunParams !== 'undefined') {
+        console.log('🔍 Checking RunParams:', window.RunParams);
+        if (window.RunParams.skuBase) {
+          skuData = window.RunParams.skuBase.skus;
+          console.log('✅ Found SKU data in RunParams.skuBase');
+        }
       }
 
       // Fallback: Try to find SKU data in page scripts
       if (!skuData) {
+        console.log('🔍 Searching for SKU data in page scripts...');
         const scripts = document.querySelectorAll('script');
+        let foundSkuKeywords = [];
 
         for (const script of scripts) {
           const scriptText = script.textContent;
 
-          // Look for skuMap or skuBase data
-          if (scriptText.includes('skuMap') || scriptText.includes('skuBase')) {
-            // Try to extract SKU map
-            const skuMapMatch = scriptText.match(/skuMap\s*[:=]\s*(\{[^}]+\})/);
-            const skuBaseMatch = scriptText.match(/skuBase\s*[:=]\s*(\{[^}]+\})/);
+          // Track which keywords we find
+          if (scriptText.includes('skuMap')) foundSkuKeywords.push('skuMap');
+          if (scriptText.includes('skuBase')) foundSkuKeywords.push('skuBase');
+          if (scriptText.includes('valItemInfo')) foundSkuKeywords.push('valItemInfo');
 
-            if (skuMapMatch || skuBaseMatch) {
+          // Look for skuMap or skuBase data with improved regex
+          if (scriptText.includes('skuMap') || scriptText.includes('skuBase')) {
+            // More flexible regex that captures nested objects
+            const skuMapMatch = scriptText.match(/skuMap\s*[:=]\s*(\{[\s\S]*?\n\s*\}(?=\s*[,;]|\s*$))/);
+            const skuBaseMatch = scriptText.match(/skuBase\s*[:=]\s*\{[\s\S]*?skus\s*[:=]\s*(\{[\s\S]*?\n\s*\}(?=\s*[,;]|\s*\}))/);
+
+            if (skuMapMatch) {
               try {
-                skuData = JSON.parse(skuMapMatch ? skuMapMatch[1] : skuBaseMatch[1]);
-                console.log('✅ Found SKU data in page scripts');
+                skuData = JSON.parse(skuMapMatch[1]);
+                console.log('✅ Found SKU data in page scripts (skuMap)');
                 break;
               } catch (e) {
-                console.warn('Failed to parse SKU data:', e);
+                console.warn('⚠️  Failed to parse skuMap:', e.message);
+              }
+            }
+
+            if (skuBaseMatch) {
+              try {
+                skuData = JSON.parse(skuBaseMatch[1]);
+                console.log('✅ Found SKU data in page scripts (skuBase)');
+                break;
+              } catch (e) {
+                console.warn('⚠️  Failed to parse skuBase:', e.message);
               }
             }
           }
@@ -703,10 +745,14 @@ function extractTaobaoProduct() {
                 console.log('✅ Found SKU data in valItemInfo');
                 break;
               } catch (e) {
-                console.warn('Failed to parse valItemInfo.skuMap:', e);
+                console.warn('⚠️  Failed to parse valItemInfo.skuMap:', e.message);
               }
             }
           }
+        }
+
+        if (!skuData && foundSkuKeywords.length > 0) {
+          console.log(`⚠️  Found keywords [${foundSkuKeywords.join(', ')}] but failed to extract SKU data`);
         }
       }
 
