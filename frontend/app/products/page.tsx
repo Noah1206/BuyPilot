@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { importProduct, getProducts, deleteProduct, updateProduct, registerToSmartStore, translateText as apiTranslateText } from '@/lib/api'
 import Header from '@/components/Header'
 import CategorySelectionModal from '@/components/CategorySelectionModal'
@@ -1199,13 +1199,13 @@ export default function ProductsPage() {
     setEditingTitle('')
   }
 
-  const saveProductTitle = async (productId: string) => {
-    if (!editingTitle.trim()) {
-      toast('상품명을 입력해주세요', 'error')
+  const saveProductTitle = async (productId: string, title: string) => {
+    if (!title.trim()) {
+      cancelEditingTitle()
       return
     }
 
-    if (editingTitle.length > 25) {
+    if (title.length > 25) {
       toast('상품명은 25자를 초과할 수 없습니다', 'error')
       return
     }
@@ -1215,7 +1215,7 @@ export default function ProductsPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: editingTitle.trim()
+          title: title.trim()
         })
       })
 
@@ -1225,15 +1225,19 @@ export default function ProductsPage() {
 
       // Update local state
       setProducts(products.map(p =>
-        p.id === productId ? { ...p, title: editingTitle.trim() } : p
+        p.id === productId ? { ...p, title: title.trim() } : p
       ))
 
-      toast('상품명이 저장되었습니다')
       cancelEditingTitle()
     } catch (error) {
       console.error('Error saving title:', error)
       toast('상품명 저장에 실패했습니다', 'error')
     }
+  }
+
+  const handleTitleBlur = (productId: string) => {
+    // Save when clicking away from the input
+    saveProductTitle(productId, editingTitle)
   }
 
   const startEditingCategory = async (productId: string) => {
@@ -1686,38 +1690,24 @@ export default function ProductsPage() {
                       {/* Product title with edit */}
                       {editingTitleId === product.id ? (
                         <div className="mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={editingTitle}
-                              onChange={(e) => setEditingTitle(e.target.value)}
-                              maxLength={25}
-                              className="flex-1 px-2 py-1 text-sm font-semibold text-slate-900 bg-white border-2 border-orange-500 rounded focus:outline-none focus:ring-2 focus:ring-orange-100"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  saveProductTitle(product.id)
-                                } else if (e.key === 'Escape') {
-                                  cancelEditingTitle()
-                                }
-                              }}
-                            />
-                            <button
-                              onClick={() => saveProductTitle(product.id)}
-                              className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-all"
-                              title="저장"
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              onClick={cancelEditingTitle}
-                              className="p-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all"
-                              title="취소"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
+                          <input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            maxLength={25}
+                            className="w-full px-2 py-1 text-base font-semibold text-slate-900 bg-white border-2 border-orange-500 rounded focus:outline-none focus:ring-2 focus:ring-orange-100"
+                            autoFocus
+                            onBlur={() => handleTitleBlur(product.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleTitleBlur(product.id)
+                              } else if (e.key === 'Escape') {
+                                cancelEditingTitle()
+                              }
+                            }}
+                            placeholder="상품명 입력"
+                          />
+                          <div className="mt-0.5 text-xs text-slate-500">
                             {editingTitle.length}/25자
                           </div>
                         </div>
