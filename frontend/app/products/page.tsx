@@ -1230,18 +1230,28 @@ export default function ProductsPage() {
       const result = await response.json()
       console.log('✅ Title saved successfully:', result)
 
-      // Update local state with response data
-      if (result.ok && result.data?.product) {
-        setProducts(products.map(p =>
-          p.id === productId ? { ...p, title: result.data.product.title } : p
-        ))
-        console.log('✅ Local state updated with new title:', result.data.product.title)
-      } else {
-        // Fallback to manual update if response doesn't contain product data
-        setProducts(products.map(p =>
-          p.id === productId ? { ...p, title: title.trim() } : p
-        ))
-      }
+      // Update local state with response data - force new array reference
+      const updatedTitle = result.ok && result.data?.product ? result.data.product.title : title.trim()
+
+      setProducts(prevProducts => {
+        const newProducts = prevProducts.map(p => {
+          if (p.id === productId) {
+            // Update both title and data.title_kr to ensure UI updates
+            return {
+              ...p,
+              title: updatedTitle,
+              data: {
+                ...p.data,
+                title_kr: updatedTitle  // This is what getProductTitle() displays!
+              }
+            }
+          }
+          return p
+        })
+        console.log('✅ Local state updated with new title:', updatedTitle)
+        console.log('📊 Updated product:', newProducts.find(p => p.id === productId))
+        return newProducts
+      })
 
       toast('상품명이 저장되었습니다', 'success')
       cancelEditingTitle()
