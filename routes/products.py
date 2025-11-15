@@ -393,10 +393,10 @@ def get_product(product_id):
         }), 500
 
 
-@bp.route('/products/<product_id>', methods=['PUT'])
+@bp.route('/products/<product_id>', methods=['PUT', 'PATCH'])
 def update_product(product_id):
     """
-    Update product
+    Update product (supports both PUT and PATCH)
     Body: {title?, price?, stock?, image_url?, data?}
     """
     try:
@@ -418,6 +418,11 @@ def update_product(product_id):
             # Update allowed fields
             if 'title' in data:
                 product.title = data['title']
+                # Also update title_kr in data for consistency
+                if not product.data:
+                    product.data = {}
+                product.data['title_kr'] = data['title']
+                logger.info(f"✅ Updated title for product {product_id}: {data['title']}")
 
             if 'price' in data:
                 product.price = data['price']
