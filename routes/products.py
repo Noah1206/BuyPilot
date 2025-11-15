@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify
 import uuid
 from datetime import datetime
 from sqlalchemy import desc
+from sqlalchemy.orm.attributes import flag_modified
 import logging
 import os
 from werkzeug.utils import secure_filename
@@ -422,6 +423,8 @@ def update_product(product_id):
                 if not product.data:
                     product.data = {}
                 product.data['title_kr'] = data['title']
+                # Mark data field as modified so SQLAlchemy tracks the change
+                flag_modified(product, 'data')
                 logger.info(f"✅ Updated title for product {product_id}: {data['title']}")
 
             if 'price' in data:
@@ -452,6 +455,9 @@ def update_product(product_id):
                 # Merge other data (exclude thumbnail/detail to avoid duplication)
                 product.data.update({k: v for k, v in update_data.items()
                                    if k not in ['thumbnail_image_url', 'detail_image_url']})
+
+                # Mark data field as modified so SQLAlchemy tracks the change
+                flag_modified(product, 'data')
 
             product.updated_at = datetime.utcnow()
 
