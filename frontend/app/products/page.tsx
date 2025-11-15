@@ -1210,6 +1210,8 @@ export default function ProductsPage() {
       return
     }
 
+    console.log('💾 Saving product title:', { productId, oldTitle: products.find(p => p.id === productId)?.title, newTitle: title.trim() })
+
     try {
       const response = await fetch(`/api/v1/products/${productId}`, {
         method: 'PATCH',
@@ -1220,24 +1222,43 @@ export default function ProductsPage() {
       })
 
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Failed to save title:', errorText)
         throw new Error('상품명 저장 실패')
       }
 
-      // Update local state
-      setProducts(products.map(p =>
-        p.id === productId ? { ...p, title: title.trim() } : p
-      ))
+      const result = await response.json()
+      console.log('✅ Title saved successfully:', result)
 
+      // Update local state with response data
+      if (result.ok && result.data?.product) {
+        setProducts(products.map(p =>
+          p.id === productId ? { ...p, title: result.data.product.title } : p
+        ))
+        console.log('✅ Local state updated with new title:', result.data.product.title)
+      } else {
+        // Fallback to manual update if response doesn't contain product data
+        setProducts(products.map(p =>
+          p.id === productId ? { ...p, title: title.trim() } : p
+        ))
+      }
+
+      toast('상품명이 저장되었습니다', 'success')
       cancelEditingTitle()
     } catch (error) {
-      console.error('Error saving title:', error)
+      console.error('❌ Error saving title:', error)
       toast('상품명 저장에 실패했습니다', 'error')
     }
   }
 
-  const handleTitleBlur = (productId: string) => {
+  const handleTitleBlur = async (productId: string) => {
+    // Small delay to prevent race conditions with other events
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     // Save when clicking away from the input
-    saveProductTitle(productId, editingTitle)
+    if (editingTitleId === productId) {
+      await saveProductTitle(productId, editingTitle)
+    }
   }
 
   const startEditingCategory = async (productId: string) => {
