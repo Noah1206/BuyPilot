@@ -1205,8 +1205,8 @@ export default function ProductsPage() {
       return
     }
 
-    if (title.length > 25) {
-      toast('상품명은 25자를 초과할 수 없습니다', 'error')
+    if (title.length > 50) {
+      toast('상품명은 50자를 초과할 수 없습니다', 'error')
       return
     }
 
@@ -1725,7 +1725,7 @@ export default function ProductsPage() {
                             type="text"
                             value={editingTitle}
                             onChange={(e) => setEditingTitle(e.target.value)}
-                            maxLength={25}
+                            maxLength={50}
                             className="w-full px-2 py-1 text-base font-semibold text-slate-900 bg-white border-2 border-orange-500 rounded focus:outline-none focus:ring-2 focus:ring-orange-100"
                             autoFocus
                             onBlur={() => handleTitleBlur(product.id)}
@@ -1739,7 +1739,7 @@ export default function ProductsPage() {
                             placeholder="상품명 입력"
                           />
                           <div className="mt-0.5 text-xs text-slate-500">
-                            {editingTitle.length}/25자
+                            {editingTitle.length}/50자
                           </div>
                         </div>
                       ) : (
