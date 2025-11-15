@@ -418,12 +418,18 @@ def update_product(product_id):
 
             # Update allowed fields
             if 'title' in data:
+                logger.info(f"🔧 DEBUG: Updating title to: {data['title']}")
                 product.title = data['title']
                 # Also update title_kr in data for consistency
-                if not product.data:
-                    product.data = {}
-                product.data['title_kr'] = data['title']
-                # Mark data field as modified so SQLAlchemy tracks the change
+                # Create new dict to force SQLAlchemy to detect the change
+                current_data = product.data or {}
+                logger.info(f"🔧 DEBUG: Current data keys: {list(current_data.keys())}")
+                logger.info(f"🔧 DEBUG: Old title_kr: {current_data.get('title_kr', 'N/A')}")
+                product.data = {
+                    **current_data,
+                    'title_kr': data['title']
+                }
+                logger.info(f"🔧 DEBUG: New title_kr: {product.data.get('title_kr')}")
                 flag_modified(product, 'data')
                 logger.info(f"✅ Updated title for product {product_id}: {data['title']}")
 

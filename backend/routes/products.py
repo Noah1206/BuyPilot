@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify
 import uuid
 from datetime import datetime
 from sqlalchemy import desc
+from sqlalchemy.orm.attributes import flag_modified
 import logging
 import os
 from werkzeug.utils import secure_filename
@@ -359,6 +360,180 @@ def get_products():
         }), 500
 
 
+@bp.route('/products/<product_id>', methods=['GET'])
+def get_product(product_id):
+    """Get single product by ID"""
+    try:
+        with get_db() as db:
+            product = db.query(Product).filter(Product.id == product_id).first()
+
+            if not product:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PRODUCT_NOT_FOUND',
+                        'message': f'Product {product_id} not found',
+                        'details': {}
+                    }
+                }), 404
+
+            return jsonify({
+                'ok': True,
+                'data': product.to_dict()
+            }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Error fetching product: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'DATABASE_ERROR',
+                'message': 'Failed to fetch product',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+@bp.route('/products/<product_id>', methods=['PUT', 'PATCH'])
+def update_product(product_id):
+    """
+    Update product (supports both PUT and PATCH)
+    Body: {title?, price?, stock?, image_url?, data?}
+    """
+    try:
+        data = request.get_json(force=True)
+
+        with get_db() as db:
+            product = db.query(Product).filter(Product.id == product_id).first()
+
+            if not product:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PRODUCT_NOT_FOUND',
+                        'message': f'Product {product_id} not found',
+                        'details': {}
+                    }
+                }), 404
+
+            # Update allowed fields
+            if 'title' in data:
+                logger.info(f"🔧 DEBUG: Updating title to: {data['title']}")
+                product.title = data['title']
+                # Also update title_kr in data for consistency
+                # Create new dict to force SQLAlchemy to detect the change
+                current_data = product.data or {}
+                logger.info(f"🔧 DEBUG: Current data keys: {list(current_data.keys())}")
+                logger.info(f"🔧 DEBUG: Old title_kr: {current_data.get('title_kr', 'N/A')}")
+                product.data = {
+                    **current_data,
+                    'title_kr': data['title']
+                }
+                logger.info(f"🔧 DEBUG: New title_kr: {product.data.get('title_kr')}")
+                flag_modified(product, 'data')
+                logger.info(f"✅ Updated title for product {product_id}: {data['title']}")
+
+            if 'price' in data:
+                product.price = data['price']
+
+            if 'stock' in data:
+                product.stock = data['stock']
+
+            if 'image_url' in data:
+                product.image_url = data['image_url']
+
+            if 'data' in data:
+                # Merge with existing data
+                if not product.data:
+                    product.data = {}
+
+                update_data = data['data']
+
+                # Handle thumbnail and detail images separately
+                if 'thumbnail_image_url' in update_data:
+                    product.data['thumbnail_image_url'] = update_data['thumbnail_image_url']
+                    logger.info(f"✅ Updated thumbnail image for product {product_id}")
+
+                if 'detail_image_url' in update_data:
+                    product.data['detail_image_url'] = update_data['detail_image_url']
+                    logger.info(f"✅ Updated detail image for product {product_id}")
+
+                # Merge other data (exclude thumbnail/detail to avoid duplication)
+                product.data.update({k: v for k, v in update_data.items()
+                                   if k not in ['thumbnail_image_url', 'detail_image_url']})
+
+                # Mark data field as modified so SQLAlchemy tracks the change
+                flag_modified(product, 'data')
+
+            product.updated_at = datetime.utcnow()
+
+            db.commit()
+
+            logger.info(f"✅ Product updated: {product_id}")
+
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'product_id': str(product.id),
+                    'message': 'Product updated successfully',
+                    'product': product.to_dict()
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Error updating product: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'DATABASE_ERROR',
+                'message': 'Failed to update product',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
+@bp.route('/products/<product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    """Delete product"""
+    try:
+        with get_db() as db:
+            product = db.query(Product).filter(Product.id == product_id).first()
+
+            if not product:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PRODUCT_NOT_FOUND',
+                        'message': f'Product {product_id} not found',
+                        'details': {}
+                    }
+                }), 404
+
+            db.delete(product)
+            db.commit()
+
+            logger.info(f"✅ Product deleted: {product_id}")
+
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'product_id': product_id,
+                    'message': 'Product deleted successfully'
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Error deleting product: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'DATABASE_ERROR',
+                'message': 'Failed to delete product',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
 @bp.route('/products/import-from-extension', methods=['POST'])
 def import_from_extension():
     """
@@ -503,7 +678,6 @@ def import_from_extension():
                     'specifications': data.get('specifications', []),
                     'options': data.get('options', []),
                     'variants': data.get('variants', []),
-                    'weight': data.get('weight'),  # Product weight in kg (extracted from Taobao page)
                     'translated': data.get('translated', False),
                     'translation_provider': data.get('translation_provider', ''),
                     'imported_at': datetime.utcnow().isoformat(),
@@ -541,195 +715,6 @@ def import_from_extension():
                 'details': {'error': str(e)}
             }
         }), 500
-
-@bp.route('/products/<product_id>', methods=['GET'])
-def get_product(product_id):
-    """Get single product by ID"""
-    try:
-        with get_db() as db:
-            product = db.query(Product).filter(Product.id == product_id).first()
-
-            if not product:
-                return jsonify({
-                    'ok': False,
-                    'error': {
-                        'code': 'PRODUCT_NOT_FOUND',
-                        'message': f'Product {product_id} not found',
-                        'details': {}
-                    }
-                }), 404
-
-            return jsonify({
-                'ok': True,
-                'data': product.to_dict()
-            }), 200
-
-    except Exception as e:
-        logger.error(f"❌ Error fetching product: {str(e)}")
-        return jsonify({
-            'ok': False,
-            'error': {
-                'code': 'DATABASE_ERROR',
-                'message': 'Failed to fetch product',
-                'details': {'error': str(e)}
-            }
-        }), 500
-
-
-@bp.route('/products/<product_id>', methods=['PUT', 'PATCH'])
-def update_product(product_id):
-    """
-    Update product
-    Body: {title?, price?, stock?, image_url?, data?}
-    """
-    try:
-        data = request.get_json(force=True)
-
-        with get_db() as db:
-            product = db.query(Product).filter(Product.id == product_id).first()
-
-            if not product:
-                return jsonify({
-                    'ok': False,
-                    'error': {
-                        'code': 'PRODUCT_NOT_FOUND',
-                        'message': f'Product {product_id} not found',
-                        'details': {}
-                    }
-                }), 404
-
-            # Update allowed fields
-            if 'title' in data:
-                product.title = data['title']
-
-            if 'price' in data:
-                product.price = data['price']
-
-            if 'stock' in data:
-                product.stock = data['stock']
-
-            # Handle image_url (accept base64 directly)
-            if 'image_url' in data:
-                product.image_url = data['image_url']
-                logger.info(f"✅ Main image updated")
-
-            if 'data' in data:
-                # Merge with existing data
-                if not product.data:
-                    product.data = {}
-
-                update_data = data['data']
-
-                # Handle images array (accept base64 directly)
-                if 'images' in update_data and isinstance(update_data['images'], list):
-                    base64_count = sum(1 for img in update_data['images'] if img and img.startswith('data:image'))
-                    logger.info(f"✅ Updated {len(update_data['images'])} images ({base64_count} base64, {len(update_data['images']) - base64_count} URLs)")
-                    # Log first image type for debugging
-                    if len(update_data['images']) > 0:
-                        first_img = update_data['images'][0]
-                        logger.info(f"📝 First image type: {'base64' if first_img.startswith('data:image') else 'URL'} ({len(first_img)} chars)")
-
-                # Handle desc_imgs array (accept base64 directly)
-                if 'desc_imgs' in update_data and isinstance(update_data['desc_imgs'], list):
-                    base64_count = sum(1 for img in update_data['desc_imgs'] if img and img.startswith('data:image'))
-                    logger.info(f"✅ Updated {len(update_data['desc_imgs'])} detail images ({base64_count} base64, {len(update_data['desc_imgs']) - base64_count} URLs)")
-
-                # Handle thumbnail and detail images separately
-                if 'thumbnail_image_url' in update_data:
-                    product.data['thumbnail_image_url'] = update_data['thumbnail_image_url']
-                    logger.info(f"✅ Updated thumbnail image for product {product_id}")
-
-                if 'detail_image_url' in update_data:
-                    product.data['detail_image_url'] = update_data['detail_image_url']
-                    logger.info(f"✅ Updated detail image for product {product_id}")
-
-                # Merge other data (exclude thumbnail/detail to avoid duplication)
-                product.data.update({k: v for k, v in update_data.items()
-                                   if k not in ['thumbnail_image_url', 'detail_image_url']})
-
-                # Mark JSONB field as modified for SQLAlchemy to detect changes
-                from sqlalchemy.orm.attributes import flag_modified
-                flag_modified(product, 'data')
-
-            product.updated_at = datetime.utcnow()
-
-            db.commit()
-
-            # Verify what was saved to database
-            if product.data and 'images' in product.data:
-                saved_images = product.data['images']
-                if isinstance(saved_images, list) and len(saved_images) > 0:
-                    first_saved = saved_images[0]
-                    is_base64 = first_saved.startswith('data:image') if first_saved else False
-                    logger.info(f"✅ Product updated: {product_id}")
-                    logger.info(f"📦 Saved to DB: {len(saved_images)} images, first is {'base64' if is_base64 else 'URL'} ({len(first_saved)} chars)")
-                else:
-                    logger.info(f"✅ Product updated: {product_id} (no images in data)")
-            else:
-                logger.info(f"✅ Product updated: {product_id}")
-
-            return jsonify({
-                'ok': True,
-                'data': {
-                    'product_id': str(product.id),
-                    'message': 'Product updated successfully',
-                    'product': product.to_dict()
-                }
-            }), 200
-
-    except Exception as e:
-        logger.error(f"❌ Error updating product: {str(e)}")
-        return jsonify({
-            'ok': False,
-            'error': {
-                'code': 'DATABASE_ERROR',
-                'message': 'Failed to update product',
-                'details': {'error': str(e)}
-            }
-        }), 500
-
-
-@bp.route('/products/<product_id>', methods=['DELETE'])
-def delete_product(product_id):
-    """Delete product"""
-    try:
-        with get_db() as db:
-            product = db.query(Product).filter(Product.id == product_id).first()
-
-            if not product:
-                return jsonify({
-                    'ok': False,
-                    'error': {
-                        'code': 'PRODUCT_NOT_FOUND',
-                        'message': f'Product {product_id} not found',
-                        'details': {}
-                    }
-                }), 404
-
-            db.delete(product)
-            db.commit()
-
-            logger.info(f"✅ Product deleted: {product_id}")
-
-            return jsonify({
-                'ok': True,
-                'data': {
-                    'product_id': product_id,
-                    'message': 'Product deleted successfully'
-                }
-            }), 200
-
-    except Exception as e:
-        logger.error(f"❌ Error deleting product: {str(e)}")
-        return jsonify({
-            'ok': False,
-            'error': {
-                'code': 'DATABASE_ERROR',
-                'message': 'Failed to delete product',
-                'details': {'error': str(e)}
-            }
-        }), 500
-
 
 
 @bp.route('/products/<product_id>/upload-image', methods=['POST'])
@@ -840,358 +825,6 @@ def upload_edited_image(product_id):
             'error': {
                 'code': 'UPLOAD_ERROR',
                 'message': 'Failed to upload image',
-                'details': {'error': str(e)}
-            }
-        }), 500
-
-
-@bp.route('/products/bulk-import', methods=['POST'])
-def bulk_import():
-    """
-    Bulk import products from Excel data
-
-    Body: {
-        products: [
-            {
-                taobao_url: string,
-                category_id?: string,
-                shipping_cost?: number,
-                margin?: number,
-                weight?: number,
-                customs_rate?: number,
-                vat_rate?: number,
-                memo?: string
-            }
-        ],
-        use_ai_category?: boolean
-    }
-
-    Returns: {ok: bool, data: {summary, results}}
-    """
-    try:
-        data = request.get_json(force=True)
-        products_data = data.get('products', [])
-        use_ai_category = data.get('use_ai_category', True)
-
-        if not products_data or len(products_data) == 0:
-            return jsonify({
-                'ok': False,
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': 'No products provided',
-                    'details': {}
-                }
-            }), 400
-
-        logger.info(f"📦 Starting bulk import for {len(products_data)} products")
-
-        # Initialize AI category analyzer if needed
-        category_analyzer = None
-        naver_categories = None
-
-        if use_ai_category:
-            try:
-                from ai.category_analyzer import get_category_analyzer
-                import json
-
-                category_analyzer = get_category_analyzer()
-
-                # Load Naver categories from JSON file
-                categories_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'naver_categories.json')
-                with open(categories_file, 'r', encoding='utf-8') as f:
-                    categories_data = json.load(f)
-                    naver_categories = categories_data.get('categories', [])
-
-                logger.info(f"✅ AI category analyzer initialized with {len(naver_categories)} categories")
-            except Exception as e:
-                logger.warning(f"⚠️ AI category analyzer initialization failed: {str(e)}")
-                use_ai_category = False
-
-        # Results tracking
-        results = []
-        success_count = 0
-        failed_count = 0
-        manual_category_count = 0
-        ai_category_count = 0
-
-        # Get connectors
-        taobao_api = get_taobao_rapidapi()
-        translator = get_translator()
-        image_service = get_image_service()
-
-        # Process each product
-        for idx, item in enumerate(products_data):
-            try:
-                taobao_url = item.get('taobao_url', '').strip()
-
-                if not taobao_url:
-                    results.append({
-                        'index': idx,
-                        'success': False,
-                        'error': 'Missing taobao_url'
-                    })
-                    failed_count += 1
-                    continue
-
-                logger.info(f"🔄 ({idx + 1}/{len(products_data)}) Processing: {taobao_url}")
-
-                # Step 1: Fetch product data from Taobao
-                product_data = taobao_api.get_product_details(taobao_url)
-
-                if not product_data:
-                    results.append({
-                        'index': idx,
-                        'success': False,
-                        'error': 'Failed to fetch product from Taobao'
-                    })
-                    failed_count += 1
-                    continue
-
-                # Step 2: Translate title and description
-                if product_data.get('title'):
-                    product_data['title'] = translator.translate(product_data['title'])
-
-                if product_data.get('description'):
-                    product_data['description'] = translator.translate(product_data['description'])
-
-                # Step 3: Download images
-                downloaded_images = []
-                if product_data.get('images'):
-                    for img_url in product_data['images'][:10]:  # Max 10 images
-                        try:
-                            local_path = image_service.download_and_optimize(img_url)
-                            if local_path:
-                                downloaded_images.append(local_path)
-                        except Exception as img_error:
-                            logger.warning(f"⚠️ Failed to download image {img_url}: {str(img_error)}")
-
-                if downloaded_images:
-                    product_data['downloaded_images'] = downloaded_images
-
-                # Step 4: Category selection (manual Korean name → ID mapping, or AI)
-                category_name = item.get('category_name', '').strip() if item.get('category_name') else None
-                category_id = None
-                category_source = 'manual'
-                category_path = None
-                ai_confidence = None
-
-                if category_name:
-                    # Manual category - convert Korean name to category ID
-                    manual_category_count += 1
-
-                    # Find category by Korean name (exact or partial match)
-                    if naver_categories:
-                        # Try exact match first
-                        for cat in naver_categories:
-                            if cat.get('name') == category_name:
-                                category_id = cat.get('id')
-                                category_path = cat.get('path')
-                                logger.info(f"✅ Exact match: {category_name} → {category_id}")
-                                break
-
-                        # If no exact match, try partial match (category name in path)
-                        if not category_id:
-                            for cat in naver_categories:
-                                if category_name in cat.get('name', ''):
-                                    category_id = cat.get('id')
-                                    category_path = cat.get('path')
-                                    logger.info(f"✅ Partial match: {category_name} → {category_path}")
-                                    break
-
-                        # If still not found, log warning and fall back to AI
-                        if not category_id:
-                            logger.warning(f"⚠️ Category '{category_name}' not found, falling back to AI")
-                            category_source = 'ai'  # Fall back to AI
-                            manual_category_count -= 1  # Don't count as manual
-
-                # If no manual category or manual category not found, use AI
-                if not category_id:
-                    # AI category analysis
-                    if use_ai_category and category_analyzer and naver_categories:
-                        try:
-                            suggestions = category_analyzer.suggest_categories(
-                                product_data={
-                                    'title': product_data.get('title', ''),
-                                    'price': product_data.get('price', 0),
-                                    'desc': product_data.get('description', '')
-                                },
-                                categories_tree=naver_categories,
-                                top_k=3
-                            )
-
-                            if suggestions and len(suggestions) > 0:
-                                best = suggestions[0]
-                                category_id = best['category_id']
-                                category_path = best['category_path']
-                                ai_confidence = best['confidence']
-                                category_source = 'ai'
-                                ai_category_count += 1
-                                logger.info(f"🤖 AI selected category: {category_path} ({ai_confidence}%)")
-                        except Exception as ai_error:
-                            logger.warning(f"⚠️ AI category analysis failed: {str(ai_error)}")
-
-                # Step 5: Add user input values
-                if item.get('shipping_cost') is not None:
-                    product_data['shipping_cost'] = float(item['shipping_cost'])
-
-                if item.get('margin') is not None:
-                    product_data['margin'] = float(item['margin'])
-                else:
-                    product_data['margin'] = 30  # Default margin
-
-                if item.get('weight') is not None:
-                    product_data['weight'] = float(item['weight'])
-
-                if item.get('customs_rate') is not None:
-                    product_data['customs_rate'] = float(item['customs_rate'])
-
-                if item.get('vat_rate') is not None:
-                    product_data['vat_rate'] = float(item['vat_rate'])
-
-                if item.get('memo'):
-                    product_data['memo'] = item['memo']
-
-                # Store category info
-                if category_id:
-                    product_data['category_id'] = category_id
-
-                # Step 6: Save to database
-                with get_db() as db:
-                    product = Product(
-                        id=str(uuid.uuid4()),
-                        source='taobao',
-                        source_url=taobao_url,
-                        supplier_id=product_data.get('seller_id'),
-                        title=product_data.get('title', 'Unknown Product'),
-                        price=product_data.get('price', 0),
-                        currency='CNY',
-                        stock=product_data.get('stock', 0),
-                        image_url=downloaded_images[0] if downloaded_images else product_data.get('images', [''])[0],
-                        data=product_data,
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
-                    )
-
-                    db.add(product)
-                    db.commit()
-
-                    result = {
-                        'index': idx,
-                        'success': True,
-                        'product_id': product.id,
-                        'title': product.title,
-                        'category_source': category_source,
-                        'category_id': category_id,
-                        'category_path': category_path
-                    }
-
-                    if ai_confidence is not None:
-                        result['ai_confidence'] = ai_confidence
-
-                    results.append(result)
-                    success_count += 1
-
-                    logger.info(f"✅ Product saved: {product.title}")
-
-            except Exception as e:
-                logger.error(f"❌ Failed to import product {idx}: {str(e)}", exc_info=True)
-                results.append({
-                    'index': idx,
-                    'success': False,
-                    'error': str(e)
-                })
-                failed_count += 1
-
-        logger.info(f"📊 Bulk import complete: {success_count} success, {failed_count} failed")
-
-        return jsonify({
-            'ok': True,
-            'data': {
-                'summary': {
-                    'total': len(products_data),
-                    'success': success_count,
-                    'failed': failed_count,
-                    'manual_category': manual_category_count,
-                    'ai_category': ai_category_count
-                },
-                'results': results
-            }
-        }), 200
-
-    except Exception as e:
-        logger.error(f"❌ Bulk import error: {str(e)}", exc_info=True)
-        return jsonify({
-            'ok': False,
-            'error': {
-                'code': 'BULK_IMPORT_ERROR',
-                'message': 'Failed to process bulk import',
-                'details': {'error': str(e)}
-            }
-        }), 500
-
-
-@bp.route('/products/<product_id>/category', methods=['PATCH'])
-def update_product_category(product_id):
-    """
-    Update selected category for a product
-
-    Body: {
-        "category_id": "50000790",
-        "category_path": "패션의류/잡화 > 여성신발 > 운동화",
-        "confidence": 95,
-        "reason": "선택 이유"
-    }
-    """
-    try:
-        data = request.get_json(force=True)
-
-        with get_db() as db:
-            product = db.query(Product).filter(Product.id == product_id).first()
-
-            if not product:
-                return jsonify({
-                    'ok': False,
-                    'error': {
-                        'code': 'NOT_FOUND',
-                        'message': 'Product not found',
-                        'details': {'product_id': product_id}
-                    }
-                }), 404
-
-            # Update selected_category in data field
-            if not product.data:
-                product.data = {}
-
-            product.data['selected_category'] = {
-                'category_id': data.get('category_id'),
-                'category_path': data.get('category_path'),
-                'confidence': data.get('confidence'),
-                'reason': data.get('reason')
-            }
-
-            # Mark as modified (important for JSONB updates)
-            from sqlalchemy.orm.attributes import flag_modified
-            flag_modified(product, 'data')
-
-            db.commit()
-
-            logger.info(f"✅ Updated category for product {product_id}: {data.get('category_path')}")
-
-            return jsonify({
-                'ok': True,
-                'data': {
-                    'message': 'Category updated successfully',
-                    'selected_category': product.data['selected_category']
-                }
-            }), 200
-
-    except Exception as e:
-        logger.error(f"❌ Error updating category: {str(e)}", exc_info=True)
-        return jsonify({
-            'ok': False,
-            'error': {
-                'code': 'UPDATE_ERROR',
-                'message': 'Failed to update category',
                 'details': {'error': str(e)}
             }
         }), 500
