@@ -104,7 +104,7 @@ export default function ProductsPage() {
   const [page, setPage] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
-  const limit = 10
+  const limit = 100
 
   // Import queue state
   const [importQueue, setImportQueue] = useState<ImportQueueItem[]>([])
