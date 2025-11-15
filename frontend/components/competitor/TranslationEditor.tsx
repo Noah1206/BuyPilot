@@ -40,6 +40,17 @@ export default function TranslationEditor({
     onCancel?.()
   }
 
+  const handleBlur = () => {
+    // Auto-save on blur if there are changes
+    if (editedText.trim() && editedText.trim() !== translated) {
+      onSave(editedText.trim())
+      setIsEditing(false)
+    } else if (!editedText.trim() && translated) {
+      // If empty, revert to original
+      setEditedText(translated)
+    }
+  }
+
   if (!translated) {
     return (
       <div className="text-xs text-[#6e7681] italic">
@@ -60,6 +71,7 @@ export default function TranslationEditor({
         <textarea
           value={editedText}
           onChange={(e) => setEditedText(e.target.value)}
+          onBlur={handleBlur}
           className="w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff] text-sm resize-none"
           rows={2}
           placeholder="번역된 한글 제목을 입력하세요"
