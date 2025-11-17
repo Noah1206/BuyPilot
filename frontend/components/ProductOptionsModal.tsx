@@ -57,6 +57,7 @@ export default function ProductOptionsModal({
   const [shippingCost, setShippingCost] = React.useState(13000)
   const [editingOptionName, setEditingOptionName] = React.useState<string | null>(null)
   const [editingVariantOption, setEditingVariantOption] = React.useState<string | null>(null)
+  const [editingVariantOptionValue, setEditingVariantOptionValue] = React.useState<string>('')
 
   React.useEffect(() => {
     setEditedVariants(variants)
@@ -351,7 +352,8 @@ export default function ProductOptionsModal({
                         {editingVariantOption === variant.sku_id ? (
                           <input
                             type="text"
-                            defaultValue={optionText}
+                            value={editingVariantOptionValue}
+                            onChange={(e) => setEditingVariantOptionValue(e.target.value)}
                             autoFocus
                             onBlur={(e) => {
                               if (e.target.value.trim()) {
@@ -373,13 +375,19 @@ export default function ProductOptionsModal({
                         ) : (
                           <div
                             className={`flex-1 text-sm font-medium cursor-pointer hover:text-blue-300 transition-colors py-2 ${hasIssue ? 'text-red-400' : 'text-white'}`}
-                            onClick={() => setEditingVariantOption(variant.sku_id)}
+                            onClick={() => {
+                              setEditingVariantOption(variant.sku_id)
+                              setEditingVariantOptionValue(optionText)
+                            }}
                           >
                             {optionText}
                           </div>
                         )}
                         <button
-                          onClick={() => setEditingVariantOption(variant.sku_id)}
+                          onClick={() => {
+                            setEditingVariantOption(variant.sku_id)
+                            setEditingVariantOptionValue(optionText)
+                          }}
                           className="text-slate-400 hover:text-blue-400 transition-colors p-1.5 hover:bg-slate-700/50 rounded"
                         >
                           <Edit2 size={16} />
