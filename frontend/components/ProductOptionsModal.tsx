@@ -6,7 +6,7 @@
 
 import React from 'react'
 import { X, Check, AlertCircle, Package2, Package, Edit2 } from 'lucide-react'
-import { translateText } from '@/utils/translate'
+import { translateText } from '@/lib/api'
 
 // Product option value definition
 interface ProductOptionValue {
@@ -82,9 +82,10 @@ export default function ProductOptionsModal({
           variants.map(async (variant) => {
             try {
               const optionText = Object.entries(variant.options).map(([k, v]) => `${k}: ${v}`).join(' + ')
-              const translated = await translateText(optionText)
+              const response = await translateText(optionText)
 
-              if (translated) {
+              if (response.ok && response.data?.translated) {
+                const translated = response.data.translated
                 const newOptions: { [key: string]: string } = {}
                 const parts = translated.split('+').map(p => p.trim())
 
