@@ -5,7 +5,7 @@
 'use client'
 
 import React from 'react'
-import { X, Check, AlertCircle, Package2, Package, Edit2 } from 'lucide-react'
+import { X, Check, AlertCircle, Package2, Package, Edit2, Trash2 } from 'lucide-react'
 import { translateText } from '@/lib/api'
 
 // Product option value definition
@@ -217,6 +217,17 @@ export default function ProductOptionsModal({
     handlePriceChange(sku_id, convertedPrice)
   }
 
+  const handleDeleteVariant = (sku_id: string) => {
+    const updatedVariants = editedVariants.filter(v => v.sku_id !== sku_id)
+    setEditedVariants(updatedVariants)
+    setHasChanges(true)
+
+    // Also remove from selected variants
+    const newSelected = new Set(selectedVariants)
+    newSelected.delete(sku_id)
+    setSelectedVariants(newSelected)
+  }
+
   if (!isOpen) return null
 
   const getOptionImage = (optionName: string, optionValue: string): string | undefined => {
@@ -326,6 +337,9 @@ export default function ProductOptionsModal({
             </div>
             <div className="w-16 text-center">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">상태</span>
+            </div>
+            <div className="w-12 text-center">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">삭제</span>
             </div>
           </div>
         </div>
@@ -513,6 +527,17 @@ export default function ProductOptionsModal({
                           <Check size={24} className="text-white" strokeWidth={3} />
                         </div>
                       )}
+                    </div>
+
+                    {/* Delete Button */}
+                    <div className="w-12 flex items-center justify-center">
+                      <button
+                        onClick={() => handleDeleteVariant(variant.sku_id)}
+                        className="w-10 h-10 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 flex items-center justify-center transition-all group/delete"
+                        title="옵션 삭제"
+                      >
+                        <Trash2 size={18} className="text-red-400 group-hover/delete:text-red-300" />
+                      </button>
                     </div>
                   </div>
                 )
