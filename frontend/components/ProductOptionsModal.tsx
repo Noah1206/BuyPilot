@@ -6,6 +6,7 @@
 
 import React from 'react'
 import { X, Check, AlertCircle, Package2, Package, Edit2 } from 'lucide-react'
+import { translateText } from '@/utils/translate'
 
 // Product option value definition
 interface ProductOptionValue {
@@ -58,6 +59,7 @@ export default function ProductOptionsModal({
   const [editingOptionName, setEditingOptionName] = React.useState<string | null>(null)
   const [editingVariantOption, setEditingVariantOption] = React.useState<string | null>(null)
   const [editingVariantOptionValue, setEditingVariantOptionValue] = React.useState<string>('')
+  const [isTranslating, setIsTranslating] = React.useState(false)
 
   React.useEffect(() => {
     setEditedVariants(variants)
@@ -68,6 +70,52 @@ export default function ProductOptionsModal({
     // Select all by default
     setSelectedVariants(new Set(variants.map(v => v.sku_id)))
   }, [variants, options, isOpen])
+
+  // 자동 번역 실행
+  React.useEffect(() => {
+    const autoTranslateVariants = async () => {
+      if (!isOpen || variants.length === 0 || isTranslating) return
+
+      setIsTranslating(true)
+      try {
+        const translatedVariants = await Promise.all(
+          variants.map(async (variant) => {
+            try {
+              const optionText = Object.entries(variant.options).map(([k, v]) => `${k}: ${v}`).join(' + ')
+              const translated = await translateText(optionText)
+
+              if (translated) {
+                const newOptions: { [key: string]: string } = {}
+                const parts = translated.split('+').map(p => p.trim())
+
+                parts.forEach(part => {
+                  const [key, value] = part.split(':').map(s => s.trim())
+                  if (key && value) {
+                    newOptions[key] = value
+                  }
+                })
+
+                return { ...variant, options: newOptions }
+              }
+              return variant
+            } catch (error) {
+              console.error('Translation failed for variant:', variant.sku_id, error)
+              return variant
+            }
+          })
+        )
+
+        setEditedVariants(translatedVariants)
+        setHasChanges(true)
+      } catch (error) {
+        console.error('Auto-translation failed:', error)
+      } finally {
+        setIsTranslating(false)
+      }
+    }
+
+    autoTranslateVariants()
+  }, [isOpen, variants])
 
   const handlePriceChange = (sku_id: string, newPrice: number) => {
     const updated = editedVariants.map(v =>
@@ -158,6 +206,14 @@ export default function ProductOptionsModal({
       onSave(editedVariants, editedOptions)
       setHasChanges(false)
     }
+  }
+
+  const handleConvertPrice = (sku_id: string) => {
+    const variant = editedVariants.find(v => v.sku_id === sku_id)
+    if (!variant) return
+
+    const convertedPrice = Math.round(variant.price * 200)
+    handlePriceChange(sku_id, convertedPrice)
   }
 
   if (!isOpen) return null
@@ -397,14 +453,23 @@ export default function ProductOptionsModal({
 
                     {/* Price Input */}
                     <div className="w-36">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={variant.price}
-                        onChange={(e) => handlePriceChange(variant.sku_id, parseFloat(e.target.value) || 0)}
-                        disabled={!editable}
-                        className="w-full px-3 py-3 bg-slate-950/80 border-2 border-slate-700 rounded-xl text-white text-center text-base font-bold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={variant.price}
+                          onChange={(e) => handlePriceChange(variant.sku_id, parseFloat(e.target.value) || 0)}
+                          disabled={!editable}
+                          className="w-full px-3 py-3 bg-slate-950/80 border-2 border-slate-700 rounded-xl text-white text-center text-base font-bold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner"
+                        />
+                        <button
+                          onClick={() => handleConvertPrice(variant.sku_id)}
+                          className="w-full px-2 py-1 text-xs font-medium text-slate-400 hover:text-blue-400 bg-slate-800/50 hover:bg-slate-700/50 rounded border border-slate-700 transition-all"
+                          title="×200 변환"
+                        >
+                          ×200
+                        </button>
+                      </div>
                     </div>
 
                     {/* Stock Input */}
