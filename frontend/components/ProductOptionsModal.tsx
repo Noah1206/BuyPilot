@@ -71,40 +71,56 @@ export default function ProductOptionsModal({
     setSelectedVariants(new Set(variants.map(v => v.sku_id)))
   }, [variants, options, isOpen])
 
-  // 자동 번역 실행
+  // 자동 번역 및 가격 변환 실행
   React.useEffect(() => {
-    const autoTranslateVariants = async () => {
+    const autoTranslateAndConvert = async () => {
       if (!isOpen || variants.length === 0 || isTranslating) return
 
       setIsTranslating(true)
       try {
-        const translatedVariants = await Promise.all(
-          variants.map(async (variant) => {
+        // 1. 모든 고유한 옵션 키와 값을 수집
+        const uniqueTexts = new Set<string>()
+        variants.forEach(variant => {
+          Object.entries(variant.options).forEach(([key, value]) => {
+            uniqueTexts.add(key)
+            uniqueTexts.add(value)
+          })
+        })
+
+        // 2. 각 텍스트를 개별적으로 번역
+        const translationMap = new Map<string, string>()
+        const textsArray = Array.from(uniqueTexts)
+
+        await Promise.all(
+          textsArray.map(async (text) => {
             try {
-              const optionText = Object.entries(variant.options).map(([k, v]) => `${k}: ${v}`).join(' + ')
-              const response = await translateText(optionText)
-
+              const response = await translateText(text)
               if (response.ok && response.data?.translated) {
-                const translated = response.data.translated
-                const newOptions: { [key: string]: string } = {}
-                const parts = translated.split('+').map(p => p.trim())
-
-                parts.forEach(part => {
-                  const [key, value] = part.split(':').map(s => s.trim())
-                  if (key && value) {
-                    newOptions[key] = value
-                  }
-                })
-
-                return { ...variant, options: newOptions }
+                translationMap.set(text, response.data.translated)
+              } else {
+                translationMap.set(text, text) // 실패시 원본 유지
               }
-              return variant
             } catch (error) {
-              console.error('Translation failed for variant:', variant.sku_id, error)
-              return variant
+              console.error('Translation failed for:', text, error)
+              translationMap.set(text, text)
             }
           })
         )
+
+        // 3. 번역된 텍스트로 variants 업데이트 + 가격 ×200 변환
+        const translatedVariants = variants.map(variant => {
+          const newOptions: { [key: string]: string } = {}
+          Object.entries(variant.options).forEach(([key, value]) => {
+            const translatedKey = translationMap.get(key) || key
+            const translatedValue = translationMap.get(value) || value
+            newOptions[translatedKey] = translatedValue
+          })
+
+          // 가격 ×200 변환 (CNY → KRW)
+          const convertedPrice = Math.round(variant.price * 200)
+
+          return { ...variant, options: newOptions, price: convertedPrice }
+        })
 
         setEditedVariants(translatedVariants)
         setHasChanges(true)
@@ -115,7 +131,7 @@ export default function ProductOptionsModal({
       }
     }
 
-    autoTranslateVariants()
+    autoTranslateAndConvert()
   }, [isOpen, variants])
 
   const handlePriceChange = (sku_id: string, newPrice: number) => {
