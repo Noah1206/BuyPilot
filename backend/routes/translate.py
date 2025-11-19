@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify
 import urllib.parse
 import urllib.request
 import json
+import ssl
 
 translate_bp = Blueprint('translate', __name__)
 
@@ -32,7 +33,12 @@ def translate():
         # Use Google Translate's free API
         url = f'https://translate.googleapis.com/translate_a/single?client=gtx&sl={from_lang}&tl={to_lang}&dt=t&q={urllib.parse.quote(text)}'
 
-        with urllib.request.urlopen(url) as response:
+        # Create SSL context that doesn't verify certificates (for development)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        with urllib.request.urlopen(url, timeout=10, context=ssl_context) as response:
             result = json.loads(response.read().decode('utf-8'))
 
             # Extract translated text from response
