@@ -1,53 +1,63 @@
 """
 AI Translation Service - Chinese to Korean
-Uses Google Gemini for natural, context-aware translation
+Uses Google Translate for fast, reliable translation
 """
 import os
 import logging
 from typing import Optional, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import google.generativeai as genai
+import urllib.parse
+import urllib.request
+import json
+import ssl
 
 logger = logging.getLogger(__name__)
 
 
 class AITranslator:
-    """AI-powered translator for product information"""
+    """Google Translate-based translator for product information"""
 
     def __init__(self):
-        """Initialize Gemini client"""
-        api_key = os.getenv('GEMINI_API_KEY')
-        if not api_key:
-            logger.warning("⚠️ GEMINI_API_KEY not configured. Translation will be disabled.")
-            self.client = None
-        else:
-            genai.configure(api_key=api_key)
+        """Initialize Google Translate client"""
+        self.client = True  # Google Translate doesn't need API key
+        logger.info("✅ AI Translator initialized (Google Translate)")
 
-            # Configure safety settings to allow translation of all content
-            safety_settings = [
-                {
-                    "category": "HARM_CATEGORY_HARASSMENT",
-                    "threshold": "BLOCK_NONE"
-                },
-                {
-                    "category": "HARM_CATEGORY_HATE_SPEECH",
-                    "threshold": "BLOCK_NONE"
-                },
-                {
-                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    "threshold": "BLOCK_NONE"
-                },
-                {
-                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                    "threshold": "BLOCK_NONE"
-                }
-            ]
+    def _google_translate(self, text: str, from_lang: str, to_lang: str) -> Optional[str]:
+        """
+        Translate text using Google Translate API
 
-            self.client = genai.GenerativeModel(
-                'gemini-2.5-flash',
-                safety_settings=safety_settings
-            )
-            logger.info("✅ AI Translator initialized (Gemini 2.5 Flash with relaxed safety)")
+        Args:
+            text: Text to translate
+            from_lang: Source language code (e.g., 'ko', 'zh-CN')
+            to_lang: Target language code (e.g., 'ko', 'zh-CN')
+
+        Returns:
+            Translated text or None if failed
+        """
+        if not text:
+            return None
+
+        try:
+            url = f'https://translate.googleapis.com/translate_a/single?client=gtx&sl={from_lang}&tl={to_lang}&dt=t&q={urllib.parse.quote(text)}'
+
+            # Create SSL context that doesn't verify certificates (for development)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            with urllib.request.urlopen(url, timeout=10, context=ssl_context) as response:
+                result = json.loads(response.read().decode('utf-8'))
+
+                # Extract translated text
+                if result and len(result) > 0 and len(result[0]) > 0:
+                    translated = ''.join([part[0] for part in result[0] if part[0]])
+                    return translated
+
+                return None
+
+        except Exception as e:
+            logger.error(f"❌ Google Translate error: {str(e)}")
+            return None
 
     def translate_korean_to_chinese(self, korean_text: str) -> Optional[str]:
         """
@@ -59,39 +69,23 @@ class AITranslator:
         Returns:
             Chinese translation optimized for Taobao search
         """
-        if not self.client or not korean_text:
+        if not korean_text:
             return None
 
         try:
             logger.info(f"🔄 Translating Korean to Chinese: {korean_text[:50]}...")
 
-            prompt = f"""You are a professional translator specializing in e-commerce product search.
-Translate the following Korean product title/keyword to Chinese (Simplified Chinese).
+            chinese_text = self._google_translate(korean_text, 'ko', 'zh-CN')
 
-Requirements:
-- Focus on common Taobao search terms
-- Keep it concise and searchable
-- Use popular product terminology
-- Return ONLY the Chinese translation, no explanations
-
-Korean text: {korean_text}
-
-Chinese translation:"""
-
-            response = self.client.generate_content(prompt)
-
-            # Safely access response text
-            if not response or not response.parts:
-                logger.warning(f"⚠️ Empty response from Gemini (finish_reason: {response.candidates[0].finish_reason if response.candidates else 'unknown'})")
+            if chinese_text:
+                logger.info(f"✅ Korean→Chinese: {chinese_text[:50]}...")
+                return chinese_text
+            else:
+                logger.warning("⚠️ Translation returned empty, using original text")
                 return korean_text
-
-            chinese_text = response.text.strip()
-            logger.info(f"✅ Korean→Chinese: {chinese_text[:50]}...")
-            return chinese_text
 
         except Exception as e:
             logger.error(f"❌ Korean to Chinese translation failed: {str(e)}")
-            # Fallback: return original text
             return korean_text
 
     def translate_product_title(self, chinese_title: str) -> Optional[str]:
@@ -104,40 +98,24 @@ Chinese translation:"""
         Returns:
             Korean translation or None if failed
         """
-        if not self.client or not chinese_title:
+        if not chinese_title:
             return None
 
         try:
             logger.info(f"🔄 Translating title: {chinese_title[:50]}...")
 
-            prompt = f"""You are a professional translator specializing in e-commerce product titles.
-Translate the following Chinese product title to Korean.
+            korean_title = self._google_translate(chinese_title, 'zh-CN', 'ko')
 
-Requirements:
-- Natural, marketing-friendly Korean
-- Keep product specifications (numbers, model names) as-is
-- Make it appealing to Korean consumers
-- Keep it concise (under 100 characters if possible)
-- Return ONLY the Korean translation, no explanations
-
-Chinese title: {chinese_title}
-
-Korean translation:"""
-
-            response = self.client.generate_content(prompt)
-
-            # Safely access response text
-            if not response or not response.parts:
-                logger.warning(f"⚠️ Empty response from Gemini (finish_reason: {response.candidates[0].finish_reason if response.candidates else 'unknown'})")
-                return chinese_title  # Return original if translation blocked
-
-            korean_title = response.text.strip()
-            logger.info(f"✅ Translated title: {korean_title[:50]}...")
-            return korean_title
+            if korean_title:
+                logger.info(f"✅ Translated title: {korean_title[:50]}...")
+                return korean_title
+            else:
+                logger.warning("⚠️ Translation returned empty, using original text")
+                return chinese_title
 
         except Exception as e:
             logger.error(f"❌ Translation failed: {str(e)}")
-            return chinese_title  # Return original text instead of None
+            return chinese_title
 
     def translate_product_description(self, chinese_desc: str) -> Optional[str]:
         """
@@ -149,131 +127,66 @@ Korean translation:"""
         Returns:
             Korean translation or None if failed
         """
-        if not self.client or not chinese_desc:
+        if not chinese_desc:
             return None
 
         try:
             logger.info(f"🔄 Translating description ({len(chinese_desc)} chars)...")
 
-            # Truncate if too long
+            # Truncate if too long (Google Translate URL limit)
             if len(chinese_desc) > 2000:
                 chinese_desc = chinese_desc[:2000] + "..."
                 logger.warning("⚠️ Description truncated to 2000 characters")
 
-            prompt = f"""You are a professional translator specializing in e-commerce product descriptions.
-Translate the following Chinese product description to Korean.
+            korean_desc = self._google_translate(chinese_desc, 'zh-CN', 'ko')
 
-Requirements:
-- Natural, persuasive Korean that appeals to consumers
-- Maintain product specifications and technical details
-- Keep formatting and structure
-- Professional tone
-- Return ONLY the Korean translation, no explanations
-
-Chinese description:
-{chinese_desc}
-
-Korean translation:"""
-
-            response = self.client.generate_content(prompt)
-
-            # Safely access response text
-            if not response or not response.parts:
-                logger.warning(f"⚠️ Empty response from Gemini (finish_reason: {response.candidates[0].finish_reason if response.candidates else 'unknown'})")
-                return chinese_desc  # Return original if translation blocked
-
-            korean_desc = response.text.strip()
-            logger.info(f"✅ Translated description ({len(korean_desc)} chars)")
-            return korean_desc
+            if korean_desc:
+                logger.info(f"✅ Translated description ({len(korean_desc)} chars)")
+                return korean_desc
+            else:
+                logger.warning("⚠️ Translation returned empty, using original text")
+                return chinese_desc
 
         except Exception as e:
             logger.error(f"❌ Description translation failed: {str(e)}")
-            return chinese_desc  # Return original text instead of None
+            return chinese_desc
 
     def _translate_options_parallel(self, options):
         """Helper function to translate options in batch (memory-optimized)"""
         if not options:
             return options
 
-        logger.info(f"🔄 Translating {len(options)} option groups in batch mode...")
+        logger.info(f"🔄 Translating {len(options)} option groups...")
 
         try:
-            # Collect all text to translate in one batch
-            all_texts = []
-            text_map = {}  # Map to track which text belongs to which option/value
-
+            # Translate each option name and value individually
             for opt_idx, option in enumerate(options):
-                # Collect option name
+                # Translate option name
                 if option.get('name'):
-                    key = f"opt_{opt_idx}_name"
-                    all_texts.append(option['name'])
-                    text_map[key] = (opt_idx, 'name', None)
+                    korean_name = self._google_translate(option['name'], 'zh-CN', 'ko')
+                    if korean_name:
+                        option['name_cn'] = option['name']
+                        option['name'] = korean_name
 
-                # Collect option values
+                # Translate option values
                 if option.get('values'):
                     for val_idx, value in enumerate(option['values']):
                         if value.get('name'):
-                            key = f"opt_{opt_idx}_val_{val_idx}"
-                            all_texts.append(value['name'])
-                            text_map[key] = (opt_idx, 'value', val_idx)
+                            korean_value = self._google_translate(value['name'], 'zh-CN', 'ko')
+                            if korean_value:
+                                value['name_cn'] = value['name']
+                                value['name'] = korean_value
 
-            # Skip if nothing to translate
-            if not all_texts:
-                return options
-
-            logger.info(f"📦 Batch translating {len(all_texts)} items at once...")
-
-            # Translate all texts in one API call
-            batch_prompt = f"""You are a professional translator specializing in e-commerce.
-Translate the following Chinese product option names and values to Korean.
-
-Requirements:
-- Natural Korean that appeals to consumers
-- Keep it concise and clear
-- Return ONLY the Korean translations, one per line, in the same order
-- No explanations, no numbering
-
-Chinese texts:
-{chr(10).join(f'{i+1}. {text}' for i, text in enumerate(all_texts))}
-
-Korean translations (one per line):"""
-
-            response = self.client.generate_content(batch_prompt)
-
-            if not response or not response.parts:
-                logger.warning("⚠️ Batch translation failed, keeping original text")
-                return options
-
-            # Parse translated results
-            korean_lines = [line.strip() for line in response.text.strip().split('\n') if line.strip()]
-
-            # Remove numbering if present (e.g., "1. 색상" → "색상")
-            korean_lines = [line.split('. ', 1)[-1] if '. ' in line else line for line in korean_lines]
-
-            # Apply translations back to options
-            for i, (key, (opt_idx, field_type, val_idx)) in enumerate(text_map.items()):
-                if i < len(korean_lines):
-                    korean_text = korean_lines[i]
-
-                    if field_type == 'name':
-                        # Option name
-                        options[opt_idx]['name_cn'] = options[opt_idx]['name']
-                        options[opt_idx]['name'] = korean_text
-                    elif field_type == 'value':
-                        # Option value
-                        options[opt_idx]['values'][val_idx]['name_cn'] = options[opt_idx]['values'][val_idx]['name']
-                        options[opt_idx]['values'][val_idx]['name'] = korean_text
-
-            logger.info(f"✅ Batch translation completed: {len(korean_lines)}/{len(all_texts)} items")
+            logger.info(f"✅ Options translation completed")
             return options
 
         except Exception as e:
-            logger.error(f"❌ Batch options translation failed: {str(e)}")
+            logger.error(f"❌ Options translation failed: {str(e)}")
             return options
 
     def translate_product(self, product_data: Dict) -> Dict:
         """
-        Translate all text fields in product data (parallel version - 2-3x faster)
+        Translate all text fields in product data
 
         Args:
             product_data: Product dictionary with Chinese text
@@ -281,15 +194,11 @@ Korean translations (one per line):"""
         Returns:
             Product dictionary with Korean translations added
         """
-        if not self.client:
-            logger.warning("⚠️ Translation skipped - Gemini not configured")
-            return product_data
-
         try:
             # Create copy to avoid modifying original
             translated = product_data.copy()
 
-            logger.info("🚀 Starting parallel translation (title + description + options)...")
+            logger.info("🚀 Starting translation (title + description + options)...")
 
             # Parallel translation with ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=3) as executor:
@@ -329,9 +238,9 @@ Korean translations (one per line):"""
 
             # Mark as translated
             translated['translated'] = True
-            translated['translation_provider'] = 'gemini'
+            translated['translation_provider'] = 'google_translate'
 
-            logger.info("🎉 Product translation completed (parallel mode)")
+            logger.info("🎉 Product translation completed")
             return translated
 
         except Exception as e:
