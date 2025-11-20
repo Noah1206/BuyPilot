@@ -523,6 +523,10 @@ class NaverCommerceAPI:
 
     def _build_option_combinations(self, options: List[Dict], variants: List[Dict] = None) -> List[Dict]:
         """Build option combinations for SmartStore API from variants data"""
+        logger.info(f"🔧 Building option combinations - variants count: {len(variants) if variants else 0}")
+        if variants:
+            logger.info(f"📦 Variants data: {variants[:2]}")  # Log first 2 variants
+
         combinations = []
 
         # If variants are provided, use them to create proper option combinations
@@ -549,9 +553,13 @@ class NaverCommerceAPI:
                     combination[f"optionValue{idx}"] = opt_value
 
                 combinations.append(combination)
+                logger.info(f"✅ Added combination: {combination}")
+
+            logger.info(f"🎉 Total combinations built from variants: {len(combinations)}")
 
         # Fallback: Simple implementation using options structure
         elif options and len(options) > 0:
+            logger.info(f"⚠️ No variants provided, using fallback with options: {len(options)} option groups")
             option1 = options[0]
             for value in option1.get('values', []):
                 combinations.append({
