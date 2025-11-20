@@ -61,21 +61,30 @@ export default function ProductOptionsModal({
   const [editingVariantOptionValue, setEditingVariantOptionValue] = React.useState<string>('')
   const [isTranslating, setIsTranslating] = React.useState(false)
 
+  // 모달 열림 감지 및 자동 번역 실행
   React.useEffect(() => {
-    setEditedVariants(variants)
+    console.log('🔍 Modal useEffect - isOpen:', isOpen, 'variants.length:', variants.length)
+
+    if (!isOpen) {
+      console.log('🚪 Modal closed')
+      return
+    }
+
+    // 모달이 열릴 때 초기화
+    console.log('✨ Modal opening - initializing state')
     setEditedOptions(options)
     setHasChanges(false)
     setEditingOptionName(null)
     setEditingVariantOption(null)
-    setIsTranslating(false) // 번역 상태 초기화
-    // Select all by default
     setSelectedVariants(new Set(variants.map(v => v.sku_id)))
-  }, [variants, options, isOpen])
 
-  // 자동 번역 및 가격 변환 실행
-  React.useEffect(() => {
+    // 자동 번역 및 가격 변환 실행
     const autoTranslateAndConvert = async () => {
-      if (!isOpen || variants.length === 0) return
+      if (variants.length === 0) {
+        console.log('⏭️ No variants to translate')
+        setEditedVariants([])
+        return
+      }
 
       setIsTranslating(true)
       console.log('🔄 Starting auto-translation for', variants.length, 'variants')
@@ -141,13 +150,14 @@ export default function ProductOptionsModal({
         setHasChanges(true)
       } catch (error) {
         console.error('Auto-translation failed:', error)
+        setEditedVariants(variants) // 실패시 원본 사용
       } finally {
         setIsTranslating(false)
       }
     }
 
     autoTranslateAndConvert()
-  }, [isOpen, variants])
+  }, [isOpen, variants, options])
 
   const handlePriceChange = (sku_id: string, newPrice: number) => {
     const updated = editedVariants.map(v =>
