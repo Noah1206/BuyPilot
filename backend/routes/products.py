@@ -492,6 +492,85 @@ def update_product(product_id):
         }), 500
 
 
+@bp.route('/products/<product_id>/category', methods=['PATCH'])
+def update_product_category(product_id):
+    """
+    Update product category
+    Body: {
+        category_id: string,
+        category_path: string,
+        category_name: string,
+        confidence?: number
+    }
+    """
+    try:
+        data = request.get_json(force=True)
+
+        # Validate required fields
+        if 'category_id' not in data or 'category_path' not in data:
+            return jsonify({
+                'ok': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'Missing required fields: category_id, category_path',
+                    'details': {}
+                }
+            }), 400
+
+        with get_db() as db:
+            product = db.query(Product).filter(Product.id == product_id).first()
+
+            if not product:
+                return jsonify({
+                    'ok': False,
+                    'error': {
+                        'code': 'PRODUCT_NOT_FOUND',
+                        'message': f'Product {product_id} not found',
+                        'details': {}
+                    }
+                }), 404
+
+            # Update product data with selected category
+            if not product.data:
+                product.data = {}
+
+            # Save selected category
+            product.data['selected_category'] = {
+                'category_id': data['category_id'],
+                'category_path': data['category_path'],
+                'category_name': data.get('category_name', ''),
+                'confidence': data.get('confidence')
+            }
+
+            # Mark data field as modified
+            flag_modified(product, 'data')
+            product.updated_at = datetime.utcnow()
+
+            db.commit()
+
+            logger.info(f"✅ Category updated for product {product_id}: {data['category_path']}")
+
+            return jsonify({
+                'ok': True,
+                'data': {
+                    'product_id': str(product.id),
+                    'message': 'Category updated successfully',
+                    'selected_category': product.data['selected_category']
+                }
+            }), 200
+
+    except Exception as e:
+        logger.error(f"❌ Error updating product category: {str(e)}")
+        return jsonify({
+            'ok': False,
+            'error': {
+                'code': 'DATABASE_ERROR',
+                'message': 'Failed to update product category',
+                'details': {'error': str(e)}
+            }
+        }), 500
+
+
 @bp.route('/products/<product_id>', methods=['DELETE'])
 def delete_product(product_id):
     """Delete product"""
