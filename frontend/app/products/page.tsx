@@ -198,6 +198,90 @@ export default function ProductsPage() {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [editingProduct, editMode])
 
+  // Auto-translate options when modal opens
+  useEffect(() => {
+    console.log('🔍 Options Modal useEffect - editMode:', editMode, 'editData.variants:', editData.variants?.length)
+
+    if (editMode !== 'options') {
+      console.log('🚪 Not in options mode')
+      return
+    }
+
+    if (!editData.variants || editData.variants.length === 0) {
+      console.log('⏭️ No variants to translate')
+      return
+    }
+
+    console.log('✨ Options modal opening - starting auto-translation')
+
+    const autoTranslateAndConvert = async () => {
+      try {
+        console.log('🔄 Starting auto-translation for', editData.variants.length, 'variants')
+
+        // 1. Collect unique texts to translate
+        const uniqueTexts = new Set<string>()
+        editData.variants.forEach((variant: any) => {
+          Object.entries(variant.options).forEach(([key, value]) => {
+            uniqueTexts.add(key)
+            uniqueTexts.add(String(value))
+          })
+        })
+
+        console.log('📝 Unique texts to translate:', uniqueTexts.size, Array.from(uniqueTexts))
+
+        // 2. Translate all unique texts in parallel
+        const translationMap = new Map<string, string>()
+        const textsArray = Array.from(uniqueTexts)
+
+        await Promise.all(
+          textsArray.map(async (text) => {
+            try {
+              console.log('🌐 Translating:', text)
+              const response = await apiTranslateText(text)
+              console.log('✅ Translation response for', text, ':', response)
+
+              if (response.ok && response.data?.translated) {
+                translationMap.set(text, response.data.translated)
+                console.log(`  ${text} → ${response.data.translated}`)
+              } else {
+                translationMap.set(text, text)
+                console.log('  Translation failed, keeping original')
+              }
+            } catch (error) {
+              console.error('Translation failed for:', text, error)
+              translationMap.set(text, text)
+            }
+          })
+        )
+
+        console.log('✅ Translation map:', Object.fromEntries(translationMap))
+
+        // 3. Update variants with translations + price ×200
+        const translatedVariants = editData.variants.map((variant: any) => {
+          const newOptions: { [key: string]: string } = {}
+          Object.entries(variant.options).forEach(([key, value]) => {
+            const translatedKey = translationMap.get(key) || key
+            const translatedValue = translationMap.get(String(value)) || String(value)
+            newOptions[translatedKey] = translatedValue
+          })
+
+          const originalPrice = variant.price
+          const convertedPrice = Math.round(originalPrice * 200)
+          console.log(`💰 Price conversion for variant: ${originalPrice} CNY → ${convertedPrice} KRW`)
+
+          return { ...variant, options: newOptions, price: convertedPrice }
+        })
+
+        console.log('🎉 Translated variants:', translatedVariants)
+        setEditData({ ...editData, variants: translatedVariants })
+      } catch (error) {
+        console.error('❌ Auto-translation failed:', error)
+      }
+    }
+
+    autoTranslateAndConvert()
+  }, [editMode, editData.variants?.length])
+
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
     setShowToast({ message, type })
     setTimeout(() => setShowToast(null), 3000)
