@@ -521,12 +521,37 @@ class NaverCommerceAPI:
 
         return product_data
 
-    def _build_option_combinations(self, options: List[Dict]) -> List[Dict]:
-        """Build option combinations for SmartStore API"""
+    def _build_option_combinations(self, options: List[Dict], variants: List[Dict] = None) -> List[Dict]:
+        """Build option combinations for SmartStore API from variants data"""
         combinations = []
 
-        # Simple implementation: create combinations from option values
-        if len(options) > 0:
+        # If variants are provided, use them to create proper option combinations
+        if variants and len(variants) > 0:
+            for variant in variants:
+                variant_options = variant.get('options', {})
+
+                # Extract option names and values from variant
+                option_items = list(variant_options.items())
+
+                if len(option_items) == 0:
+                    continue
+
+                combination = {
+                    "id": variant.get('sku_id', ''),
+                    "stockQuantity": variant.get('stock', 999),
+                    "price": 0,  # Additional price (0 means use base price)
+                    "sellerManagerCode": variant.get('sku_id', '')
+                }
+
+                # Add option name/value pairs (supports up to 3 options)
+                for idx, (opt_name, opt_value) in enumerate(option_items[:3], 1):
+                    combination[f"optionName{idx}"] = opt_name
+                    combination[f"optionValue{idx}"] = opt_value
+
+                combinations.append(combination)
+
+        # Fallback: Simple implementation using options structure
+        elif options and len(options) > 0:
             option1 = options[0]
             for value in option1.get('values', []):
                 combinations.append({
@@ -534,7 +559,7 @@ class NaverCommerceAPI:
                     "optionName1": option1.get('name', ''),
                     "optionValue1": value.get('name', ''),
                     "stockQuantity": 999,
-                    "price": 0,  # Additional price
+                    "price": 0,
                     "sellerManagerCode": ""
                 })
 

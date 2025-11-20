@@ -549,7 +549,8 @@ def register_products():
                         origin_area=origin_area,
                         brand=brand,
                         manufacturer=manufacturer,
-                        options=product.data.get('options', [])
+                        options=product.data.get('options', []),
+                        variants=product.data.get('variants', [])
                     )
 
                     # Register product
