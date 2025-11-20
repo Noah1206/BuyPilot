@@ -67,6 +67,7 @@ export default function ProductOptionsModal({
     setHasChanges(false)
     setEditingOptionName(null)
     setEditingVariantOption(null)
+    setIsTranslating(false) // 번역 상태 초기화
     // Select all by default
     setSelectedVariants(new Set(variants.map(v => v.sku_id)))
   }, [variants, options, isOpen])
@@ -74,9 +75,11 @@ export default function ProductOptionsModal({
   // 자동 번역 및 가격 변환 실행
   React.useEffect(() => {
     const autoTranslateAndConvert = async () => {
-      if (!isOpen || variants.length === 0 || isTranslating) return
+      if (!isOpen || variants.length === 0) return
 
       setIsTranslating(true)
+      console.log('🔄 Starting auto-translation for', variants.length, 'variants')
+
       try {
         // 1. 모든 고유한 옵션 키와 값을 수집
         const uniqueTexts = new Set<string>()
@@ -87,6 +90,8 @@ export default function ProductOptionsModal({
           })
         })
 
+        console.log('📝 Unique texts to translate:', uniqueTexts.size)
+
         // 2. 각 텍스트를 개별적으로 번역
         const translationMap = new Map<string, string>()
         const textsArray = Array.from(uniqueTexts)
@@ -94,11 +99,16 @@ export default function ProductOptionsModal({
         await Promise.all(
           textsArray.map(async (text) => {
             try {
+              console.log('🌐 Translating:', text)
               const response = await translateText(text)
+              console.log('✅ Translation response:', response)
+
               if (response.ok && response.data?.translated) {
                 translationMap.set(text, response.data.translated)
+                console.log(`  ${text} → ${response.data.translated}`)
               } else {
                 translationMap.set(text, text) // 실패시 원본 유지
+                console.log('  Translation failed, keeping original')
               }
             } catch (error) {
               console.error('Translation failed for:', text, error)
@@ -106,6 +116,8 @@ export default function ProductOptionsModal({
             }
           })
         )
+
+        console.log('✅ Translation map:', translationMap)
 
         // 3. 번역된 텍스트로 variants 업데이트 + 가격 ×200 변환
         const translatedVariants = variants.map(variant => {
@@ -119,9 +131,12 @@ export default function ProductOptionsModal({
           // 가격 ×200 변환 (CNY → KRW)
           const convertedPrice = Math.round(variant.price * 200)
 
+          console.log(`💰 Price conversion: ${variant.price} → ${convertedPrice}`)
+
           return { ...variant, options: newOptions, price: convertedPrice }
         })
 
+        console.log('🎉 Translated variants:', translatedVariants)
         setEditedVariants(translatedVariants)
         setHasChanges(true)
       } catch (error) {
