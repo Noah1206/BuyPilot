@@ -531,6 +531,30 @@ class NaverCommerceAPI:
 
         # If variants are provided, use them to create proper option combinations
         if variants and len(variants) > 0:
+            # Build mapping from Chinese option names to Korean option names
+            option_name_mapping = {}
+            if options:
+                for option in options:
+                    chinese_name = option.get('pid', '')  # Chinese option name (e.g., "颜色分类")
+                    korean_name = option.get('name', '')  # Korean translated name (e.g., "옵션")
+                    if chinese_name and korean_name:
+                        option_name_mapping[chinese_name] = korean_name
+                        logger.info(f"📝 Option name mapping: {chinese_name} → {korean_name}")
+
+            # Build mapping from Chinese option values to Korean option values
+            option_value_mapping = {}
+            if options:
+                for option in options:
+                    chinese_name = option.get('pid', '')
+                    for value in option.get('values', []):
+                        chinese_value = value.get('name_cn', '')  # Chinese value name
+                        korean_value = value.get('name', '')  # Korean translated value name
+                        if chinese_value and korean_value:
+                            # Create composite key: "中文选项名::中文选项值"
+                            key = f"{chinese_name}::{chinese_value}"
+                            option_value_mapping[key] = korean_value
+                            logger.info(f"📝 Option value mapping: {key} → {korean_value}")
+
             for variant in variants:
                 variant_options = variant.get('options', {})
 
@@ -548,7 +572,15 @@ class NaverCommerceAPI:
                 }
 
                 # Add option name/value pairs (supports up to 3 options)
-                for idx, (opt_name, opt_value) in enumerate(option_items[:3], 1):
+                # Use Korean names from mapping
+                for idx, (opt_name_chinese, opt_value_chinese) in enumerate(option_items[:3], 1):
+                    # Translate option name (Chinese → Korean)
+                    opt_name = option_name_mapping.get(opt_name_chinese, opt_name_chinese)
+
+                    # Translate option value (Chinese → Korean)
+                    mapping_key = f"{opt_name_chinese}::{opt_value_chinese}"
+                    opt_value = option_value_mapping.get(mapping_key, opt_value_chinese)
+
                     combination[f"optionName{idx}"] = opt_name
                     combination[f"optionValue{idx}"] = opt_value
 
@@ -563,7 +595,7 @@ class NaverCommerceAPI:
             option1 = options[0]
             for value in option1.get('values', []):
                 combinations.append({
-                    "id": value.get('id', ''),
+                    "id": value.get('vid', ''),
                     "optionName1": option1.get('name', ''),
                     "optionValue1": value.get('name', ''),
                     "stockQuantity": 999,
