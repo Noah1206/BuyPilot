@@ -368,6 +368,16 @@ class NaverCommerceAPI:
         try:
             logger.info(f"📦 Registering product: {product_data.get('name', 'Unknown')}")
 
+            # Debug: Log optionInfo if exists
+            if 'originProduct' in product_data and 'optionInfo' in product_data['originProduct']:
+                option_info = product_data['originProduct']['optionInfo']
+                logger.info(f"🔍 Sending optionInfo: {option_info}")
+                if 'optionCombinations' in option_info:
+                    logger.info(f"🔍 optionCombinations count: {len(option_info['optionCombinations'])}")
+                    logger.info(f"🔍 First 2 combinations: {option_info['optionCombinations'][:2]}")
+                if 'standardOptions' in option_info:
+                    logger.info(f"🔍 standardOptions count: {len(option_info['standardOptions'])}")
+
             endpoint = '/external/v2/products'
             response = self._make_request('POST', endpoint, data=product_data)
 
