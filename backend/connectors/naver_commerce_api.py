@@ -586,8 +586,11 @@ class NaverCommerceAPI:
                 if len(option_items) == 0:
                     continue
 
+                # Generate unique integer ID for this combination
+                combo_id = hash(variant.get('sku_id', '')) % (10 ** 8)  # 8-digit integer
+
                 combination = {
-                    "id": variant.get('sku_id', ''),
+                    "id": combo_id,
                     "stockQuantity": variant.get('stock', 999),
                     "price": 0,  # Additional price (0 means use base price)
                     "sellerManagerCode": variant.get('sku_id', '')
@@ -603,7 +606,7 @@ class NaverCommerceAPI:
                     mapping_key = f"{opt_name_chinese}::{opt_value_chinese}"
                     opt_value = option_value_mapping.get(mapping_key, opt_value_chinese)
 
-                    combination[f"optionValue{idx}"] = opt_value
+                    combination[f"optionName{idx}"] = opt_value
 
                 combinations.append(combination)
                 logger.info(f"✅ Added combination: {combination}")
