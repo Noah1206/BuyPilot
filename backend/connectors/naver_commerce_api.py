@@ -593,6 +593,7 @@ class NaverCommerceAPI:
                     "id": combo_id,
                     "stockQuantity": variant.get('stock', 999),
                     "price": 0,  # Additional price (0 means use base price)
+                    "usable": True,  # Required field
                     "sellerManagerCode": variant.get('sku_id', '')
                 }
 
