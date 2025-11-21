@@ -507,12 +507,18 @@ class NaverCommerceAPI:
             product_data["originProduct"]["manufacturer"] = manufacturer
 
         # Add options if provided
+        logger.info(f"🔍 Checking options - options type: {type(options)}, options value: {options}")
+        logger.info(f"🔍 Checking variants - variants type: {type(variants)}, variants count: {len(variants) if variants else 0}")
+
         if options and len(options) > 0:
+            logger.info(f"✅ Options found! Building option info...")
             product_data["originProduct"]["optionInfo"] = {
                 "simpleOption": False,
                 "optionCombinations": self._build_option_combinations(options, variants),
                 "standardOptions": self._build_standard_options(options)
             }
+        else:
+            logger.warning(f"⚠️ No options provided or options is empty!")
 
         # Add any additional fields
         for key, value in kwargs.items():
