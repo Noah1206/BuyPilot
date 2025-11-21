@@ -524,14 +524,17 @@ class NaverCommerceAPI:
             logger.info(f"✅ Options found! Building option info...")
             option_combinations = self._build_option_combinations(options, variants)
             option_group_names = self._build_option_group_names(options)
+            standard_option_groups = self._build_standard_option_groups(options)
 
             product_data["originProduct"]["optionInfo"] = {
                 "optionCombinationSortType": "CREATE",
                 "optionCombinationGroupNames": option_group_names,
                 "optionCombinations": option_combinations,
+                "standardOptionGroups": standard_option_groups,
                 "useStockManagement": True
             }
             logger.info(f"🔍 optionCombinationGroupNames: {option_group_names}")
+            logger.info(f"🔍 standardOptionGroups: {standard_option_groups}")
             logger.info(f"🔍 optionCombinations count: {len(option_combinations)}")
         else:
             logger.warning(f"⚠️ No options provided or options is empty!")
@@ -643,6 +646,42 @@ class NaverCommerceAPI:
 
         logger.info(f"🔧 Built optionCombinationGroupNames: {group_names}")
         return group_names
+
+    def _build_standard_option_groups(self, options: List[Dict]) -> List[Dict]:
+        """Build standardOptionGroups for SmartStore API
+
+        This defines the base option groups that combinations are built from.
+        Required for combination options (조합형) to work properly.
+
+        Returns:
+            list: Array of option group objects with groupName and standardOptionNames
+        """
+        standard_groups = []
+
+        for idx, option in enumerate(options[:3], 1):  # Max 3 option groups
+            option_name = option.get('name', f'옵션{idx}')
+
+            # Collect all unique option values for this group
+            option_values = []
+            for value in option.get('values', []):
+                korean_name = value.get('name', '')  # Korean translated name
+                if korean_name:
+                    option_values.append({
+                        "name": korean_name,
+                        "sortOrder": len(option_values) + 1
+                    })
+
+            if option_values:
+                standard_groups.append({
+                    "groupName": option_name,
+                    "standardOptionNames": option_values
+                })
+
+        logger.info(f"🔧 Built standardOptionGroups: {len(standard_groups)} groups")
+        for group in standard_groups:
+            logger.info(f"   - {group['groupName']}: {len(group['standardOptionNames'])} values")
+
+        return standard_groups
 
 
 def get_naver_commerce_api() -> NaverCommerceAPI:
