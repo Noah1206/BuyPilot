@@ -405,6 +405,14 @@ def register_products():
 
                     logger.info(f"🔄 Processing: {product.title[:50]}...")
 
+                    # Debug: Check product.data structure
+                    logger.info(f"🔍 product.data type: {type(product.data)}")
+                    logger.info(f"🔍 product.data keys: {product.data.keys() if product.data else 'None'}")
+                    logger.info(f"🔍 product.data['options'] exists: {'options' in product.data if product.data else False}")
+                    logger.info(f"🔍 product.data['variants'] exists: {'variants' in product.data if product.data else False}")
+                    if product.data and 'variants' in product.data:
+                        logger.info(f"🔍 product.data['variants'] length: {len(product.data['variants'])}")
+
                     # Step 0: Category Selection (prioritize cached category from frontend)
                     product_category_id = default_category_id  # Default to user-provided or DB category
                     ai_category_info = None
