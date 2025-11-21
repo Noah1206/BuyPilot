@@ -522,11 +522,19 @@ class NaverCommerceAPI:
 
         if options and len(options) > 0:
             logger.info(f"✅ Options found! Building option info...")
+            option_combinations = self._build_option_combinations(options, variants)
+            option_standards, standard_option_groups = self._build_standard_options(options)
+
             product_data["originProduct"]["optionInfo"] = {
                 "simpleOption": False,
-                "optionCombinations": self._build_option_combinations(options, variants),
-                "standardOptions": self._build_standard_options(options)
+                "optionCombinationSortType": "CREATE",
+                "optionStandards": option_standards,
+                "standardOptionGroups": standard_option_groups,
+                "optionCombinations": option_combinations,
+                "useStockManagement": True
             }
+            logger.info(f"🔍 optionStandards count: {len(option_standards)}")
+            logger.info(f"🔍 standardOptionGroups count: {len(standard_option_groups)}")
         else:
             logger.warning(f"⚠️ No options provided or options is empty!")
 
@@ -584,7 +592,8 @@ class NaverCommerceAPI:
                     "id": variant.get('sku_id', ''),
                     "stockQuantity": variant.get('stock', 999),
                     "price": 0,  # Additional price (0 means use base price)
-                    "sellerManagerCode": variant.get('sku_id', '')
+                    "sellerManagerCode": variant.get('sku_id', ''),
+                    "optionStandardIds": []  # Will store the option value IDs
                 }
 
                 # Add option name/value pairs (supports up to 3 options)
@@ -599,6 +608,14 @@ class NaverCommerceAPI:
 
                     combination[f"optionName{idx}"] = opt_name
                     combination[f"optionValue{idx}"] = opt_value
+
+                    # Find the option value ID from the options structure
+                    for option in options:
+                        if option.get('name', '') == opt_name:
+                            for val in option.get('values', []):
+                                if val.get('name', '') == opt_value:
+                                    combination["optionStandardIds"].append(val.get('vid', ''))
+                                    break
 
                 combinations.append(combination)
                 logger.info(f"✅ Added combination: {combination}")
@@ -621,20 +638,38 @@ class NaverCommerceAPI:
 
         return combinations
 
-    def _build_standard_options(self, options: List[Dict]) -> List[Dict]:
-        """Build standard options for SmartStore API"""
-        standard_options = []
+    def _build_standard_options(self, options: List[Dict]) -> tuple:
+        """Build standard options for SmartStore API
 
-        for idx, option in enumerate(options[:2]):  # Max 2 options
-            standard_options.append({
-                "groupName": option.get('name', f'옵션{idx+1}'),
-                "optionValues": [
-                    {"name": val.get('name', '')}
-                    for val in option.get('values', [])
-                ]
+        Returns:
+            tuple: (optionStandards, standardOptionGroups)
+        """
+        option_standards = []
+        standard_option_groups = []
+
+        for idx, option in enumerate(options[:3]):  # Max 3 options
+            # Get option name and generate sequential ID
+            option_name = option.get('name', f'옵션{idx+1}')
+            option_id = idx + 1
+
+            # Build optionStandards (the individual option values)
+            for val in option.get('values', []):
+                option_standards.append({
+                    "id": val.get('vid', ''),  # Use value ID from variants
+                    "groupId": option_id,
+                    "name": val.get('name', '')
+                })
+
+            # Build standardOptionGroups (the option group definition)
+            standard_option_groups.append({
+                "id": option_id,
+                "name": option_name
             })
 
-        return standard_options
+        logger.info(f"🔧 Built {len(option_standards)} optionStandards")
+        logger.info(f"🔧 Built {len(standard_option_groups)} standardOptionGroups")
+
+        return option_standards, standard_option_groups
 
 
 def get_naver_commerce_api() -> NaverCommerceAPI:
